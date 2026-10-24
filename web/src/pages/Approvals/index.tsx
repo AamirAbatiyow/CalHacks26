@@ -7,15 +7,14 @@ function formatDollarsExact(cents: bigint): string {
   return `$${dollars.toLocaleString()}`;
 }
 
-function getConfidenceLabel(confidence: number, amountCents: bigint): { label: string; type: 'warning' | 'info' } {
-  const amount = Number(amountCents) / 100;
-  if (amount > 25000) {
-    return { label: 'Above $25K limit', type: 'warning' };
+const AUTO_APPROVE_CONFIDENCE = 95;
+const LOW_CONFIDENCE = 80;
+
+function getEscalationLabel(confidence: number): { label: string; type: 'warning' | 'info' } {
+  if (confidence < LOW_CONFIDENCE) {
+    return { label: 'Low confidence', type: 'warning' };
   }
-  if (confidence >= 95) {
-    return { label: `Confidence ${confidence}%`, type: 'info' };
-  }
-  return { label: `Confidence ${confidence}%`, type: 'info' };
+  return { label: `Below ${AUTO_APPROVE_CONFIDENCE}% threshold`, type: 'info' };
 }
 
 export default function ApprovalsPage() {
@@ -79,7 +78,7 @@ export default function ApprovalsPage() {
     <div className="approvals-page">
       <div className="approvals-list">
         {pendingClaims.map(claim => {
-          const { label, type } = getConfidenceLabel(claim.confidencePct, claim.amountClaimedCents);
+          const { label, type } = getEscalationLabel(claim.confidencePct);
           const isSelected = selectedClaim?.id === claim.id;
           
           return (
@@ -105,12 +104,12 @@ export default function ApprovalsPage() {
           </div>
           
           <div className="detail-info">
-            <p className="info-label">Automated review triggered.</p>
+            <p className="info-label">Escalated for human review.</p>
             <p className="info-reason">{selectedClaim.escalationReason}</p>
           </div>
           
           <div className="detail-meta">
-            <span>Rule: requires_approval_over_25k</span>
+            <span>Rule: confidence_below_{AUTO_APPROVE_CONFIDENCE}</span>
             <span className="meta-sep">·</span>
             <span>Policy {selectedClaim.policyVersion}</span>
             <span className="meta-sep">·</span>

@@ -4,7 +4,7 @@
     "amount_claimed_cents": 4200000,
     "proposed_amount_cents": 4200000,
     "confidence_pct": 88,
-    "escalation_reason": "Transaction exceeds standard daily threshold. Manual verification of satellite bandwidth allocation required.",
+    "escalation_reason": "Confidence 88% below 95% auto-approval threshold. Satellite bandwidth allocation could not be fully reconciled against pass telemetry.",
     "policy_version": "v4",
     "model_version": "v2"
   },
@@ -13,7 +13,7 @@
     "amount_claimed_cents": 3800000,
     "proposed_amount_cents": 3200000,
     "confidence_pct": 82,
-    "escalation_reason": "Exceeds $25K Cedar authority limit. Partial telemetry gap during X-class flare event.",
+    "escalation_reason": "Confidence 82% below 95% auto-approval threshold. Partial telemetry gap during X-class flare event.",
     "policy_version": "v4",
     "model_version": "v2"
   },
@@ -22,7 +22,7 @@
     "amount_claimed_cents": 2800000,
     "proposed_amount_cents": 2800000,
     "confidence_pct": 65,
-    "escalation_reason": "Confidence 65% below 80% threshold. Disputed pass duration conflicts with ground station logs.",
+    "escalation_reason": "Confidence 65% below 95% auto-approval threshold. Disputed pass duration conflicts with ground station logs.",
     "policy_version": "v4",
     "model_version": "v2"
   },
@@ -31,7 +31,7 @@
     "amount_claimed_cents": 1850000,
     "proposed_amount_cents": 1850000,
     "confidence_pct": 91,
-    "escalation_reason": "Confidence 91% requires manual review. First claim from new customer contract.",
+    "escalation_reason": "Confidence 91% below 95% auto-approval threshold. First claim from new customer contract, no prior baseline.",
     "policy_version": "v4",
     "model_version": "v2"
   },
@@ -40,7 +40,7 @@
     "amount_claimed_cents": 7500000,
     "proposed_amount_cents": 6200000,
     "confidence_pct": 72,
-    "escalation_reason": "Exceeds $25K Cedar authority limit. Confidence 72% below threshold. Proposed adjustment from $75K to $62K.",
+    "escalation_reason": "Confidence 72% below 95% auto-approval threshold. Proposed adjustment from $75K to $62K for passes with partial downlink.",
     "policy_version": "v4",
     "model_version": "v2"
   },
@@ -49,7 +49,7 @@
     "amount_claimed_cents": 3100000,
     "proposed_amount_cents": 3100000,
     "confidence_pct": 45,
-    "escalation_reason": "Confidence 45% far below threshold. Multiple pass failures correlate with Kp=7 geomagnetic storm.",
+    "escalation_reason": "Confidence 45% below 95% auto-approval threshold. Multiple pass failures correlate with Kp=7 geomagnetic storm.",
     "policy_version": "v4",
     "model_version": "v2"
   }
