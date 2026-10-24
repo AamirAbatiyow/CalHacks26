@@ -1,10 +1,11 @@
 {
-  "_source": "Volume and pricing assumptions for the generated pass history; see README 'Seeded volume'.",
+  "_source": "Volume and pricing assumptions for the generated pass history; see README 'Seeded volume'. fleet_multiplier: each generated pass row stands for that many contacts across the operator's network, so revenue reaches KSAT-class scale without multiplying rows.",
   "pricing": {
     "narrowband_cents_per_minute": 1500,
     "wideband_cents_per_minute": 2500,
     "billing": "per contact minute, rounded up (AWS Ground Station on-demand, US West / Sydney / Sao Paulo)"
   },
+  "fleet_multiplier": 10,
   "history_days": 30,
   "schedule_ahead_hours": 24,
   "min_elevation_deg": 10,

@@ -17,7 +17,7 @@ fn cents_per_minute(norad_id: u32) -> i64 {
         .find(|s| s["norad_id"].as_u64() == Some(norad_id as u64))
         .is_some_and(|s| s["band"] == "narrowband");
     let key = if narrowband { "narrowband_cents_per_minute" } else { "wideband_cents_per_minute" };
-    contracts["pricing"][key].as_i64().unwrap()
+    contracts["pricing"][key].as_i64().unwrap() * contracts["fleet_multiplier"].as_i64().unwrap_or(1)
 }
 
 /// The hand-written passes plus the Claim page's NOAA-20 SvalSat pass, which
@@ -204,4 +204,21 @@ fn only_admins_may_raise_their_own_limit() {
     assert!(!may_raise_own_limit(UserRole::Customer));
     assert!(!may_raise_own_limit(UserRole::Operator));
     assert!(may_raise_own_limit(UserRole::Admin));
+}
+
+#[test]
+fn fixed_attack_amounts_scale_with_the_fleet() {
+    let fleet = fleet_multiplier();
+    for spec in CATALOG {
+        let f = scaled_fixture(spec);
+        assert!(!f.description.contains('{'), "unfilled template: {}", f.description);
+        if spec.attack_type == AttackType::InsiderRaisesOwnLimit {
+            let value: i64 = extract_param(&f.attack_params, "value").unwrap().parse().unwrap();
+            assert!(f.amount_cents > 0 && f.amount_cents < value, "{}", f.description);
+            assert_eq!(value % fleet, 0);
+        } else {
+            assert_eq!(f.amount_cents, spec.amount_cents * fleet, "{}", f.description);
+        }
+    }
+    assert_eq!(max_reasonable_claim_cents(), MAX_REASONABLE_CLAIM_CENTS * fleet);
 }

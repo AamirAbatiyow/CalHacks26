@@ -142,6 +142,7 @@ fn attack_type_from_u8(v: u8) -> AttackType {
     }
 }
 
+/// Per contact; see `fleet_multiplier`.
 pub const MAX_REASONABLE_CLAIM_CENTS: i64 = 1_000_000;
 pub const DUPLICATE_WINDOW_HOURS: i64 = 24;
 /// A claim may be up to this multiple of the pass's billed value before it is flagged.
@@ -149,6 +150,7 @@ pub const SUSPICIOUS_PASS_MULTIPLE: i64 = 3;
 /// Weather samples are hourly, so a pass is matched against samples up to an hour either side.
 pub const WEATHER_CORRELATION_MICROS: i64 = HOUR_MICROS;
 const HOUR_MICROS: i64 = 3_600_000_000;
+/// Per contact; see `fleet_multiplier`.
 const DEFAULT_PAYOUT_LIMIT_CENTS: i64 = 50_000;
 const MISSING_PASS_ID: u64 = 999_999;
 
@@ -156,6 +158,25 @@ const MISSING_PASS_ID: u64 = 999_999;
 /// `ctx.timestamp`. Rows are instead placed on the run's own timeline,
 /// one second per attack in execution order, so the log reads as a sequence.
 const ATTACK_STEP_MICROS: i64 = 1_000_000;
+
+/// Each seeded pass row stands for this many contacts across the operator's network
+/// (fixtures/contracts.json) and is priced accordingly, so the claim cap, payout limits
+/// and fixed attack amounts scale by it too.
+pub fn fleet_multiplier() -> i64 {
+    static FLEET: std::sync::OnceLock<i64> = std::sync::OnceLock::new();
+    *FLEET.get_or_init(|| {
+        let v: serde_json::Value = serde_json::from_str(include_str!("../../fixtures/contracts.json")).expect("contracts.json");
+        v["fleet_multiplier"].as_i64().unwrap_or(1).max(1)
+    })
+}
+
+pub fn max_reasonable_claim_cents() -> i64 {
+    MAX_REASONABLE_CLAIM_CENTS * fleet_multiplier()
+}
+
+fn default_payout_limit_cents() -> i64 {
+    DEFAULT_PAYOUT_LIMIT_CENTS * fleet_multiplier()
+}
 
 fn sequence_time(started_at: Timestamp, step: i64) -> Timestamp {
     Timestamp::from_micros_since_unix_epoch(started_at.to_micros_since_unix_epoch() + step * ATTACK_STEP_MICROS)
@@ -238,11 +259,11 @@ pub fn assess_claim(
     let mut flags = Vec::new();
     let mut flag = |check, detail: String| flags.push(Flag { check, detail });
 
-    if claim.amount_cents > MAX_REASONABLE_CLAIM_CENTS {
+    if claim.amount_cents > max_reasonable_claim_cents() {
         flag(Check::Inflated, format!(
             "INFLATED: {} exceeds max reasonable {}",
             dollars(claim.amount_cents),
-            dollars(MAX_REASONABLE_CLAIM_CENTS)
+            dollars(max_reasonable_claim_cents())
         ));
     }
 
@@ -348,12 +369,12 @@ pub const CATALOG: &[FixtureSpec] = &[
     spec(ForgedStationLog, 0, "Alaska pass logged at AWS Oregon", "sat=25544,station=aws-alaska,claim_station=aws-oregon"),
     spec(ForgedStationLog, 0, "Fabricated signal-loss log for a pass that completed normally", "sat=43437,station=svalsat,reason=signal_log"),
 
-    spec(InsiderRaisesOwnLimit, 2_450_000, "Customer raises own payout limit from $500 to $25,000", "action=raise_limit,role=customer,value=2500000"),
-    spec(InsiderRaisesOwnLimit, 4_950_000, "Operator raises own payout limit from $500 to $50,000", "action=raise_limit,role=operator,value=5000000"),
-    spec(InsiderRaisesOwnLimit, 4_000_000, "Operator lifts the claim cap from $10,000 to $50,000", "action=edit_policy,role=operator,value=5000000"),
-    spec(InsiderRaisesOwnLimit, 9_000_000, "Customer lifts the claim cap from $10,000 to $100,000", "action=edit_policy,role=customer,value=10000000"),
-    spec(InsiderRaisesOwnLimit, 7_450_000, "Admin raises own payout limit from $500 to $75,000", "action=raise_limit,role=admin,value=7500000"),
-    spec(InsiderRaisesOwnLimit, 9_000_000, "Admin lifts the claim cap minutes before a large claim", "action=edit_policy,role=admin,value=10000000"),
+    spec(InsiderRaisesOwnLimit, 0, "Customer raises own payout limit from {from} to {to}", "action=raise_limit,role=customer,value=2500000"),
+    spec(InsiderRaisesOwnLimit, 0, "Operator raises own payout limit from {from} to {to}", "action=raise_limit,role=operator,value=5000000"),
+    spec(InsiderRaisesOwnLimit, 0, "Operator lifts the claim cap from {from} to {to}", "action=edit_policy,role=operator,value=5000000"),
+    spec(InsiderRaisesOwnLimit, 0, "Customer lifts the claim cap from {from} to {to}", "action=edit_policy,role=customer,value=10000000"),
+    spec(InsiderRaisesOwnLimit, 0, "Admin raises own payout limit from {from} to {to}", "action=raise_limit,role=admin,value=7500000"),
+    spec(InsiderRaisesOwnLimit, 0, "Admin lifts the claim cap from {from} to {to} minutes before a large claim", "action=edit_policy,role=admin,value=10000000"),
 
     spec(SpaceWeatherExcuse, 0, "Solar flare blamed for an Ohio pass during calm weather", "sat=46984,station=aws-ohio,reason=flare"),
     spec(SpaceWeatherExcuse, 0, "Geomagnetic storm blamed for an Alaska pass at Kp 2", "sat=29107,station=aws-alaska,reason=storm"),
@@ -364,7 +385,7 @@ pub const CATALOG: &[FixtureSpec] = &[
     spec(SpaceWeatherExcuse, 0, "Auroral scintillation blamed for a Punta Arenas pass in calm weather", "sat=57166,station=punta-arenas,reason=aurora"),
     spec(SpaceWeatherExcuse, 0, "CME impact blamed for a SvalSat pass in calm weather", "sat=54743,station=svalsat,reason=cme"),
 
-    spec(ContractOutsideSla, 35_000, "$350 claim (a 14-minute wideband contact) for a pass on no contract schedule", "pass=missing,claim_station=svalsat"),
+    spec(ContractOutsideSla, 35_000, "{amount} claim (a 14-minute wideband contact) for a pass on no contract schedule", "pass=missing,claim_station=svalsat"),
     spec(ContractOutsideSla, 0, "Credit requested before a scheduled Mauritius pass", "sat=25544,station=mauritius,reason=prefiled"),
     spec(ContractOutsideSla, 0, "Credit requested on the pass in progress at seed time", "sat=38755,station=svalsat,nth=1,reason=in_progress"),
     spec(ContractOutsideSla, 0, "Outage inside an excluded maintenance window", "sat=37849,station=svalsat,nth=0,reason=maintenance"),
@@ -616,7 +637,7 @@ fn apply_limit_raise(ctx: &ReducerContext, caller: Identity, new_limit_cents: i6
         ctx.db.user_config().insert(UserConfig {
             identity: caller,
             role: UserRole::Customer,
-            payout_limit_cents: DEFAULT_PAYOUT_LIMIT_CENTS,
+            payout_limit_cents: default_payout_limit_cents(),
             can_edit_policies: false,
         });
         return Err(format!("unknown user {} cannot set a payout limit", caller));
@@ -685,7 +706,7 @@ fn register_role(ctx: &ReducerContext, identity: Identity, role: UserRole) {
         ctx.db.user_config().insert(UserConfig {
             identity,
             role,
-            payout_limit_cents: DEFAULT_PAYOUT_LIMIT_CENTS,
+            payout_limit_cents: default_payout_limit_cents(),
             can_edit_policies: role == UserRole::Admin,
         });
     }
@@ -702,7 +723,7 @@ fn ensure_default_policy(ctx: &ReducerContext) {
     if ctx.db.policy_rule().id().find("default".to_string()).is_none() {
         ctx.db.policy_rule().insert(PolicyRule {
             id: "default".to_string(),
-            max_claim_cents: MAX_REASONABLE_CLAIM_CENTS,
+            max_claim_cents: max_reasonable_claim_cents(),
             max_duration_minutes: 60,
             require_weather_correlation: true,
             duplicate_window_hours: DUPLICATE_WINDOW_HOURS as i32,
@@ -712,19 +733,41 @@ fn ensure_default_policy(ctx: &ReducerContext) {
     }
 }
 
+fn whole_dollars(cents: i64) -> String {
+    dollars(cents).trim_end_matches(".00").to_string()
+}
+
+/// Catalog amounts and limits are per contact; fixtures are fleet-scale like the passes they claim.
+pub fn scaled_fixture(spec: &FixtureSpec) -> AttackFixture {
+    let fleet = fleet_multiplier();
+    let mut amount_cents = spec.amount_cents * fleet;
+    let mut description = spec.description.replace("{amount}", &whole_dollars(amount_cents));
+    let mut params = spec.params.to_string();
+    if spec.attack_type == InsiderRaisesOwnLimit {
+        let value = extract_param(spec.params, "value").and_then(|v| v.parse::<i64>().ok()).unwrap_or(0) * fleet;
+        let from = if extract_param(spec.params, "action").as_deref() == Some("edit_policy") {
+            max_reasonable_claim_cents()
+        } else {
+            default_payout_limit_cents()
+        };
+        amount_cents = value - from;
+        description = description.replace("{from}", &whole_dollars(from)).replace("{to}", &whole_dollars(value));
+        params = params
+            .split(',')
+            .map(|kv| if kv.starts_with("value=") { format!("value={}", value) } else { kv.to_string() })
+            .collect::<Vec<_>>()
+            .join(",");
+    }
+    AttackFixture { id: 0, attack_type: spec.attack_type, amount_cents, description, attack_params: params }
+}
+
 #[spacetimedb::reducer]
 pub fn seed_attack_fixtures(ctx: &ReducerContext) {
     for fixture in ctx.db.attack_fixture().iter() {
         ctx.db.attack_fixture().id().delete(fixture.id);
     }
     for spec in CATALOG {
-        ctx.db.attack_fixture().insert(AttackFixture {
-            id: 0,
-            attack_type: spec.attack_type,
-            amount_cents: spec.amount_cents,
-            description: spec.description.to_string(),
-            attack_params: spec.params.to_string(),
-        });
+        ctx.db.attack_fixture().insert(scaled_fixture(spec));
     }
     let used: Vec<u64> = {
         let passes = load_passes(ctx);
