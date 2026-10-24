@@ -76,7 +76,7 @@ export function useSpacetimeDB() {
   const connect = useCallback(() => {
     const wsProtocol = SPACETIMEDB_HOST.startsWith('https') ? 'wss' : 'ws';
     const wsHost = SPACETIMEDB_HOST.replace(/^https?:\/\//, '');
-    const wsUrl = `${wsProtocol}://${wsHost}/database/subscribe/${SPACETIMEDB_MODULE}`;
+    const wsUrl = `${wsProtocol}://${wsHost}/v1/database/${SPACETIMEDB_MODULE}/subscribe`;
     
     console.log('Connecting to SpacetimeDB:', wsUrl);
     setConnectionState('connecting');
