@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 
 use spacetimedb::{ReducerContext, Table};
 
-use crate::approvals::{escalated_claim, EscalatedClaim, EscalatedClaimStatus};
+use crate::approvals::{escalated_claim, split_by_revenue, EscalatedClaim, EscalatedClaimStatus};
 use crate::ledger::{ledger_entry, LedgerEntry, LedgerEntryType};
 use crate::sla::{dispute, Dispute, DisputeStatus};
 use crate::{decision_record, kpi, pass, DecisionOutcome, DecisionRecord, Kpi, Pass, PassStatus};
@@ -24,7 +24,8 @@ pub struct KpiFigures {
     /// Revenue of every pass that started in the billing window (dropped passes are billed too).
     pub billed_cents: i64,
     /// Billed revenue that may still have to be credited back: unsettled dropped
-    /// passes plus open disputes, each capped at the revenue of its pass.
+    /// passes, open disputes and pending escalated claims, each capped at the
+    /// revenue of its pass.
     pub at_risk_cents: i64,
     /// Credits paid out, from the ledger.
     pub credits_paid_cents: i64,
@@ -95,6 +96,12 @@ pub fn compute_kpis(
     for d in disputes {
         if matches!(d.status, DisputeStatus::Filed | DisputeStatus::UnderReview | DisputeStatus::Escalated) {
             expose(d.pass_id, d.claim_amount_cents);
+        }
+    }
+    for c in escalations.iter().filter(|c| c.status == EscalatedClaimStatus::Pending) {
+        let revenues: Vec<i64> = c.pass_ids.iter().map(|id| revenue.get(id).copied().unwrap_or(0)).collect();
+        for (pass_id, share) in c.pass_ids.iter().zip(split_by_revenue(c.amount_claimed_cents, &revenues)) {
+            expose(*pass_id, share);
         }
     }
     f.at_risk_cents = exposure.values().sum();
@@ -245,6 +252,7 @@ mod tests {
             policy_version: "v4".into(),
             model_version: "v2".into(),
             created_at: Timestamp::from_micros_since_unix_epoch(NOW),
+            pass_ids: vec![],
         }
     }
 
@@ -294,6 +302,17 @@ mod tests {
         ];
         let f = compute_kpis(NOW, &passes, &ledger, &decisions, &disputes, &[]);
         assert_eq!(f.at_risk_cents, 430_000 + 530_000 + 50_000);
+    }
+
+    #[test]
+    fn pending_escalations_are_at_risk_on_their_passes() {
+        let passes = [pass(1, PassStatus::Ok, NOW - HOUR, 30_000), pass(2, PassStatus::Ok, NOW - HOUR, 10_000)];
+        let pending = EscalatedClaim { pass_ids: vec![1, 2], ..escalation(EscalatedClaimStatus::Pending, 36_000, 36_000) };
+        let approved = EscalatedClaim { pass_ids: vec![1], ..escalation(EscalatedClaimStatus::Approved, 30_000, 30_000) };
+        let f = compute_kpis(NOW, &passes, &[], &[], &[], &[pending.clone()]);
+        assert_eq!(f.at_risk_cents, 27_000 + 9_000);
+        let f = compute_kpis(NOW, &passes, &[], &[], &[], &[approved]);
+        assert_eq!(f.at_risk_cents, 0);
     }
 
     #[test]

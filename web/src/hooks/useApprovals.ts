@@ -16,6 +16,7 @@ function useEscalatedClaims(): EscalatedClaim[] {
     policyVersion: row.policyVersion,
     modelVersion: row.modelVersion,
     createdAt: micros(row.createdAt),
+    passIds: row.passIds,
   })), [rows]);
 }
 

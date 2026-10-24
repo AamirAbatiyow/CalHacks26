@@ -118,6 +118,7 @@ export interface EscalatedClaim {
   policyVersion: string;
   modelVersion: string;
   createdAt: bigint;
+  passIds: bigint[];
 }
 
 export interface LayerState {

@@ -7,6 +7,12 @@ function formatDollarsExact(cents: bigint): string {
   return `$${dollars.toLocaleString()}`;
 }
 
+function formatPasses(passIds: bigint[]): string {
+  const shown = passIds.slice(0, 6).map(id => `#${id}`).join(', ');
+  const more = passIds.length > 6 ? ` and ${passIds.length - 6} more` : '';
+  return `Covers ${passIds.length} billed ${passIds.length === 1 ? 'pass' : 'passes'}: ${shown}${more}`;
+}
+
 const AUTO_APPROVE_CONFIDENCE = 95;
 const LOW_CONFIDENCE = 80;
 
@@ -106,6 +112,7 @@ export default function ApprovalsPage() {
           <div className="detail-info">
             <p className="info-label">Escalated for human review.</p>
             <p className="info-reason">{selectedClaim.escalationReason}</p>
+            <p className="info-reason">{formatPasses(selectedClaim.passIds)}</p>
           </div>
           
           <div className="detail-meta">
