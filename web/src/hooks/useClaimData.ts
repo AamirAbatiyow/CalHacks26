@@ -13,7 +13,6 @@ import { useTable, useConnected, reducers, micros, tag } from './useTable';
 
 function mapClaimGate(gate: unknown): ClaimGate {
   switch (tag(gate)) {
-    case 'Approval': return ClaimGate.Approval;
     case 'Escalated': return ClaimGate.Escalated;
     default: return ClaimGate.Auto;
   }

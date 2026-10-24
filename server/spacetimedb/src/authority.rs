@@ -310,8 +310,10 @@ pub fn evaluate_authorization(
 /// Initialize authority system with default policies and actors
 #[spacetimedb::reducer]
 pub fn init_authority(ctx: &ReducerContext) {
+    let version = crate::policy::current_policy_version_id(ctx)
+        .unwrap_or_else(|| crate::CURRENT_POLICY_VERSION.to_string());
     ctx.db.cedar_policy_store().insert(CedarPolicyStore {
-        version: crate::CURRENT_POLICY_VERSION.to_string(),
+        version,
         policy_text: DEFAULT_CEDAR_POLICY.to_string(),
         created_at: ctx.timestamp,
         is_active: true,
@@ -446,6 +448,52 @@ pub fn add_policy_version(
 /// Get the current active policy version
 pub fn get_active_policy(ctx: &ReducerContext) -> Option<CedarPolicyStore> {
     ctx.db.cedar_policy_store().iter().find(|p| p.is_active)
+}
+
+/// Makes `version` the only active Cedar policy so authorization results are
+/// stamped with the version the Policies page marks Current. A version the
+/// store has not seen yet starts from the previously active policy text.
+pub fn activate_policy_version(ctx: &ReducerContext, version: &str, description: &str) {
+    let source_text = get_active_policy(ctx)
+        .map(|p| p.policy_text)
+        .unwrap_or_else(|| DEFAULT_CEDAR_POLICY.to_string());
+
+    let others: Vec<CedarPolicyStore> = ctx
+        .db
+        .cedar_policy_store()
+        .iter()
+        .filter(|p| p.is_active && p.version != version)
+        .collect();
+    for policy in others {
+        ctx.db.cedar_policy_store().version().update(CedarPolicyStore {
+            is_active: false,
+            ..policy
+        });
+    }
+
+    match ctx.db.cedar_policy_store().version().find(version.to_string()) {
+        Some(existing) if existing.is_active => {}
+        Some(existing) => {
+            ctx.db.cedar_policy_store().version().update(CedarPolicyStore {
+                is_active: true,
+                ..existing
+            });
+        }
+        None => {
+            ctx.db.cedar_policy_store().insert(CedarPolicyStore {
+                version: version.to_string(),
+                policy_text: source_text,
+                created_at: ctx.timestamp,
+                is_active: true,
+                description: description.to_string(),
+            });
+        }
+    }
+}
+
+/// Version label of the active Cedar policy, if any.
+pub fn active_policy_version(ctx: &ReducerContext) -> Option<String> {
+    get_active_policy(ctx).map(|p| p.version)
 }
 
 /// Check if an actor can perform an action on a resource

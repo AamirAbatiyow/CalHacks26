@@ -1,6 +1,9 @@
 use spacetimedb::{ReducerContext, SpacetimeType, Table, Timestamp};
 
+use crate::authority::active_policy_version;
 use crate::confidence_gate::{determine_route, DecisionRoute};
+use crate::kpis::sync_kpis;
+use crate::ledger::{ledger_entry, LedgerEntry, LedgerEntryType};
 use crate::{decision_record, DecisionOutcome, DecisionRecord, DecisionType};
 
 #[derive(SpacetimeType, Clone, Copy, PartialEq, Eq, Debug)]
@@ -74,7 +77,7 @@ pub fn approve_escalated_claim(
     policy_version: String,
     model_version: String,
 ) {
-    if let Some(claim) = ctx.db.escalated_claim().id().find(claim_id) {
+    if let Some(claim) = ctx.db.escalated_claim().id().find(claim_id).filter(|c| c.status == EscalatedClaimStatus::Pending) {
         ctx.db.escalated_claim().id().update(EscalatedClaim {
             status: EscalatedClaimStatus::Approved,
             ..claim.clone()
@@ -88,9 +91,11 @@ pub fn approve_escalated_claim(
             station_id: None,
             amount_cents: claim.proposed_amount_cents,
             reason: format!("Approved escalated claim for {}", claim.customer_name),
-            policy_version,
+            policy_version: active_policy_version(ctx).unwrap_or(policy_version),
             model_version,
         });
+        post_claim_credit(ctx, &claim, claim.proposed_amount_cents);
+        sync_kpis(ctx);
     }
 }
 
@@ -101,7 +106,7 @@ pub fn deny_escalated_claim(
     policy_version: String,
     model_version: String,
 ) {
-    if let Some(claim) = ctx.db.escalated_claim().id().find(claim_id) {
+    if let Some(claim) = ctx.db.escalated_claim().id().find(claim_id).filter(|c| c.status == EscalatedClaimStatus::Pending) {
         ctx.db.escalated_claim().id().update(EscalatedClaim {
             status: EscalatedClaimStatus::Denied,
             ..claim.clone()
@@ -115,9 +120,10 @@ pub fn deny_escalated_claim(
             station_id: None,
             amount_cents: 0,
             reason: format!("Denied escalated claim for {}", claim.customer_name),
-            policy_version,
+            policy_version: active_policy_version(ctx).unwrap_or(policy_version),
             model_version,
         });
+        sync_kpis(ctx);
     }
 }
 
@@ -129,7 +135,7 @@ pub fn edit_escalated_claim(
     policy_version: String,
     model_version: String,
 ) {
-    if let Some(claim) = ctx.db.escalated_claim().id().find(claim_id) {
+    if let Some(claim) = ctx.db.escalated_claim().id().find(claim_id).filter(|c| c.status == EscalatedClaimStatus::Pending) {
         ctx.db.escalated_claim().id().update(EscalatedClaim {
             status: EscalatedClaimStatus::Edited,
             proposed_amount_cents: new_amount_cents,
@@ -144,13 +150,32 @@ pub fn edit_escalated_claim(
             station_id: None,
             amount_cents: new_amount_cents,
             reason: format!(
-                "Edited and approved claim for {} (adjusted to {} cents)",
-                claim.customer_name, new_amount_cents
+                "Edited and approved claim for {} (adjusted to ${:.2})",
+                claim.customer_name,
+                new_amount_cents as f64 / 100.0
             ),
-            policy_version,
+            policy_version: active_policy_version(ctx).unwrap_or(policy_version),
             model_version,
         });
+        post_claim_credit(ctx, &claim, new_amount_cents);
+        sync_kpis(ctx);
     }
+}
+
+/// An approved escalation pays out a credit, so it lands in the ledger and the
+/// credits-paid KPI alongside the audit record.
+fn post_claim_credit(ctx: &ReducerContext, claim: &EscalatedClaim, amount_cents: i64) {
+    ctx.db.ledger_entry().insert(LedgerEntry {
+        id: 0,
+        created_at: ctx.timestamp,
+        entry_type: LedgerEntryType::Credit,
+        description: format!("Credit issued for escalated claim from {}", claim.customer_name),
+        reference_id: Some(format!("CR-ESC-{}", claim.id)),
+        amount_cents: -amount_cents,
+        dispute_id: None,
+        pass_id: None,
+        station_id: None,
+    });
 }
 
 #[cfg(test)]

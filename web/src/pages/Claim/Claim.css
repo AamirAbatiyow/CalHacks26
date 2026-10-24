@@ -187,11 +187,6 @@
   color: var(--color-green);
 }
 
-.decision-gate.approval {
-  background: var(--color-amber-muted);
-  color: var(--color-amber);
-}
-
 .decision-gate.escalated {
   background: rgba(239, 68, 68, 0.2);
   color: var(--color-red);

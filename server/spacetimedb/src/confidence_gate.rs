@@ -7,6 +7,8 @@
 use spacetimedb::{ReducerContext, SpacetimeType, Table, Timestamp};
 
 use crate::authority::{check_authorization, AuthzDecision};
+use crate::kpis::sync_kpis;
+use crate::ledger::post_credit;
 use crate::{decision_record, DecisionOutcome, DecisionRecord, DecisionType};
 
 pub const CONFIDENCE_AUTO_APPROVE_THRESHOLD: i64 = 95;
@@ -208,6 +210,17 @@ pub fn process_claim_decision(
         }
     };
 
+    if outcome == DecisionOutcome::AutoApproved {
+        post_credit(
+            ctx,
+            pass_id,
+            station_id.clone(),
+            format!("CR-AUTO-{}", claim_id),
+            format!("Credit auto-approved for claim {} at {}% confidence", claim_id, confidence_percent),
+            amount_cents,
+        );
+    }
+
     ctx.db.decision_record().insert(DecisionRecord {
         id: 0,
         created_at: ctx.timestamp,
@@ -220,6 +233,7 @@ pub fn process_claim_decision(
         policy_version,
         model_version,
     });
+    sync_kpis(ctx);
 }
 
 /// Human approver processes a queued claim
@@ -279,6 +293,17 @@ pub fn human_approve_claim(
         ..queue_item.clone()
     });
 
+    if approved {
+        post_credit(
+            ctx,
+            queue_item.pass_id,
+            queue_item.station_id.clone(),
+            format!("CR-REV-{}", queue_item.claim_id),
+            format!("Credit approved for claim {} by {}", queue_item.claim_id, approver_id),
+            queue_item.amount_cents,
+        );
+    }
+
     ctx.db.decision_record().insert(DecisionRecord {
         id: 0,
         created_at: ctx.timestamp,
@@ -291,6 +316,7 @@ pub fn human_approve_claim(
         policy_version: authz.policy_version,
         model_version: queue_item.model_version.clone(),
     });
+    sync_kpis(ctx);
 
     log::info!(
         "Claim {} {} by human approver {}",
@@ -431,6 +457,15 @@ pub fn issue_credit(
         DecisionOutcome::Approved
     };
 
+    post_credit(
+        ctx,
+        pass_id,
+        station_id.clone(),
+        format!("CR-{}", claim_id),
+        format!("Credit issued for claim {}", claim_id),
+        amount_cents,
+    );
+
     ctx.db.decision_record().insert(DecisionRecord {
         id: 0,
         created_at: ctx.timestamp,
@@ -443,6 +478,7 @@ pub fn issue_credit(
         policy_version: authz.policy_version,
         model_version,
     });
+    sync_kpis(ctx);
 
     log::info!(
         "Credit of ${} issued for claim {} by {}",
@@ -496,6 +532,7 @@ pub fn deny_claim(
         policy_version: authz.policy_version,
         model_version,
     });
+    sync_kpis(ctx);
 
     log::info!("Claim {} denied by {}", claim_id, actor_id);
 }

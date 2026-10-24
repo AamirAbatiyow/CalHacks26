@@ -16,8 +16,6 @@ function getGateLabel(gate: ClaimGate): string {
   switch (gate) {
     case ClaimGate.Auto:
       return 'auto';
-    case ClaimGate.Approval:
-      return 'needs approval';
     case ClaimGate.Escalated:
       return 'escalated';
   }

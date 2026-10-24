@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { Station, Satellite, Pass, SpaceWeather, SimClock, Kpi, PlaybackSpeed } from '../types';
+import type { Station, Satellite, Pass, SpaceWeather, SimClock, PlaybackSpeed } from '../types';
 import { PassStatus, FlareClass } from '../types';
 import { SPACETIMEDB_HOST, SPACETIMEDB_MODULE } from '../config';
 import { DbConnection, tables, type SubscriptionHandle } from '../module_bindings';
@@ -68,7 +68,6 @@ export function useSpacetimeDB() {
   const [passes, setPasses] = useState<Pass[]>([]);
   const [spaceWeather, setSpaceWeather] = useState<SpaceWeather[]>([]);
   const [simClock, setSimClock] = useState<SimClock | null>(null);
-  const [kpi, setKpi] = useState<Kpi | null>(null);
   const [error, setError] = useState<string | null>(null);
   
   const connectionRef = useRef<DbConnection | null>(null);
@@ -109,7 +108,6 @@ export function useSpacetimeDB() {
                 tables.pass,
                 tables.spaceWeather,
                 tables.simClock,
-                tables.kpi,
               ]);
             
             subscriptionRef.current = sub;
@@ -248,27 +246,6 @@ export function useSpacetimeDB() {
             simTimeAnchor: extractMicros(newRow.simTimeAnchor),
           });
         });
-        
-        conn.db.kpi.onInsert((_ctx, row) => {
-          console.log('KPI inserted:', row);
-          setKpi({
-            id: row.id,
-            billedThisMonthCents: row.billedThisMonthCents,
-            revenueAtRiskCents: row.revenueAtRiskCents,
-            creditsPaidCents: row.creditsPaidCents,
-            recoveredCents: row.recoveredCents,
-          });
-        });
-        
-        conn.db.kpi.onUpdate((_ctx, _oldRow, newRow) => {
-          setKpi({
-            id: newRow.id,
-            billedThisMonthCents: newRow.billedThisMonthCents,
-            revenueAtRiskCents: newRow.revenueAtRiskCents,
-            creditsPaidCents: newRow.creditsPaidCents,
-            recoveredCents: newRow.recoveredCents,
-          });
-        });
 
       } catch (err) {
         console.error('Failed to connect:', err);
@@ -332,19 +309,6 @@ export function useSpacetimeDB() {
           isPlaying: row.isPlaying,
           realTimeAnchor: extractMicros(row.realTimeAnchor),
           simTimeAnchor: extractMicros(row.simTimeAnchor),
-        });
-      }
-      
-      const kpiRows = Array.from(db.kpi.iter());
-      if (kpiRows.length > 0) {
-        const row = kpiRows[kpiRows.length - 1];
-        console.log('Syncing KPI:', row);
-        setKpi({
-          id: row.id,
-          billedThisMonthCents: row.billedThisMonthCents,
-          revenueAtRiskCents: row.revenueAtRiskCents,
-          creditsPaidCents: row.creditsPaidCents,
-          recoveredCents: row.recoveredCents,
         });
       }
     };
@@ -411,7 +375,6 @@ export function useSpacetimeDB() {
     passes,
     spaceWeather,
     simClock,
-    kpi,
     setPlaybackPlaying,
     setPlaybackSpeedDb,
     seekToTime,

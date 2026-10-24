@@ -90,6 +90,8 @@ export interface Kpi {
   revenueAtRiskCents: bigint;
   creditsPaidCents: bigint;
   recoveredCents: bigint;
+  leakageAvoidedCents: bigint;
+  reviewCostSavedCents: bigint;
 }
 
 export interface DecisionRecord {
@@ -129,7 +131,6 @@ export type PlaybackSpeed = 1 | 4 | 16;
 
 export const ClaimGate = {
   Auto: 'Auto',
-  Approval: 'Approval',
   Escalated: 'Escalated',
 } as const;
 export type ClaimGate = (typeof ClaimGate)[keyof typeof ClaimGate];

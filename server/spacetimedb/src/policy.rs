@@ -251,6 +251,17 @@ pub fn create_policy_version(
             ..rule
         });
     }
+
+    crate::authority::activate_policy_version(ctx, &new_id, &format!("Created from {} on the Policies page", source_version_id));
+}
+
+/// Id of the policy version the Policies page marks Current.
+pub fn current_policy_version_id(ctx: &ReducerContext) -> Option<String> {
+    ctx.db
+        .policy_version()
+        .iter()
+        .find(|v| v.status == PolicyStatus::Current)
+        .map(|v| v.id)
 }
 
 #[spacetimedb::reducer]
@@ -271,11 +282,12 @@ pub fn promote_policy_version(ctx: &ReducerContext, version_id: String) {
         }
     }
 
-    if let Some(version) = ctx.db.policy_version().id().find(version_id) {
+    if let Some(version) = ctx.db.policy_version().id().find(version_id.clone()) {
         ctx.db.policy_version().id().update(PolicyVersion {
             status: PolicyStatus::Current,
             ..version
         });
+        crate::authority::activate_policy_version(ctx, &version_id, "Promoted on the Policies page");
     }
 }
 
