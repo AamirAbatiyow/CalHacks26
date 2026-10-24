@@ -15,6 +15,7 @@
 }
 
 .finance-tab {
+  position: relative;
   padding: 12px 24px;
   font-size: var(--font-body);
   color: var(--color-secondary);
@@ -29,7 +30,15 @@
 
 .finance-tab.active {
   color: var(--color-primary);
-  border-bottom-color: var(--color-primary);
+}
+
+.finance-tab-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--color-primary);
 }
 
 .finance-content {
@@ -305,4 +314,84 @@
   font-style: italic;
   padding: 24px 0;
   text-align: center;
+}
+
+/* Ledger and Audit: tiles, one chart, then a slim table */
+
+.fin-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.fin-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  border-bottom: 1px solid var(--color-muted);
+  padding-bottom: 24px;
+}
+
+.fin-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 28px;
+  border-left: 1px solid #1c1c1c;
+  min-width: 0;
+}
+
+.fin-tile:first-child {
+  padding-left: 0;
+  border-left: none;
+}
+
+.fin-tile .ui-stat-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fin-tile-wide .ui-split {
+  margin-top: 10px;
+}
+
+.fin-tile-wide .ui-legend {
+  margin-top: 8px;
+}
+
+.fin-chart .ui-section-title {
+  margin-bottom: 8px;
+}
+
+.fin-table td {
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+
+.fin-muted {
+  color: var(--color-secondary);
+}
+
+.fin-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+
+.fin-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.fin-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.audit-replay-cell .replay-trigger {
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.audit-row:hover .audit-replay-cell .replay-trigger,
+.audit-row:focus-visible .audit-replay-cell .replay-trigger {
+  opacity: 1;
 }

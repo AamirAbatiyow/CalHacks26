@@ -1,7 +1,21 @@
+import { CountUp, compactUsd } from '../../ui/CountUp';
+import { Skeleton } from '../../ui/Skeleton';
+
 interface SummaryTabProps {
-  leakageAvoided: string;
-  reviewCostSaved: string;
-  creditsIssued: string;
+  leakageAvoided: number | null;
+  reviewCostSaved: number | null;
+  creditsIssued: number | null;
+}
+
+function Figure({ label, cents }: { label: string; cents: number | null }) {
+  return (
+    <div className="summary-figure">
+      <span className="figure-label">{label}</span>
+      <span className="figure-value">
+        {cents === null ? <Skeleton width={80} height={20} /> : <CountUp value={cents} format={compactUsd} />}
+      </span>
+    </div>
+  );
 }
 
 export function SummaryTab({ leakageAvoided, reviewCostSaved, creditsIssued }: SummaryTabProps) {
@@ -163,18 +177,9 @@ export function SummaryTab({ leakageAvoided, reviewCostSaved, creditsIssued }: S
       </div>
 
       <div className="summary-figures">
-        <div className="summary-figure">
-          <span className="figure-label">Leakage avoided</span>
-          <span className="figure-value">{leakageAvoided}</span>
-        </div>
-        <div className="summary-figure">
-          <span className="figure-label">Review cost saved</span>
-          <span className="figure-value">{reviewCostSaved}</span>
-        </div>
-        <div className="summary-figure">
-          <span className="figure-label">Credits issued</span>
-          <span className="figure-value">{creditsIssued}</span>
-        </div>
+        <Figure label="Leakage avoided" cents={leakageAvoided} />
+        <Figure label="Review cost saved" cents={reviewCostSaved} />
+        <Figure label="Credits issued" cents={creditsIssued} />
       </div>
     </div>
   );
