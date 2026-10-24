@@ -6,7 +6,10 @@ import { LayerPanel } from './components/LayerPanel';
 import { PlaybackBar } from './components/PlaybackBar';
 import { useSpacetimeDB } from './hooks/useSpacetimeDB';
 import type { LayerState, PlaybackSpeed } from './types';
+import Policies from './pages/Policies';
 import './App.css';
+
+const SHOW_POLICIES_PREVIEW = new URLSearchParams(window.location.search).get('page') === 'policies';
 
 function App() {
   const [layers, setLayers] = useState<LayerState>({
@@ -76,6 +79,15 @@ function App() {
         return wDiff < closestDiff ? w : closest;
       }, spaceWeather[0])
     : null;
+
+  if (SHOW_POLICIES_PREVIEW) {
+    return (
+      <div className="app">
+        <Sidebar />
+        <Policies />
+      </div>
+    );
+  }
 
   return (
     <div className="app">

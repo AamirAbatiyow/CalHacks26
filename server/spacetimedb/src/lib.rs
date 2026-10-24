@@ -1,6 +1,9 @@
 use spacetimedb::{ReducerContext, ScheduleAt, SpacetimeType, Table, Timestamp};
 use std::time::Duration;
 
+mod policy;
+pub use policy::*;
+
 #[derive(SpacetimeType, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PassStatus {
     Scheduled,
@@ -149,6 +152,8 @@ pub fn init(ctx: &ReducerContext) {
         scheduled_id: 0,
         scheduled_at: ScheduleAt::Interval(Duration::from_millis(1000).into()),
     });
+
+    policy::seed_initial_policies(ctx);
     
     log::info!("Ground Truth module initialized");
 }
