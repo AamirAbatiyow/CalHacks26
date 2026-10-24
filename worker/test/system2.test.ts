@@ -55,6 +55,57 @@ test('callLlm posts an OpenAI-compatible request and parses the reply', async ()
   assert.equal(seen!.body.model, 'm');
   assert.equal(seen!.body.temperature, 0);
   assert.equal(seen!.body.messages.length, 2);
+  const format = seen!.body.response_format;
+  assert.equal(format.type, 'json_schema');
+  assert.equal(format.json_schema.strict, true);
+  const refs = format.json_schema.schema.properties.cited_evidence.items.enum;
+  assert.deepEqual(refs, input('hello').evidenceIds);
+  assert.ok(!refs.includes('contract'));
+  assert.ok(refs.some((r: string) => r.startsWith('contract_term:')));
+});
+
+test('the user message lists the exact valid evidence ids and maps the contract section to its id', () => {
+  const inp = input('my pass dropped');
+  const [system, user] = buildMessages(inp);
+  assert.match(system.content, /VALID EVIDENCE IDS/);
+  const lines = user.content.split('\n');
+  assert.match(lines[0], /VALID EVIDENCE IDS/);
+  assert.deepEqual(JSON.parse(lines[1]), inp.evidenceIds);
+  const evidence = JSON.parse(lines[lines.indexOf('EVIDENCE (from the operator database):') + 1]);
+  const contractRef = `contract_term:${inp.snapshot.contract.customer}`;
+  assert.match(evidence.evidence_id_index[contractRef], /contract section/);
+  assert.ok(lines.indexOf(MESSAGE_OPEN) > 1, 'evidence ids come before the untrusted message');
+});
+
+test('callLlm falls back to json_object when the endpoint rejects json_schema', async () => {
+  const formats: string[] = [];
+  const fakeFetch = (async (_url: string, init: RequestInit) => {
+    const body = JSON.parse(String(init.body));
+    formats.push(body.response_format.type);
+    if (body.response_format.type === 'json_schema') {
+      return new Response('{"error":{"message":"Invalid parameter: response_format json_schema not supported"}}', { status: 400 });
+    }
+    const content = JSON.stringify({ decision: 'deny', confidence: 0.9, credit_cents: 0, cited_evidence: ['pass:1'], rationale: 'r', summary: 's' });
+    return new Response(JSON.stringify({ choices: [{ message: { content } }] }), { status: 200 });
+  }) as typeof fetch;
+  const out = await callLlm({ apiKey: 'k', baseUrl: 'https://llm.example/v1', model: 'm' }, input('hello'), fakeFetch);
+  assert.equal(out.decision, 'deny');
+  assert.deepEqual(formats, ['json_schema', 'json_object']);
+});
+
+test('callLlm does not retry on unrelated client errors', async () => {
+  let calls = 0;
+  const fakeFetch = (async () => {
+    calls++;
+    return new Response('{"error":{"message":"invalid api key"}}', { status: 400 });
+  }) as unknown as typeof fetch;
+  await assert.rejects(callLlm({ apiKey: 'k', baseUrl: 'https://llm.example/v1', model: 'm' }, input('hello'), fakeFetch), /LLM HTTP 400/);
+  assert.equal(calls, 1);
+});
+
+test('parseOutput keeps invalid citations so the module can reject them', () => {
+  const out = parseOutput('{"decision":"approve","confidence":0.9,"credit_cents":1,"cited_evidence":["contract"],"rationale":"r","summary":"s"}');
+  assert.deepEqual(out.cited_evidence, ['contract']);
 });
 
 test('the mock analyst is credulous so Break It measures the guards, not the mock', () => {
