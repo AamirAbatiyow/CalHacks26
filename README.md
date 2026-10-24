@@ -292,11 +292,259 @@ spacetime logs ground-truth --server local -f
 
 The `/ml` directory contains a gradient-boosted model (LightGBM) for predicting satellite pass failures. The model uses real SatNOGS observation outcomes combined with space weather and local conditions to estimate failure probability per pass.
 
-### Architecture
+### v3.2.0: policy layer on top of v3.1.0
+
+`ml/policies.py` wraps the unchanged v3.1.0 model in an ordered, first-match list of auto-decide policies, each a
+conjunction of thresholds with an effect (`failed` or `ok`). Passes no policy matches go to a human. Policies are
+decided at pass end + label lag (1h), so besides the v3.1.0 features they can use:
+- the pass's own uploads (audio, waterfall, decoded frames);
+- station / satellite / transmitter outcome history as of end + lag (`dt_*`);
+- co-observation (`co_*`: overlapping passes of the same satellite at other stations, and of the same station).
+
+Another pass counts only if its outcome was known by then, under the same label-latency model as v3.
+
+Every threshold and mined rule is fit inside the training fold. Each stage is tuned on the training passes no
+earlier stage decided. Candidates, in order:
+
+| Group | Policy | Effect | In-fold tuning |
+|---|---|---|---|
+| ops evidence (own pass) | no audio and no waterfall uploaded | failed | none |
+| ops evidence (own pass) | ≥ k decoded frames uploaded | ok | k ∈ {1, 2, 5} |
+| physics | max elevation ≤ X° while Kp ≥ Y | failed | X ∈ {10..30}, Y ∈ {3, 4, 5} |
+| ops history | station outage streak ≥ N at end + lag | failed | N ∈ {1..6} |
+| ops history | ≥ N overlapping passes on the same station with no artifacts | failed | N ∈ {1, 2, 3} |
+| physics | TLE age ≥ D days | failed | D ∈ {7, 14, 30, 60} |
+| model | v3.1.0 raw score ≥ t | failed | t: Wilson80 rule on passes reaching the gate |
+| learned | 1–2 condition rules mined by sequential covering | either | must clear Wilson80 ≥ 0.95 on both halves of a station split |
+| learned | stage-2 gated LightGBM on all decision-time features | either | Wilson80 rule on passes reaching it |
+
+A hand rule is enabled in a fold only if its best setting has ≥ 20 training passes and a Wilson 80% lower bound
+≥ 0.95. Each policy's test decisions are then scored. A policy is kept only if:
+- it is ≥ 0.95 precise in every test split where it fires;
+- its precision pooled over both tests has a Wilson 80% lower bound ≥ 0.95;
+- the final list still meets the target on each auto-decided side in both tests (otherwise the weakest kept
+  policy is dropped).
+
+That last selection step looks at the test folds, so the kept-policy numbers are slightly optimistic.
+
+**Tier A vs tier B.** SatNOGS marks a pass `failed` when no audio or waterfall arrives, and auto-vets passes with
+decoded frames as `good`. The two own-pass evidence rules therefore largely restate how the label is produced.
+- Tier A excludes them and every `own_*` feature.
+- Tier B includes them.
+
+For Ground Truth claims they are legitimate checks: did the station upload anything, did it decode the
+satellite. But tier B is not a prediction, and is reported separately.
+
+**Results (lag 1h, 3,604 passes, 350 stations, `ml/reports/policies_v3_2.md`).** The v3.1.0 row is failed-side only,
+as deployed (v3.1.0 has no OK threshold), so its escalation is 89.5% on held-out stations rather than the 87.4% in
+the v3.1.0 table, which counted an in-fold OK side.
+
+| Configuration | Split | Auto "failed": n / precision / 95% CI / LB80 | Auto "ok": n / precision / 95% CI / LB80 | Coverage | Escalated | Accuracy on auto-decided (95% CI) | Target met |
+|---|---|---|---|---|---|---|---|
+| v3.1.0 only | held-out stations | 380 / 0.979 / 0.959–0.989 / 0.967 | 0 | 10.5% | 89.5% | 0.979 (0.959–0.989) | yes |
+| v3.1.0 only | future time | 157 / 0.981 / 0.945–0.993 / 0.961 | 0 | 14.5% | 85.5% | 0.981 (0.945–0.993) | yes |
+| tier A, all candidates | held-out stations | 448 / 0.931 / 0.903–0.951 / 0.914 | 45 / 0.978 / 0.884–0.996 / 0.929 | 13.7% | 86.3% | 0.935 | **no** |
+| tier A, all candidates | future time | 159 / 0.975 / 0.937–0.990 / 0.953 | 0 | 14.7% | 85.3% | 0.975 | yes |
+| tier A, kept (= v3.1.0 gate only) | both | same as v3.1.0 only | | | | | yes |
+| tier B, all candidates | held-out stations | 523 / 0.998 / 0.989–1.000 / 0.994 | 1144 / 0.993 / 0.986–0.996 / 0.989 | 46.3% | 53.7% | 0.995 | yes |
+| tier B, all candidates | future time | 217 / 1.000 / 0.983–1.000 / 0.992 | 347 / 0.997 / 0.984–0.999 / 0.990 | 52.2% | 47.8% | 0.998 | yes |
+| **tier B, kept (v3.2.0)** | **held-out stations** | **510 / 0.998 / 0.989–1.000 / 0.993** | **1144 / 0.993 / 0.986–0.996 / 0.989** | **45.9%** | **54.1%** | **0.995 (0.990–0.997)** | yes |
+| **tier B, kept (v3.2.0)** | **future time** | **217 / 1.000 / 0.983–1.000 / 0.992** | **347 / 0.997 / 0.984–0.999 / 0.990** | **52.2%** | **47.8%** | **0.998 (0.990–1.000)** | yes |
+
+For v3.2.0 on held-out stations:
+- Recall on `failed` passes 79.9%, on `bad` passes 2.1%.
+- 57.6% of OK passes auto-cleared.
+- Future-time test passes from stations never seen in training (33): 9 failed calls and 11 OK calls, all
+  correct, 39.4% escalated.
+
+Per-policy contribution (lag 1h, all candidates, first match wins). "Lost if removed" re-runs the list without
+that policy, and "folds" counts the folds (of 5 station folds / 1 time split) where in-fold tuning enabled it:
+
+| Tier | Policy | Effect | Held-out stations: decided / precision (95% CI) / coverage added / lost if removed / folds | Future time: same | Kept |
+|---|---|---|---|---|---|
+| B | no artifacts uploaded | failed | 477 / 1.000 (0.992–1.000) / 13.2% / 11.1% / 5 | 167 / 1.000 (0.978–1.000) / 15.4% / 7.8% / 1 | yes |
+| B | decoded frames uploaded (k = 1) | ok | 1144 / 0.993 (0.986–0.996) / 31.7% / 31.7% / 5 | 347 / 0.997 (0.984–0.999) / 32.1% / 32.1% / 1 | yes |
+| B | v3.1.0 gate, re-tuned on passes reaching it | failed | 33 / 0.970 (0.847–0.995) / 0.9% / 0.9% / 2 | 50 / 1.000 (0.929–1.000) / 4.6% / 4.6% / 1 | yes (pooled 82/83) |
+| B | stage-2 model | failed | 13 / 1.000 (0.772–1.000) / 0.4% / 0.4% / 3 | – / 0 | no (pooled LB80 0.89) |
+| A | v3.1.0 gate | failed | 253 / 0.988 (0.966–0.996) / 7.0% / 7.0% / 5 | 118 / 0.983 (0.940–0.995) / 10.9% / 10.9% / 1 | yes |
+| A | station outage streak (decision time) | failed | 195 / 0.856 (0.800–0.899) / 5.4% / 3.9% / 2 | 41 / 0.951 (0.839–0.987) / 3.8% / 1.1% / 1 | no |
+| A | stage-2 model | ok | 45 / 0.978 (0.884–0.996) / 1.2% / 1.2% / 2 | – / 0 | no |
+| A, B | low elevation in storm, stale TLE | failed | never enabled (no setting cleared the in-fold bound; Kp never exceeded 4 in this window) | | no |
+| A, B | simultaneous drop on station | failed | never applies: SatNOGS stations never run overlapping observations | | no |
+| A, B | mined 1–2 condition rules | either | none passed the two-half station validation (one fold, 5 calls) | | no |
+
+**Why not 17% escalation.** After the two evidence rules, the remaining 1,983 passes (55%) all uploaded a
+waterfall but no decoded frames: 1,012 `bad`, 837 `good` and 134 `failed`. Whether such a waterfall shows signal
+is exactly what the SatNOGS vetter decides. Nothing we store separates `bad` from `good` there at 0.95:
+- pre-pass physics;
+- station, satellite and transmitter history up to end + lag;
+- co-observation by other stations.
+
+The model gate and stage-2 model add only 1–5 points. Reaching ~17% would mean auto-deciding about 70% of that
+group, which needs the waterfall image itself (signal detection on the waterfall PNG), not more rules. With 3h
+label latency, tier B keeps only the two evidence rules (54.7% / 53.1% escalated, same precision). Tier A keeps
+nothing: the v3.1.0 gate is 0.904 precise at 3h.
+
+**Records and serving.** `python -m ml.policies train` fits the kept policies on all 3,604 passes around the
+v3.1.0 booster (identical weights; only the gate threshold is re-picked on passes the evidence rules leave: 0.946
+vs 0.951). It writes `ml/models/final/policies_v3.2.0.json`. Each record has the app's `CedarRule` fields (`id`,
+`policy_version_id`, `name`, `description`, `cedar_code`, `enabled`, `order_index`) plus conditions, training
+support/precision and held-out precision, e.g.
+
+```
+permit(
+  principal == GroundTruth::Actor::"ai_analyst",
+  action == GroundTruth::Action::"auto_decide_failed",
+  resource
+) when {
+  context.own_artifacts == 0
+};
+```
+
+```python
+from ml.policies import decide_observations
+decide_observations(new_passes_df, recent_passes_df)
+# -> pass_id, policy_version, model_version, route, decision ("failed"/"fine"/"uncertain"), rule_id, confidence_percent
+```
+
+The model registry still points at v3.1.0; v3.2.0 is a policy file on top of it.
+
+```bash
+python -m ml.policies evaluate   # ml/reports/policies_v3_2.{md,json}
+python -m ml.policies train      # ml/models/final/policies_v3.2.0.json
+```
+
+### v3.1.0: final high-precision gate (current)
+
+`ml/final_model.py` + `ml/causal_features.py` + `ml/hitl.py` + `ml/satnogs_fetcher.py` combine the three earlier ML
+branches (PR #12 outage streaks, PR #17 past-only station health / co-observation, PR #18 physics features and
+random-window sampling) into one strictly causal model whose only job is to auto-decide "this pass failed" when it
+is very sure and escalate everything else to a human.
+
+**Data.** One continuously running collector (`python -m ml.satnogs_fetcher daemon`, see below) stores whole UTC
+hours of SatNOGS observations, so class mix is natural and every station's pass history is complete. Hours are
+fetched 72h+ after the passes so `failed`/`good` have settled. Snapshot used for v3.1.0 (collector stopped at
+18:00 UTC on 2026-10-24): 35 contiguous hours (2026-10-20 06:00 to 2026-10-21 17:00 UTC), 5,365 observations,
+4,583 labeled, 356 stations. After dropping passes whose 1h+6h history window is not fully inside the store,
+**3,604 labeled passes, 350 stations** (1,973 good, 1,020 bad, 611 failed; failure = bad or failed, base rate 0.45).
+A commit-sized copy is in `data/processed/satnogs_store_snapshot.parquet`.
+
+**Features (all known at pass start).**
+- Physics (PR #18): elevation and margin over the station's mask/culmination limit, duration, azimuth span, antenna
+  coverage of the downlink, frequency/band, baud, mode, TLE age, B* drag, perigee/apogee, inclination, satellite age,
+  Kp of the last *completed* 3h bin and 24h max, geomagnetic latitude, sun elevation. No station id, name, raw
+  lat/lon, or post-hoc station fields (`status`, `last_seen`, `success_rate`, `client_version`).
+- Outcome history with an explicit label-latency model: a past pass counts only once its outcome was known
+  (`failed`/`good`: pass end + lag, lag = 1h or 3h; vetted `good`/`bad`: vetting timestamp; `unknown`: never).
+  Station: outage streak, failed/good share, last outcome, hours since last good/failed (PR #12/#17); satellite,
+  transmitter, station×band, station×satellite failed/good shares over the last 6h (PR #17 co-observation,
+  PR #18 rates). Satellite target encoding over the same window is **not** used (non-causal, PR #17).
+
+**Model and gate.** LightGBM (`full_causal`: physics + causal history), isotonic calibration. The
+auto-"failed" threshold is picked *inside each training fold* on station-grouped out-of-fold scores: the lowest
+threshold whose Wilson lower bound (z = 1.28) of inner precision is ≥ 0.95. Everything below it escalates. The
+shipped v3.1.0 fit on all 3,604 passes uses raw score ≥ 0.951 (calibrated probability ≥ 0.904); no OK-side threshold
+met the rule, so v3.1.0 only auto-decides failures and escalation rate = 1 − coverage.
+
+**Held-out results (lag 1h, `ml/reports/final_v3.md`).**
+
+| Split | Auto "failed" calls | Precision | 95% CI (Wilson) | 95% CI (station bootstrap) | Recall (all failures) | Recall `failed` / `bad` | Coverage | Escalated | AUC |
+|---|---|---|---|---|---|---|---|---|---|
+| Held-out stations (5 folds, 3,604 passes) | 380 | **0.979** | 0.959–0.989 | 0.960–0.997 | 22.8% | 39.0% / 13.1% | 10.5% | 87.4% | 0.873 |
+| Future time (last 30%, 3h embargo; train 2,145, test 1,081) | 157 | **0.981** | 0.945–0.993 | 0.950–1.000 | 32.4% | 46.3% / 20.5% | 14.5% | 85.5% | 0.902 |
+| Future time, stations unseen in training (33 passes) | 2 | 1.000 | 0.342–1.000 | – | 12.5% | – | – | – | – |
+
+Per-fold precision on held-out stations: 0.979 (n=96), 1.000 (n=54), 0.985 (n=67), 1.000 (n=28), 0.963 (n=135);
+in-fold thresholds 0.926–0.969. In the held-out-station evaluation the OK side also auto-cleared 74 passes at
+0.959, so two-sided coverage is 12.6% and auto-decided accuracy 0.976 (87.4% escalated).
+
+Comparison (same folds and rule; full table incl. other threshold rules in the report):
+
+| Variant | Held-out stations: calls / precision / recall | Future time: calls / precision / recall |
+|---|---|---|
+| physics only | 15 / 1.000 / 0.9% | 81 / 0.926 / 15.8% |
+| PR #12 station state + physics | 213 / 0.972 / 12.7% | 194 / 0.923 / 37.6% |
+| **full causal (v3.1.0)** | **380 / 0.979 / 22.8%** | **157 / 0.981 / 32.4%** |
+| full causal + monotone (v3.0.0 recipe) | 336 / 0.976 / 20.1% | 203 / 0.951 / 40.5% |
+| full causal + monotone, outage-evidence only | 336 / 0.938 / 19.3% | 148 / 0.986 / 30.7% |
+| transparent streak rule | 171 / 0.965 / 10.1% | 47 / 1.000 / 9.9% |
+
+With 3h label latency history is thinner: v3.1.0's recipe makes 94 calls at 0.904 (0.828–0.949) on held-out stations
+and none in the time split, while the monotone recipe holds up better (121 at 0.967 / 144 at 0.910). v3.1.0 is fit
+for the 1h latency the System 1 worker sees; if outcomes arrive later, retrain with `--lag 3 --variant full_causal_mono`.
+
+**v3.0.0 vs v3.1.0.** v3.0.0 (first push, 18 hours, 1,467 passes) used the monotone variant: 70 calls at 1.000
+(0.948–1.000) on held-out stations, 52 at 0.962 (0.870–0.989) in the time split, 4.8% / 11.8% coverage. With 2.5x
+the data the plain variant has the highest precision in both splits and twice the recall, so v3.1.0 switched.
+v3.0.0 reports are kept as `ml/reports/final_v3_0_0.*` and `hitl_v3_0_0.*`, and its artifact stays in the registry.
+
+Honest caveats: 35 hours over two days is still a small, single-season sample; the rule (`wilson80`) and variant
+were chosen by comparing variants on these same folds, so the chosen model's numbers are slightly optimistic;
+unseen-station precision in the time split rests on 2 calls. PR curves (the outage-evidence curve coincides with
+the monotone one because it shares its calibrated score): `ml/reports/final_v3_pr_station.png`,
+`ml/reports/final_v3_pr_time.png`.
+
+**Human-in-the-loop (`ml/hitl.py`, `ml/reports/hitl_v3.md`).** Each human ruling on an escalated pass becomes a
+labeled example *and* makes that pass's outcome known immediately to later passes' history features. The System 1
+worker calls `ml.hitl.ingest_labeled_decision(features, label, pass_id=..., reviewer=...)`; it appends the ruling to
+`ml/models/final/human_labels.jsonl`, refits, bumps the version (v3.1.0 -> v3.1.1 ...) and registers it in
+`ml/models/final/registry.json`. Refits are warm (continued boosting on the new rulings plus a replay sample,
+0.19s) with a full nested refit (inner OOF -> isotonic + threshold, 1.3s) every 25 rulings. Replay of the last 60%
+of the snapshot in time order (1,442 initial passes, 2,162 replayed, rulings arrive 1h after pass end, refit every 2h):
+
+| Mode | Auto "failed" calls | Precision (Wilson CI) | Failures auto-decided, bucket 1 -> 4 | Overall | Escalated |
+|---|---|---|---|---|---|
+| frozen | 215 | 0.981 (0.953–0.993) | 16.8% -> 20.2% -> 26.7% -> 24.0% | 22.0% | 90.1% |
+| rulings feed history only | 210 | 0.976 (0.945–0.990) | 16.0% -> 21.5% -> 25.5% -> 22.3% | 21.3% | 90.3% |
+| **warm refit** | 220 | **0.995 (0.975–0.999)** | 17.2% -> 22.3% -> 21.8% -> **30.0%** | 22.8% | 89.8% |
+| full refit every 2h | 222 | 0.968 (0.936–0.985) | 13.0% -> 22.7% -> 22.2% -> 31.8% | 22.4% | 88.6% |
+
+On the larger snapshot, warm refits keep precision above 0.95 in every bucket (0.98–1.00) and end 6 points above the
+frozen model in the last bucket; full refits on rulings reach similar final coverage at lower precision. On the
+first 18-hour snapshot (v3.0.0) the replay was below target (warm 0.932) and full refits collapsed coverage
+because escalations are the hard cases, which is why production uses warm steps plus scheduled full refits on the
+whole store rather than full refits on rulings alone.
+
+**Serving.**
+
+```python
+from ml import final_model as fm
+out = fm.score_observations(new_passes_df, recent_passes_df)   # SatNOGS-shaped rows
+# -> pass_id, model_version, failure_probability, route ("auto"/"human"), decision, confidence_percent, features
+from ml.hitl import ingest_labeled_decision
+ingest_labeled_decision(out[0]["features"], "failed", pass_id=out[0]["pass_id"], reviewer="ops")
+```
+
+`confidence_percent` feeds `confidence_gate::process_claim_decision`: auto calls carry the measured held-out
+precision (97 for v3.1.0), escalations are capped at 94 (clears the 0.90 operating point) or 79.
+
+**Continuous collection and scheduled retrain.** `ml/satnogs_fetcher.py` replaces the three earlier fetchers
+(`fetch_labeled.py` is now a thin shim). It keeps a rolling-hour request budget (70/h, spread evenly, persisted
+across restarts), sleeps the server's `Retry-After` on 429 and lowers the budget, checkpoints every page, dedupes by
+id, fetches only resolved statuses (one listing per status, ~40% fewer requests; features ignore unresolved passes
+either way), crawls the forward edge (now − 72h) first and then backfills, re-fetches hours after 10 days to pick
+up late vetting, refreshes Kp (GFZ definitive + NOAA SWPC recent) every 3h and SatNOGS DB TLEs every 6h, and
+fetches metadata only for stations it has not seen. Every 6h (default) it runs
+`python -m ml.final_model retrain --scheduled` when the labeled count has grown 10%.
+
+```bash
+ml/run_collector.sh                       # restart loop; run under tmux/nohup
+sudo cp ml/systemd/ground-truth-collector.service /etc/systemd/system/ && sudo systemctl enable --now ground-truth-collector
+python -m ml.satnogs_fetcher status       # hours stored, labeled count, requests, 429s
+python -m ml.final_model evaluate         # ml/reports/final_v3.{md,json} + PR curves
+python -m ml.hitl simulate                # ml/reports/hitl_v3.{md,json,png}
+python -m ml.final_model train            # ml/models/final/
+```
+
+### Architecture (v1.x)
 
 ```
 /ml
-├── fetch_labeled.py     # SatNOGS fetch: every status per time slice (no per-status quotas)
+├── satnogs_fetcher.py   # v3: unified resumable collector daemon (Kp, TLEs, stations, scheduled retrain)
+├── causal_features.py   # v3: physics + label-latency-aware history features
+├── final_model.py       # v3: evaluation, gated LightGBM, training, serving
+├── hitl.py              # v3: human-in-the-loop ingest + replay simulation
+├── fetch_labeled.py     # shim over satnogs_fetcher (kept for datasets.load_window / verify_labels)
 ├── datasets.py          # Labeled datasets + leakage-safe physical / station-state features
 ├── heldout_eval.py      # Random vs station-grouped vs time split, nested threshold tuning
 ├── gate.py              # Score -> confidence_percent for confidence_gate.rs

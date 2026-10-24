@@ -39,3 +39,6 @@ data/raw/satnogs_db_transmitters.json
 
 # Generated bindings for the attacker script
 server/scripts/module_bindings/
+
+# Unified SatNOGS store (ml/satnogs_fetcher.py)
+data/raw/satnogs_store/
