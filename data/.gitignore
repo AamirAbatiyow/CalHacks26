@@ -16,3 +16,6 @@ processed/station_weather.json
 
 # Keep pipeline stats
 !pipeline_stats.json
+
+# v2 natural-distribution fetch (regenerate with python -m ml.fetch_labeled)
+raw/*.jsonl

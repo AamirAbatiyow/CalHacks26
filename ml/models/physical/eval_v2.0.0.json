@@ -1,0 +1,283 @@
+{
+ "dataset": {
+  "raw_observations": 1650,
+  "raw_status_counts": {
+   "unknown": 718,
+   "good": 481,
+   "bad": 286,
+   "failed": 165
+  },
+  "vetted_share": 0.5648484848484848,
+  "labeled_passes": 920,
+  "label_counts": {
+   "good": 477,
+   "bad": 283,
+   "failed": 160
+  },
+  "fail_rate": 0.4815217391304348,
+  "stations": 234,
+  "satellites": 299,
+  "transmitters": 336,
+  "sampling_windows_hours": 6,
+  "time_span": [
+   "2025-12-28 10:00:12+00:00",
+   "2026-09-05 16:53:44+00:00"
+  ],
+  "top_station_share": 0.05,
+  "kp_coverage": 1.0,
+  "station_meta_coverage": 1.0
+ },
+ "generated_at": "2026-10-24T11:44:20.942066+00:00",
+ "feature_sets": {
+  "physical+history": {
+   "group_kfold_station": {
+    "n": 920,
+    "fail_rate": 0.4815217391304348,
+    "auc_roc": 0.7909810658224132,
+    "auc_pr_fail": 0.7885769050647429,
+    "brier": 0.1862492021613428,
+    "accuracy_at_0.5": 0.7152173913043478,
+    "majority_baseline_accuracy": 0.5184782608695653,
+    "precision_fail_at_0.5": 0.7212713936430318,
+    "policy_p95_val_thresholds": {
+     "fail_precision": 0.9134615384615384,
+     "fail_recall": 0.2144469525959368,
+     "ok_precision": 0.8611111111111112,
+     "ok_recall": 0.0649895178197065,
+     "auto_accuracy": 0.9,
+     "escalate_share": 0.8478260869565217,
+     "auto_share": 0.15217391304347827,
+     "thresholds_per_fold": [
+      {
+       "t_ok": 0.0203,
+       "t_fail": 0.8918
+      },
+      {
+       "t_ok": 0.0728,
+       "t_fail": 0.8095
+      },
+      {
+       "t_ok": 0.0601,
+       "t_fail": 0.8029
+      },
+      {
+       "t_ok": 0.1377,
+       "t_fail": 0.9073
+      },
+      {
+       "t_ok": 0.037,
+       "t_fail": 0.8768
+      }
+     ]
+    },
+    "policy_p95_oracle_on_test": {
+     "t_ok": 0.0513694451302699,
+     "t_fail": 0.9146437535844301,
+     "fail_precision": 0.9636363636363636,
+     "fail_recall": 0.11963882618510158,
+     "ok_precision": 0.9565217391304348,
+     "ok_recall": 0.04612159329140461,
+     "auto_accuracy": 0.9615384615384616,
+     "escalate_share": 0.9152173913043479,
+     "auto_share": 0.08478260869565217
+    },
+    "policy_p98_val_thresholds": {
+     "fail_precision": 0.918918918918919,
+     "fail_recall": 0.15349887133182843,
+     "ok_precision": 0.9333333333333333,
+     "ok_recall": 0.029350104821802937,
+     "auto_accuracy": 0.9213483146067416,
+     "escalate_share": 0.9032608695652173,
+     "auto_share": 0.0967391304347826,
+     "thresholds_per_fold": [
+      {
+       "t_ok": 0.0203,
+       "t_fail": 0.9211
+      },
+      {
+       "t_ok": 0.0639,
+       "t_fail": 0.8266
+      },
+      {
+       "t_ok": 0.0396,
+       "t_fail": 0.8597
+      },
+      {
+       "t_ok": 0.0501,
+       "t_fail": 0.9376
+      },
+      {
+       "t_ok": 0.037,
+       "t_fail": 0.9186
+      }
+     ]
+    },
+    "policy_p98_oracle_on_test": {
+     "t_ok": 0.027335676080159414,
+     "t_fail": 0.9495892808441962,
+     "fail_precision": 1.0,
+     "fail_recall": 0.056433408577878104,
+     "ok_precision": 1.0,
+     "ok_recall": 0.012578616352201259,
+     "auto_accuracy": 1.0,
+     "escalate_share": 0.966304347826087,
+     "auto_share": 0.03369565217391304
+    },
+    "gain_importance": {
+     "sat_bstar": 0.0983,
+     "station_hist_rate": 0.0704,
+     "log_baud": 0.0684,
+     "sat_age_years": 0.0618,
+     "tle_age_days": 0.0554,
+     "downlink_freq_mhz": 0.0467,
+     "geomag_abs_lat": 0.0421,
+     "station_age_days": 0.0417,
+     "station_altitude_m": 0.0412,
+     "sun_elevation_deg": 0.0349,
+     "station_abs_lat": 0.0345,
+     "elevation_margin_deg": 0.0319,
+     "sat_inclination_deg": 0.0319,
+     "local_solar_hour": 0.0316,
+     "duration_sec": 0.0306,
+     "station_min_horizon_deg": 0.0304,
+     "kp_x_geomag_lat": 0.0285,
+     "sat_apogee_km": 0.0272,
+     "sat_perigee_km": 0.0221,
+     "sat_hist_rate": 0.0199,
+     "sat_mean_motion": 0.0198,
+     "azimuth_span_deg": 0.0163,
+     "max_elevation_deg": 0.015,
+     "station_band_hist_log_n": 0.0129,
+     "station_band_hist_rate": 0.0128,
+     "antenna_type": 0.0111,
+     "station_hist_log_n": 0.0108,
+     "freq_offset_khz": 0.009,
+     "station_n_antennas": 0.0072,
+     "kp_at_time": 0.0065,
+     "band": 0.0055,
+     "kp_max_24h": 0.0055,
+     "tx_hist_rate": 0.0047,
+     "transmitter_mode": 0.0042,
+     "sat_hist_log_n": 0.0038,
+     "tx_hist_log_n": 0.0033,
+     "self_scheduled": 0.001,
+     "station_14d_hist_log_n": 0.0006,
+     "is_night": 0.0003,
+     "station_min_culmination_deg": 0.0002,
+     "transmitter_type": 0.0,
+     "antenna_covers_freq": 0.0,
+     "tle_source": 0.0,
+     "station_14d_hist_rate": 0.0
+    }
+   },
+   "time_split": {
+    "n": 184,
+    "fail_rate": 0.44021739130434784,
+    "auc_roc": 0.8166127292340885,
+    "auc_pr_fail": 0.810411521231629,
+    "brier": 0.17234965132261945,
+    "accuracy_at_0.5": 0.7445652173913043,
+    "majority_baseline_accuracy": 0.5597826086956521,
+    "precision_fail_at_0.5": 0.7361111111111112,
+    "policy_p95_val_thresholds": {
+     "fail_precision": 1.0,
+     "fail_recall": 0.07407407407407407,
+     "ok_precision": null,
+     "ok_recall": 0.0,
+     "auto_accuracy": 1.0,
+     "escalate_share": 0.967391304347826,
+     "auto_share": 0.03260869565217391,
+     "thresholds_per_fold": [
+      {
+       "t_ok": -0.0,
+       "t_fail": 0.9356
+      }
+     ]
+    },
+    "policy_p95_oracle_on_test": {
+     "t_ok": 0.11733514086833911,
+     "t_fail": 0.7930264666193239,
+     "fail_precision": 0.9545454545454546,
+     "fail_recall": 0.25925925925925924,
+     "ok_precision": 0.9714285714285714,
+     "ok_recall": 0.3300970873786408,
+     "auto_accuracy": 0.9649122807017544,
+     "escalate_share": 0.6902173913043478,
+     "auto_share": 0.30978260869565216
+    },
+    "policy_p98_val_thresholds": {
+     "fail_precision": 1.0,
+     "fail_recall": 0.07407407407407407,
+     "ok_precision": null,
+     "ok_recall": 0.0,
+     "auto_accuracy": 1.0,
+     "escalate_share": 0.967391304347826,
+     "auto_share": 0.03260869565217391,
+     "thresholds_per_fold": [
+      {
+       "t_ok": -0.0,
+       "t_fail": 0.9356
+      }
+     ]
+    },
+    "policy_p98_oracle_on_test": {
+     "t_ok": 0.03974766495629909,
+     "t_fail": 0.8028050250652081,
+     "fail_precision": 1.0,
+     "fail_recall": 0.25925925925925924,
+     "ok_precision": 1.0,
+     "ok_recall": 0.1262135922330097,
+     "auto_accuracy": 1.0,
+     "escalate_share": 0.8152173913043478,
+     "auto_share": 0.18478260869565216
+    },
+    "gain_importance": {
+     "sat_bstar": 0.096,
+     "log_baud": 0.0742,
+     "geomag_abs_lat": 0.0575,
+     "tle_age_days": 0.0573,
+     "sat_age_years": 0.051,
+     "downlink_freq_mhz": 0.0491,
+     "station_abs_lat": 0.0431,
+     "local_solar_hour": 0.0423,
+     "duration_sec": 0.0407,
+     "station_altitude_m": 0.0395,
+     "sun_elevation_deg": 0.0364,
+     "station_age_days": 0.0358,
+     "station_hist_rate": 0.0356,
+     "station_min_horizon_deg": 0.0346,
+     "elevation_margin_deg": 0.0339,
+     "sat_inclination_deg": 0.0329,
+     "sat_perigee_km": 0.0303,
+     "sat_apogee_km": 0.0276,
+     "max_elevation_deg": 0.0275,
+     "kp_x_geomag_lat": 0.0268,
+     "sat_mean_motion": 0.021,
+     "station_band_hist_rate": 0.0184,
+     "azimuth_span_deg": 0.0177,
+     "station_band_hist_log_n": 0.0169,
+     "freq_offset_khz": 0.0114,
+     "station_hist_log_n": 0.0076,
+     "antenna_type": 0.0067,
+     "sat_hist_rate": 0.0065,
+     "kp_at_time": 0.0047,
+     "station_n_antennas": 0.0046,
+     "transmitter_mode": 0.0043,
+     "tx_hist_rate": 0.0023,
+     "self_scheduled": 0.0015,
+     "kp_max_24h": 0.0013,
+     "sat_hist_log_n": 0.0011,
+     "tx_hist_log_n": 0.0009,
+     "band": 0.0007,
+     "station_14d_hist_log_n": 0.0005,
+     "is_night": 0.0003,
+     "station_min_culmination_deg": 0.0,
+     "antenna_covers_freq": 0.0,
+     "transmitter_type": 0.0,
+     "tle_source": 0.0,
+     "station_14d_hist_rate": 0.0
+    }
+   }
+  }
+ }
+}
