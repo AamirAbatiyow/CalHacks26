@@ -159,7 +159,17 @@ else
   echo "Skipping labeled history: run 'npm install' in worker/ and then 'npm run seed-history' there."
 fi
 
-# Break It runs last so its decisions see the contracts, SLA terms and learned policies above.
+# Break It runs last so its decisions see the contracts, SLA terms and learned policies above,
+# and the System 1 model a running worker trains on the history (proxy scores without one).
+echo "Waiting up to 60s for the worker to train System 1..."
+for _ in $(seq 1 30); do
+  if "$SPACETIME" sql "$MODULE" --server "$SERVER" "SELECT version FROM model_version" 2>/dev/null | grep -qE '^ *[0-9]+ *$'; then
+    echo "System 1 trained."
+    break
+  fi
+  sleep 2
+done
+
 echo "Seeding attack fixtures..."
 "$SPACETIME" call "$MODULE" seed_attack_fixtures --server "$SERVER" || true
 "$SPACETIME" call "$MODULE" run_all_attacks --server "$SERVER" || true

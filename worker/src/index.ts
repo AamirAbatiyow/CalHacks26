@@ -234,8 +234,11 @@ function start(c: DbConnection) {
   ready = false;
   // A reconnect starts from a fresh subscription: jobs queued on the old socket may never settle,
   // and cases they were handling are picked up again (the module rejects anything already decided).
+  // The database may also have been republished, so model and labels are reloaded from it.
   chain = Promise.resolve();
   handled.clear();
+  parsed.clear();
+  active = null;
   conn.db.decisionCase.onInsert((_ctx, row) => onCase(row));
   conn.db.decisionCase.onUpdate((_ctx, _old, row) => onCase(row));
   conn.db.modelVersion.onInsert(() => loadActiveModel());
