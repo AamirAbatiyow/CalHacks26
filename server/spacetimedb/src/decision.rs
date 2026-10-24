@@ -625,7 +625,7 @@ fn scenario(name: &str) -> Option<Scenario> {
             storm: true,
             status: PassStatus::Ok,
             loss_pct: Some(32),
-            customer: "Northpoint Orbital",
+            customer: "SkyNet Communications",
             amount_cents: 160_000,
             message: "Link quality dropped during the pass and part of the imagery is missing. Requesting the SLA credit.",
         },
@@ -634,7 +634,7 @@ fn scenario(name: &str) -> Option<Scenario> {
             storm: true,
             status: PassStatus::Ok,
             loss_pct: Some(47),
-            customer: "Northpoint Orbital",
+            customer: "SkyNet Communications",
             amount_cents: 200_000,
             message: "About half of the downlink was lost while the storm was active.",
         },
@@ -643,7 +643,7 @@ fn scenario(name: &str) -> Option<Scenario> {
             storm: false,
             status: PassStatus::Dropped,
             loss_pct: None,
-            customer: "Kestrel Imaging",
+            customer: "Nexus Corp",
             amount_cents: 300_000,
             message: "",
         },
@@ -652,7 +652,7 @@ fn scenario(name: &str) -> Option<Scenario> {
             storm: false,
             status: PassStatus::Ok,
             loss_pct: Some(0),
-            customer: "Kestrel Imaging",
+            customer: "Nexus Corp",
             amount_cents: 450_000,
             message: "We did not receive the data from this pass.",
         },
@@ -1281,34 +1281,29 @@ pub fn seed_pass_telemetry(ctx: &ReducerContext, pass_id: u64, loss_pct: u32) ->
     Ok(())
 }
 
-/// Contracts, SLA clauses and maintenance windows for the decision pipeline.
+#[spacetimedb::reducer]
+pub fn seed_contract_term(
+    ctx: &ReducerContext,
+    customer: String,
+    contract_id: String,
+    tier: String,
+    sla_clause: String,
+    credit_pct: u32,
+    max_credit_cents: i64,
+    weather_exclusion: bool,
+    claim_window_days: u32,
+) {
+    let row = ContractTerm { customer, contract_id, tier, sla_clause, credit_pct, max_credit_cents, weather_exclusion, claim_window_days };
+    if ctx.db.contract_term().customer().find(&row.customer).is_some() {
+        ctx.db.contract_term().customer().update(row);
+    } else {
+        ctx.db.contract_term().insert(row);
+    }
+}
+
+/// Station maintenance windows for the decision pipeline's station history.
 #[spacetimedb::reducer]
 pub fn seed_decision_world(ctx: &ReducerContext) {
-    let contracts = [
-        ("Northpoint Orbital", "NPO-2026-01", "Gold", "4.2 Downlink loss: credit of 60% of pass value per affected pass, prorated by data lost. Space weather is not excluded.", 60, 500_000, false, 30),
-        ("Kestrel Imaging", "KES-2025-07", "Premium", "5.1 Dropped or degraded passes are credited at 50% of pass value. Claims within 30 days.", 50, 400_000, false, 30),
-        ("Polar Data Systems", "PDS-2024-11", "Standard", "7.3 Force majeure: outages caused by geomagnetic storms (Kp >= 5) are excluded from SLA credits.", 40, 300_000, true, 14),
-        ("Helix Orbital", "HLX-2026-03", "Standard", "6.1 Credits of 40% of pass value; space weather excluded; claims within 14 days.", 40, 250_000, true, 14),
-        ("Aether Dynamics", "AET-2025-02", "Premium", "3.4 Credits of 50% of pass value, prorated for degraded links.", 50, 350_000, false, 30),
-        ("Orbital Sciences Inc", "OSI-2026-05", "Gold", "2.2 Credits of 60% of pass value; late delivery credited at 25% when caused by station maintenance.", 60, 600_000, false, 45),
-    ];
-    for (customer, id, tier, clause, pct, max, excl, window) in contracts {
-        let row = ContractTerm {
-            customer: customer.to_string(),
-            contract_id: id.to_string(),
-            tier: tier.to_string(),
-            sla_clause: clause.to_string(),
-            credit_pct: pct,
-            max_credit_cents: max,
-            weather_exclusion: excl,
-            claim_window_days: window,
-        };
-        if ctx.db.contract_term().customer().find(&row.customer).is_some() {
-            ctx.db.contract_term().customer().update(row);
-        } else {
-            ctx.db.contract_term().insert(row);
-        }
-    }
     if ctx.db.station_maintenance().iter().next().is_none() {
         let now = ctx.timestamp.to_micros_since_unix_epoch();
         let hour = 3_600_000_000i64;
@@ -1388,7 +1383,7 @@ pub fn run_injection_attacks(ctx: &ReducerContext) -> Result<(), String> {
             set_telemetry_loss(ctx, &p, l);
         }
         let claim_ref = format!("INJ-{}-{:02}", session.id, i + 1);
-        create_case(ctx, claim_ref, "Kestrel Imaging".to_string(), p.id, attack.claim_type, attack.amount_cents,
+        create_case(ctx, claim_ref, "Nexus Corp".to_string(), p.id, attack.claim_type, attack.amount_cents,
             attack.message.to_string(), None, Some((session.id, attack.name.to_string())))?;
     }
     Ok(())

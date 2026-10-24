@@ -202,7 +202,7 @@ pub fn cedar_permits(policy_text: &str, action: &str, amount_cents: i64, context
     Authorizer::new().is_authorized(&request, &policies, &entities).decision() == Decision::Allow
 }
 
-/// Splits an evidence citation like `pass:42` or `contract_term:Northpoint Orbital`.
+/// Splits an evidence citation like `pass:42` or `contract_term:SkyNet Communications`.
 pub fn parse_evidence_ref(s: &str) -> Option<(&str, &str)> {
     let (table, key) = s.split_once(':')?;
     let table = table.trim();
@@ -308,7 +308,7 @@ mod tests {
     #[test]
     fn evidence_refs_parse_known_tables_only() {
         assert_eq!(parse_evidence_ref("pass:42"), Some(("pass", "42")));
-        assert_eq!(parse_evidence_ref("contract_term:Northpoint Orbital"), Some(("contract_term", "Northpoint Orbital")));
+        assert_eq!(parse_evidence_ref("contract_term:SkyNet Communications"), Some(("contract_term", "SkyNet Communications")));
         assert_eq!(parse_evidence_ref("cedar_policy_store:v4"), None);
         assert_eq!(parse_evidence_ref("pass:"), None);
         assert_eq!(parse_evidence_ref("nonsense"), None);
