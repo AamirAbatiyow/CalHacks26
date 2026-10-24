@@ -5,8 +5,7 @@
   "type": "module",
   "description": "Runs System 1, System 2 and retraining outside SpacetimeDB and writes results back through reducers",
   "scripts": {
-    "start": "tsx src/supervisor.ts",
-    "worker": "tsx src/index.ts",
+    "start": "tsx src/index.ts",
     "seed-history": "tsx src/seedHistory.ts",
     "test": "node --import tsx --test test/*.test.ts",
     "typecheck": "tsc --noEmit",
@@ -14,8 +13,7 @@
   },
   "dependencies": {
     "spacetimedb": "^2.13.0",
-    "tsx": "^4.20.0",
-    "undici": "^6.29.1"
+    "tsx": "^4.20.0"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",

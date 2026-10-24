@@ -4,7 +4,7 @@
  * policy proposals, and writes every result back through reducers.
  */
 
-import { connect, STDB_HOST, STDB_MODULE, tagOf } from './connect.ts';
+import { connect, tagOf } from './connect.ts';
 import { tables, type DbConnection } from './module_bindings/index.ts';
 import type { DecisionCase } from './module_bindings/types.ts';
 import { evidenceRefs, FEATURE_NAMES, featurize, namedFeatures, type Snapshot } from './features.ts';
@@ -28,24 +28,8 @@ const parsed = new Map<bigint, Label>();
 const handled = new Set<string>();
 let chain: Promise<unknown> = Promise.resolve();
 
-/** Longest a queued job may run; a reducer call on a dead socket never settles, and would otherwise block every later job. */
-const JOB_TIMEOUT_MS = 90_000;
-const HEARTBEAT_MS = 5_000;
-/** Without an acknowledged heartbeat for this long the connection is dead even if no close event arrived. */
-const WATCHDOG_MS = 20_000;
-
-function withTimeout<T>(name: string, ms: number, p: Promise<T>): Promise<T> {
-  let timer: NodeJS.Timeout;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`${name} timed out after ${ms / 1000}s`)), ms);
-  });
-  return Promise.race([p, timeout]).finally(() => clearTimeout(timer));
-}
-
 function enqueue(name: string, job: () => Promise<void>) {
-  chain = chain
-    .then(() => withTimeout(name, JOB_TIMEOUT_MS, job()))
-    .catch(err => console.error(`[worker] ${name} failed:`, err?.message ?? err));
+  chain = chain.then(job).catch(err => console.error(`[worker] ${name} failed:`, err?.message ?? err));
 }
 
 function labels(): Label[] {
@@ -84,25 +68,8 @@ function promotedRules(): Rule[] {
     .map(r => ({ id: Number(r.id), approve: tagOf(r.verdict) === 'Approve', conditions: JSON.parse(r.conditionsJson) as Condition[] }));
 }
 
-let lastAck = Date.now();
-
 async function heartbeat() {
-  await withTimeout('heartbeat', WATCHDOG_MS, conn.reducers.workerHeartbeat({ mode, llmModel, note: lastNote }));
-  lastAck = Date.now();
-}
-
-/** Heartbeats run beside the job queue, so a long System 2 backlog cannot make the worker look offline. */
-function startLiveness() {
-  setInterval(() => {
-    heartbeat().catch(err => console.error('[worker] heartbeat failed:', err?.message ?? err));
-  }, HEARTBEAT_MS);
-  setInterval(() => {
-    const silent = Date.now() - lastAck;
-    if (silent > WATCHDOG_MS) {
-      console.error(`[worker] no heartbeat acknowledged for ${Math.round(silent / 1000)}s; connection is dead, exiting so the supervisor reconnects`);
-      process.exit(1);
-    }
-  }, HEARTBEAT_MS);
+  await conn.reducers.workerHeartbeat({ mode, llmModel, note: lastNote });
 }
 
 /** Refit System 1 on all human labels, gate on replay precision, then mine for policy proposals. */
@@ -257,7 +224,7 @@ function start(c: DbConnection) {
     .onApplied(() => {
       loadActiveModel();
       ready = true;
-      console.log(`[worker] subscribed to ${STDB_HOST}/${STDB_MODULE} (System 2: ${mode} ${llmModel}); ${conn.db.labeledDecision.count()} labeled decisions`);
+      console.log(`[worker] subscribed (System 2: ${mode} ${llmModel}); ${conn.db.labeledDecision.count()} labeled decisions`);
       if (!active) enqueue('bootstrap System 1', () => learn(undefined));
       else enqueue('initial mine', async () => {
         lastNote = 'ready';
@@ -276,8 +243,7 @@ function start(c: DbConnection) {
       tables.modelVersion,
       tables.learnedRule,
     ]);
-  lastAck = Date.now();
-  startLiveness();
+  setInterval(() => enqueue('heartbeat', heartbeat), 5000);
 }
 
 connect(start);
