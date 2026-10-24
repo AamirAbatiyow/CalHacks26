@@ -124,7 +124,7 @@ def test_pick_threshold_wilson_is_conservative():
 
 def test_gate_finds_outages_with_high_precision(synth):
     _, _, _, df = synth
-    m, dec = fm.eval_station_cv(df, "full_causal_mono", k=3)
+    m, dec = fm.eval_station_cv(df, "full_causal_mono", k=3, rule="point")
     assert m["fail_flagged"] > 20
     assert m["fail_precision"] >= 0.85
     assert m["recall_failed_class"] > m["recall_bad_class"]
