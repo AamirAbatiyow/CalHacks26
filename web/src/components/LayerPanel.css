@@ -60,9 +60,18 @@
 
 .toggle-badge {
   font-size: var(--font-metadata);
-  color: var(--color-amber);
-  background: var(--color-amber-muted);
+  font-weight: 500;
   padding: 2px 8px;
+  border: 1px solid;
   border-radius: 4px;
   margin-left: auto;
+  white-space: nowrap;
+}
+
+.layer-storm-info {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--color-secondary);
+  padding-left: 48px;
+  max-width: 260px;
 }

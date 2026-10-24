@@ -1,5 +1,5 @@
 .playback-bar {
-  height: var(--playback-bar-height);
+  height: 76px;
   border-top: 1px solid var(--color-muted);
   display: flex;
   align-items: center;
@@ -68,41 +68,89 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+  min-width: 0;
 }
 
 .scrubber {
-  height: 20px;
+  height: 28px;
   cursor: pointer;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  justify-content: flex-end;
+  position: relative;
+}
+
+.scrubber-drops {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 16px;
+}
+
+.scrubber-drop {
+  position: absolute;
+  bottom: 0;
+  background: var(--color-amber);
+  opacity: 0.55;
+  border-radius: 1px 1px 0 0;
 }
 
 .scrubber-track {
   width: 100%;
-  height: 4px;
-  background: var(--color-muted);
+  height: 8px;
+  margin-bottom: 2px;
+  background: #222;
   border-radius: 2px;
   position: relative;
 }
 
-.scrubber-progress {
-  height: 100%;
-  background: var(--color-secondary);
-  border-radius: 2px;
-}
-
-.scrubber-tick {
+.scrubber-storm {
   position: absolute;
-  top: -2px;
-  width: 2px;
-  height: 8px;
-  background: var(--color-secondary);
-  transform: translateX(-50%);
+  top: 0;
+  bottom: 0;
+  opacity: 0.85;
 }
 
-.scrubber-tick.dispute {
-  background: var(--color-amber);
+.scrubber-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.18);
+  border-right: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 2px 0 0 2px;
+}
+
+.scrubber-hour {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.scrubber-ticks {
+  position: relative;
+  height: 14px;
+}
+
+.scrubber-tick-label {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: var(--color-secondary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.scrubber-tz {
+  position: absolute;
+  right: 0;
+  top: 14px;
+  font-size: 9px;
+  color: var(--color-muted);
 }
 
 .scrubber-handle {
@@ -114,12 +162,6 @@
   border-radius: 50%;
   transform: translate(-50%, -50%);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.scrubber-label {
-  font-size: 10px;
-  color: var(--color-secondary);
-  text-align: center;
 }
 
 .playback-timestamp {

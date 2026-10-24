@@ -18,7 +18,7 @@ All three read the same SpacetimeDB Maincloud database, `ground-truth-aamir`, ov
 
 - **Problem.** Ground-station operators bill every satellite pass by the minute, and every dropped or degraded pass can turn into an SLA credit dispute. Reviewing one by hand costs far more than many of the credits being argued over.
 - **What it does.** Ground Truth files each claim as a case, builds the evidence from real orbital data, telemetry, space weather and the customer's contract, and routes it through a numbers-only model (System 1), learned Cedar rules, a prompt-injection screen, and an LLM analyst (System 2, GPT-4.1 through any OpenAI-compatible endpoint). The module re-verifies every LLM citation. Anything below 95% confidence goes to a human with a complete evidence package.
-- **Hyphenate (deterministic + AI that learns safely).** Human rulings become labeled decisions. After 3 consistent rulings with no contradiction the system proposes a Cedar rule, replays it over the whole labeled history, and blocks it if precision regresses. On a fresh seed, mined policy v6 cut escalations from **2,772 to 1,362** while precision rose from **98.89% to 99.07%** with **0 regressions**. A live ruling then produced **v7**, which is promoted. The four governing rules (the 95% gate, escalation, AI cannot edit policy, human authority) are fixed and cannot be switched off.
+- **Hyphenate (deterministic + AI that learns safely).** Human rulings become labeled decisions. After 3 consistent rulings with no contradiction the system proposes a Cedar rule, replays it over the whole labeled history, and blocks it if precision regresses. When the loop shipped (PR [#26](https://github.com/AamirAbatiyow/CalHacks26/pull/26)), mined policy v6 cut escalations from **2,772 to 1,362** while precision rose from **98.89% to 99.07%** with **0 regressions**; on the current, larger seed the same step is **3,406 → 1,660** at **98.87% → 99.06%**, again with 0 regressions. A live ruling then produced **v7**, which is promoted. The four governing rules (the 95% gate, escalation, AI cannot edit policy, human authority) are fixed and cannot be switched off.
 - **SpacetimeDB.** The whole decision system (evidence, routing, Cedar authorization, re-verification, ledger, KPIs, audit and replay) runs inside reducers in one Rust module. Every screen updates live through subscriptions, and the worker is just another subscriber.
 - **SpaceX.** 169 satellites with real CelesTrak TLEs are SGP4-propagated against 28 real ground-station locations to produce about 49,000 priced passes. A pass-failure classifier is trained on real SatNOGS observations: 0.979 precision on held-out stations (PR [#23](https://github.com/AamirAbatiyow/CalHacks26/pull/23), open).
 - **CRS (fraud).** **Break It** fires real adversarial claims through the real decision path from separate identities and reports what was caught, held for a human or missed. Prompt injection: **11 of 12 caught**. Before/after learning (PR [#28](https://github.com/AamirAbatiyow/CalHacks26/pull/28), pending): **29 caught / 45 held / 2 missed** before, **70 / 1 / 5** after one human ruling and v7.
@@ -54,17 +54,17 @@ A commercial ground-station network sells antenna time. A satellite flies over a
 
 Passes fail. Geomagnetic storms degrade high-latitude links, antennas go down for maintenance, and a contact can drop at low elevation. Each failure can become a claim against the customer's SLA, and each claim needs someone to answer three questions: what actually happened to the pass, whether the contract excuses it, and how much credit is owed.
 
-**The economics.** The model assumes a human review costs **$300** and an automated Ground Truth decision costs **$15** (constants in `server/spacetimedb/src/kpis.rs`). A single narrowband contact is often worth well under $300, so reviewing every claim by hand can cost more than paying it. Paying every claim without review invites over-claiming and fraud. On the seeded KSAT-sized operator (fresh seed on `main`):
+**The economics.** The model assumes a human review costs **$300** and an automated Ground Truth decision costs **$15** (constants in `server/spacetimedb/src/kpis.rs`). A single narrowband contact is often worth well under $300, so reviewing every claim by hand can cost more than paying it. Paying every claim without review invites over-claiming and fraud. On the seeded KSAT-class operator (fresh seed on `main`; see [Data](#3-data-what-is-real-and-what-is-simulated) for how it is scaled):
 
 | Monthly figure (trailing 30 days) | Value |
 |---|---|
-| Billed | $8.05M |
-| Credits paid | $100.9K |
-| Revenue at risk | $85.3K |
-| Leakage avoided | $96.3K |
-| Review cost saved | $180.1K (632 auto-approved decisions x $285) |
+| Billed | $80.6M |
+| Credits paid | $2.67M |
+| Revenue at risk | $2.77M |
+| Leakage avoided | $3.54M |
+| Review cost saved | $411K (1,442 auto-approved decisions x $285) |
 
-Annualized (12x): about **$2.2M** in dispute cost (credits plus revenue at risk), **$1.2M** in leakage avoided and **$2.2M** in review cost saved.
+Annualized (12x): about **$65M** in dispute cost (credits plus revenue at risk), **$42M** in leakage avoided and **$4.9M** in review cost saved.
 
 The argument for automation is not "replace the reviewer". It is: let a system decide the cases it can prove, at a confidence it can defend, with an audit trail, and send the reviewer only the genuinely hard cases, with all the evidence already assembled. Then learn from what the reviewer decides.
 
@@ -78,20 +78,19 @@ Ground Truth is an AI dispute and billing analyst. Each claim becomes a case. Th
 
 | Page | What it shows |
 |---|---|
-| **Overview** | A three.js globe with ground stations, satellites on their real orbits, live pass links and the space-weather auroral oval, plus the KPI strip and a playback bar (1x/4x/16x, scrub the last 24 hours, Live) |
-| **Claims** | A claim's disputed pass, its evidence, the gated decision with plain-language reasons, and where the money went |
-| **Approvals** | The human queue: every case below 95% confidence, with the full evidence handoff and a decision form |
+| **Overview** | A three.js globe: ground stations (cyan triangles), satellites on their real orbits with fading trails, live station-to-satellite pass links, and the geomagnetic storm as a filled auroral band colored by NOAA G-scale severity (G1 yellow to G5 magenta) with a badge such as `G3 Strong · Kp 6.7`. A legend shows every marker and severity color. Click a station or satellite for an info card (station: antennas, passes and drops in the last 24 hours, revenue this month, storm exposure; satellite: NORAD ID, operator, band and price, orbit from the TLE, current or next pass). Plus the KPI strip and a playback bar with storm intervals and dropped-pass density |
+| **Claims** | One queue for every claim, escalated ones first, with a live red badge on the nav item counting claims waiting for a human. Selecting a claim shows its pass on a labeled globe beside the detail: the full evidence handoff and decision form for an escalated claim, or the evidence, decision and outcome for a decided one |
 | **Decisions** | Model versions and retrain latency, learned rules with their Cedar text, the decision audit feed and buttons to file demo claims |
 | **Finance** | Summary, **Ledger** (invoices, credits, recoveries and a cumulative credits-vs-recovered chart) and **Audit** (every decision, human or AI; click a row to replay it) tabs |
 | **Policies** | Versioned Cedar policies, six months of human audit history, learned-rule proposals, replay of each version over the labeled history, and promotion |
 | **Break It** | Adversarial testing: real attack claims filed through the real decision path, scored as caught, held or missed |
 | **Settings** | **Show technical details**. Off by default, so the app reads like a billing product (dollars, status, a short reason). On, it reveals confidence, SHAP terms, re-verify checks, model and policy versions, Cedar text and replay internals |
 
-PR [#27](https://github.com/AamirAbatiyow/CalHacks26/pull/27) (open, draft) merges Approvals into a single Claims queue, folds Ledger and Audit under Finance in the sidebar, and adds a G-scale storm overlay and station and satellite info cards to the globe.
+The sidebar is Overview, Claims, Decisions, Finance (Ledger and Audit tabs), Policies and Break It, with Settings at the bottom. Old links still work: `#/approvals` redirects to `#/claims`, and `#/ledger` and `#/audit` redirect to the Finance tabs.
 
 ### Decision replay
 
-Click any decision (an Audit row, the Claim decision card, or **Replay path** in Approvals) to watch that one decision travel through the pipeline. Only the stages it actually took are drawn, one at a time, each with its output: confidence, the Cedar verdict, the injection screen, the System 2 rationale, re-verify checks, the human's credit, the retrained model version and any policy proposal. Branches not taken show as faint stubs. Built with React Flow (`@xyflow/react`), Motion and dagre.
+Click any decision (an Audit row, a decided claim's decision card, or **Replay path** on an escalated claim) to watch that one decision travel through the pipeline. Only the stages it actually took are drawn, one at a time, each with its output: confidence, the Cedar verdict, the injection screen, the System 2 rationale, re-verify checks, the human's credit, the retrained model version and any policy proposal. Branches not taken show as faint stubs. Built with React Flow (`@xyflow/react`), Motion and dagre.
 
 ---
 
@@ -102,20 +101,23 @@ Click any decision (an Audit row, the Claim decision card, or **Replay path** in
 | **Satellites** | 169 satellites with real CelesTrak TLEs: 30 curated demo satellites (ISS, NOAA-20 and others; TLE epoch October 2024) plus 139 commercial Earth-observation satellites with current TLEs (Planet 40, ICEYE 40, Spire 30, Satellogic 15, Capella 9, Umbra 5) |
 | **Passes** | Propagated with SGP4 (`satellite.js`) against every station. Contacts above 10° elevation lasting at least 4 minutes, booked highest-elevation first under per-satellite quotas, a 5-minute slew gap and each station's antenna count. About 49,000 passes per seed |
 | **Ground stations** | 28 real ground-station locations, matching KSAT's reported count of 28: 22 KSAT sites (SvalSat, TrollSat, Tromsø, Inuvik, Hartebeesthoek and others) plus 6 AWS Ground Station regions. 322 antennas in total |
-| **Volumes** | Sized against KSAT's 2025 annual report. The seed bills about 47,000 contacts per 30 days (roughly a quarter of KSAT's monthly contacts), about $97M a year against KSAT's ~$220M revenue |
+| **Volumes** | Sized against KSAT's 2025 annual report. The seed books about 47,000 passes per 30 days, and each booked pass stands for 10 contacts of the same geometry (`fleet_multiplier: 10`), about 470,000 contacts a month, roughly 2.7 times KSAT's ~175,000 |
 | **Pricing** | AWS Ground Station on-demand: $15/min narrowband, $25/min wideband, billed per started minute |
 | **ML training data** | Real SatNOGS observations (3,604 labeled passes from 350 stations), real Kp from GFZ and NOAA SWPC, and SatNOGS DB TLEs. On the PR [#23](https://github.com/AamirAbatiyow/CalHacks26/pull/23) branch |
 
 | Simulated | Detail |
 |---|---|
-| **Space weather** | A hand-written 24-hour Kp, flare and Dst curve (`server/fixtures/space_weather.json`) with a storm in it |
+| **Space weather** | A hand-written 24-hour Kp, flare and Dst curve (`server/fixtures/space_weather.json`) peaking at Kp 6.7 (G3 Strong) |
+| **Fleet multiplier** | Each generated pass stands for 10 contacts, so its price and every credit, dispute and claim derived from it is 10 times one contact's. This keeps the database at about 49,000 pass rows while billing at fleet scale |
 | **Contracts and SLAs** | Six enterprise contracts and their SLA terms (credit formula, Kp exclusion, maintenance notice period, minimum elevation, filing window) |
-| **Drops, disputes and settlement** | Drop rates (1.5%, 6% at stations above 60° latitude during Kp ≥ 5), dispute rates and settlement outcomes are parameters in `server/fixtures/contracts.json` |
-| **Ledger, invoices and history** | All money is derived from pass revenue. The six months of human audit decisions (about 10,000 rows from five simulated reviewers, with consistent patterns, contradiction zones and 1% noise) are generated |
+| **Drops, disputes and settlement** | Storm-season rates: 7% of contacts drop, 35% at stations above 60° latitude during Kp ≥ 5; 5% of completed passes are disputed; passes settle after 7 days. All parameters are in `server/fixtures/contracts.json` |
+| **Ledger, invoices and history** | All money is derived from pass revenue. The six months of human audit decisions (about 12,000 rows from five simulated reviewers, with consistent patterns, contradiction zones and 1% noise) are generated |
 | **Telemetry** | The elevation curve is modeled from pass geometry, and per-pass loss is derived deterministically |
 | **Incoming claims and customer messages** | Written so the evidence sources disagree in realistic ways (see [Third source](#third-source-sla-contracts-and-customer-messages)) |
 
 On `main`, the module's per-pass failure probability is a fixed logistic proxy (`ml-proxy-0` in `decision_logic.rs`). The SatNOGS-trained classifier is evaluated and packaged on PR [#23](https://github.com/AamirAbatiyow/CalHacks26/pull/23) but not yet wired into the module.
+
+Pricing every contact at AWS on-demand list rates and modeling a storm-season month makes the money larger than KSAT's books: $80.6M billed a month is about $970M a year, against KSAT's reported ~$220M revenue. The operator is KSAT-class in stations and a few times KSAT's contact volume, and the dollar figures are what that volume would bill at AWS list prices. Read them as scale, not as a model of KSAT's revenue.
 
 ---
 
@@ -153,7 +155,7 @@ flowchart LR
     LLM["OpenAI-compatible<br/>/chat/completions"]
 
     subgraph WEB["Web (Vite + React, Vercel)"]
-        UI["Overview globe, Claims, Approvals,<br/>Decisions, Finance, Policies,<br/>Break It, Decision replay"]
+        UI["Overview globe, Claims,<br/>Decisions, Finance, Policies,<br/>Break It, Decision replay"]
     end
 
     TLE --> GEN
@@ -170,7 +172,7 @@ flowchart LR
 
 The module is the system of record and the decision authority. It owns the evidence, routing, Cedar, every final decision, the ledger, KPIs and audit trail. Published to Maincloud as **`ground-truth-aamir`**.
 
-- **Real-time subscriptions.** The web app and the worker subscribe to the tables they need. When a reducer writes a decision, the Approvals badge, the Audit feed, the ledger, the KPI strip and the decision replay all update together, with no polling and no API layer.
+- **Real-time subscriptions.** The web app and the worker subscribe to the tables they need. When a reducer writes a decision, the Claims badge, the Audit feed, the ledger, the KPI strip and the decision replay all update together, with no polling and no API layer.
 - **Reducers** do all the writes. `file_case` builds a claim's feature snapshot from the pass, telemetry, space weather, 30-day station history and maintenance, SLA terms and the failure probability. `submit_system2` re-verifies the LLM. `human_decide_case` records a labeled ruling. `register_model_version` re-checks a retrained model before promoting it. `promote_policy_version` activates a Cedar version.
 - **Cedar authority checks.** `cedar-policy` v4 compiles to `wasm32-unknown-unknown` and runs inside reducers (`authority.rs`, `decision_logic.rs`). Cedar decides whether the AI analyst may auto-approve, and forbids it from editing policy. Learned rules are stored as Cedar text and evaluated alongside the active base policy. Rule conditions are generated from typed values, so they cannot inject Cedar (tested in `rule_conditions_cannot_inject_cedar`).
 - **Scheduled reducers** handle SLA deadlines and the Break It injection-run timeout.
@@ -209,7 +211,7 @@ flowchart TD
     F --> G{"Module re-verifies:<br/>citations exist and belong to claim,<br/>credit ≤ entitlement, sanity checks,<br/>≥ 95%, Cedar permits?"}
     G -->|all pass| AUTO3["Auto-decided by System 2"]
     G -->|any fail| H
-    H --> I["Approvals: evidence handoff,<br/>human rules with decisive evidence"]
+    H --> I["Claims queue: evidence handoff,<br/>human rules with decisive evidence"]
     I --> J["Labeled decision stored<br/>with the full evidence package"]
     J --> K["Retrain System 1 + replay<br/>promote only if precision holds"]
     J --> L{"≥ 3 consistent rulings,<br/>0 contradictions?"}
@@ -246,13 +248,24 @@ Every number below comes from a report or PR description in this repository. See
 
 ### Learning-loop replay (PR [#26](https://github.com/AamirAbatiyow/CalHacks26/pull/26), merged)
 
-Replayed over the labeled human decisions on a fresh seed.
+Each proposed policy version is replayed over every labeled human decision.
+
+**As measured in PR #26** (seed before the fleet multiplier):
 
 | Policy version | Escalations | Precision | Regressions | Settled automatically | Drift from human credits | Result |
 |---|---|---|---|---|---|---|
 | v5 (threshold lowered to 90%) | 2,772 → 2,278 | 98.89% → 98.91% | 4 | $54,700 | +$736 | **Blocked** by the 95% floor |
 | v6 (7 rules mined from history) | 2,772 → 1,362 | 98.89% → 99.07% | 0 | $129,519 | $0 | Promoted |
 | v7 (learned live from CLM-20003) | 1,364 → 1,361 | 99.07% → 99.07% | 0 | $673 | $0 | Promoted, **live** |
+
+**On the current seed** (`main` after PR [#27](https://github.com/AamirAbatiyow/CalHacks26/pull/27), about 12,000 audit decisions; figures from main's seed run):
+
+| Policy version | Escalations | Precision | Regressions | Settled automatically | Drift from human credits | Result |
+|---|---|---|---|---|---|---|
+| v5 (threshold lowered to 90%) | 3,406 → 2,793 | 98.87% → 98.89% | 5 | $677,496 | +$7,834 | **Blocked** by the 95% floor |
+| v6 (7 rules mined from history) | 3,406 → 1,660 | 98.87% → 99.06% | 0 | $1,611,099 | $0 | Promoted |
+
+A fresh local seed of `main` made for this README reproduced the same result within seed-time drift: v5 3,378 → 2,770 with 5 regressions (blocked), v6 3,378 → 1,640 at 98.87% → 99.06% with 0 regressions (promoted), over 11,925 audit decisions. v7 is learned live from a reviewer's ruling; its numbers above were measured before the fleet multiplier.
 
 The live loop: an approval on CLM-20002 produced no rule (2 of the 3 consistent rulings needed). The same ruling on CLM-20003 made 3 with none contradicting, so v7 was proposed. After promotion, a similar new claim (CLM-20009, TrollSat, Kp 5.0, 95% lost) auto-approved at 99% for $325, citing `v7-learned-1` under policy v7.
 
@@ -300,19 +313,22 @@ Human-in-the-loop replay (1,442 initial passes, later passes replayed in time or
 
 ### KPI volumes (fresh seed on `main`)
 
-| Figure | Value |
-|---|---|
-| Passes | 48,954 (about 47,000 billed in the trailing 30 days) |
-| Billed this month | $8.05M |
-| Revenue at risk | $85.3K |
-| Credits paid | $100.9K |
-| Recovered | $28.7K |
-| Leakage avoided | $96.3K |
-| Review cost saved | $180.1K (632 auto-approved decisions x $285) |
-| Labeled decisions for the worker | 2,409 over 180 days |
-| Human audit decisions for the Policies miner | about 10,000 over 182 days |
+All KPIs are computed live by `server/spacetimedb/src/kpis.rs` from the pass, ledger and decision tables. The first column is main's documented seed run; the second is a fresh local publish and seed of `main` made while writing this README. They differ only because pass geometry and the trailing 30-day window depend on the seed time.
 
-PR [#27](https://github.com/AamirAbatiyow/CalHacks26/pull/27) (open) rescales the seed with a documented `fleet_multiplier: 10` (Billed $80.6M, Revenue at risk $2.77M, Credits paid $2.67M, Recovered $2.21M). The figures above are the ones on `main`.
+| Figure | Main's seed run | Fresh local seed |
+|---|---|---|
+| Passes | 48,954 | 48,954 |
+| Billed this month | $80.6M | $80.56M |
+| Revenue at risk | $2.77M | $2.79M |
+| Credits paid | $2.67M | $2.62M |
+| Recovered | $2.21M | $2.27M |
+| Leakage avoided | $3.54M | $3.56M |
+| Review cost saved | $411K (1,442 auto-approvals x $285) | $406K (1,423 x $285) |
+| Ledger entries | 3,560 | 3,585 |
+| Labeled decisions for the worker | 2,409 over 180 days | 2,409 |
+| Human audit decisions for the Policies miner | 11,997 over 182 days | 11,925 |
+
+Annualized from main's run: dispute cost ~$65M (12 x credits plus revenue at risk), leakage avoided ~$42M, review cost saved ~$4.9M.
 
 ### Tests
 
@@ -347,25 +363,30 @@ PR [#27](https://github.com/AamirAbatiyow/CalHacks26/pull/27) (open) rescales th
 ### Local development
 
 ```bash
-# 1. Start SpacetimeDB
+# 1. Install dependencies (the pass generator uses satellite.js from web/, and seed.sh calls the worker)
+(cd web && npm ci) && (cd worker && npm ci) && (cd server/scripts && npm ci)
+
+# 2. Start SpacetimeDB (keep it running, e.g. in tmux)
 spacetime start
 
-# 2. Build and publish the module (from the repo root)
+# 3. Build and publish the module (from the repo root)
 spacetime publish ground-truth --server local -p server/spacetimedb -y
 
-# 3. Seed (from the repo root, NOT from server/)
+# 4. Seed (from the repo root, NOT from server/)
 SPACETIMEDB_SERVER=local SPACETIMEDB_MODULE=ground-truth bash server/seed.sh
 
-# 4. Start the decision worker (System 2 runs in mock mode without LLM_API_KEY)
-cd worker && npm install && npm run generate && npm start
+# 5. Start the decision worker (System 2 runs in mock mode without LLM_API_KEY)
+(cd worker && npm run generate && npm start)
 
-# 5. Start the web client
-cd web && cp .env.example .env && npm install && npm run dev   # http://localhost:5173
+# 6. Start the web client
+(cd web && cp .env.example .env && npm run dev)   # http://localhost:5173
 ```
 
-**Run `spacetime` and `seed.sh` from the repo root.** `server/spacetime.local.json` points any CLI call made inside `server/` at the Maincloud database `ground-truth-aamir`, so running from `server/` would target Maincloud instead of your local database.
+**Run `spacetime` and `seed.sh` from the repo root.** `server/spacetime.local.json` pins the database name for CLI calls made inside `server/` to `ground-truth-aamir` (the Maincloud database), so commands run from `server/` can act on a different database than the one you named.
 
-`seed.sh` generates the pass history with SGP4 (about 30 s), loads it in batches, settles the dispute and credit history, and seeds SLA terms, maintenance windows, labeled decisions, the six-month audit history and Break It fixtures.
+If your default Rust toolchain is older than the module's edition 2024, prefix the publish and seed commands with `RUSTUP_TOOLCHAIN=stable` (and run `rustup target add wasm32-unknown-unknown --toolchain stable` once); `seed.sh` builds the module when it generates the worker's bindings.
+
+`seed.sh` generates the pass history with SGP4 (about 30 s), loads it in batches, settles the dispute and credit history, and seeds SLA terms, maintenance windows, labeled decisions, the six-month audit history and Break It fixtures. A full local seed takes a few minutes.
 
 ### Maincloud publish and reseed
 
@@ -381,7 +402,15 @@ spacetime publish ground-truth-aamir --server maincloud -p server/spacetimedb -c
 SPACETIMEDB_SERVER=maincloud SPACETIMEDB_MODULE=ground-truth-aamir bash server/seed.sh
 ```
 
-Schema changes need a clear-and-reseed. After v7 has been promoted, only a reseed puts the learning demo back in its starting state.
+Code-only updates that keep every table and column unchanged can be a plain publish without `-c`. Schema changes need a clear-and-reseed. After v7 has been promoted, only a reseed puts the learning demo back in its starting state.
+
+`server/reseed.sh` does the clear, republish and seed in one step, then prints the KPI row and row counts. It refuses to run without `--yes`, and refuses a database name that differs from the one `server/spacetime.local.json` pins (`ground-truth-aamir`):
+
+```bash
+server/reseed.sh ground-truth-aamir maincloud --yes   # or: server/reseed.sh ground-truth-aamir local --yes
+```
+
+Restart the worker after a reseed if it does not reconnect on its own.
 
 ### Worker environment variables
 
@@ -453,7 +482,7 @@ Ground Truth is built on the idea that an AI should earn autonomy one provable c
 ### SpacetimeDB: what only it enables
 
 - **The database is the application server.** Evidence building, routing, Cedar checks, re-verification, ledger writes, KPI recomputation, scheduled SLA deadlines and audit all run in reducers in one Rust module. There is no separate API tier to keep consistent.
-- **Real-time everything.** A human ruling in Approvals retrains System 1 in the worker, promotes a model, possibly proposes a policy, and the Audit feed, Decisions page, KPI strip, Policies and decision replay all update live through subscriptions.
+- **Real-time everything.** A human ruling on the Claims page retrains System 1 in the worker, promotes a model, possibly proposes a policy, and the Audit feed, Decisions page, KPI strip, Policies and decision replay all update live through subscriptions.
 - **The AI worker is just another client.** It subscribes to the tables it needs and writes back through reducers. The module stays the authority and the worker can be restarted or replaced.
 - **Transactional authorization.** Cedar runs inside the reducer, so a decision and the policy check that permitted it commit together.
 - **Event-sourced replay.** Every stage of every decision is a `pipeline_step` row, which is what powers the animated decision replay and the Break It before/after view.
@@ -516,7 +545,7 @@ Ground Truth is built on the idea that an AI should earn autonomy one provable c
 
 ### How the KPIs are computed
 
-`server/spacetimedb/src/kpis.rs` recomputes the single `kpi` row every sim tick and after ledger writes, seeding and Approvals decisions.
+`server/spacetimedb/src/kpis.rs` recomputes the single `kpi` row every sim tick and after ledger writes, seeding and human claim decisions.
 
 | KPI | Formula |
 |---|---|
@@ -535,8 +564,9 @@ Seeded credits, recoveries and claims are percentages of the revenue of the pass
 |---|---|---|
 | Stations | `stations.json` | 28 stations, 322 antennas (SvalSat 100, Tromsø 40, TrollSat 12, Hartebeesthoek 12, the rest 2 to 10). Monthly revenue is the sum of billed passes |
 | Satellites | `satellites.json` | 169 satellites with CelesTrak TLEs; each has a `band` that sets its price |
-| Contracts and pricing | `contracts.json` | Six enterprise contracts with daily contact quotas (about 1,580 contacts per day), $15/$25 per started minute, 30 days of history plus 24 hours scheduled |
-| Drops and settlement | `contracts.json` | 1.5% drop rate, 6% above 60° latitude during Kp ≥ 5. Passes settle after 72 hours: 60% of drops credited, 25% recovered, the rest denied; 2% of completed passes disputed; 65% of decisions auto-decide |
+| Contracts and pricing | `contracts.json` | Six enterprise contracts with daily contact quotas (about 1,580 booked passes per day), $15/$25 per started minute, 30 days of history plus 24 hours scheduled |
+| Fleet multiplier | `contracts.json` `fleet_multiplier` | 10: each booked pass stands for 10 contacts, so its price and everything derived from it is 10 times one contact's |
+| Drops and settlement | `contracts.json` | 7% drop rate, 35% above 60° latitude during Kp ≥ 5 (storm season). Passes settle after 7 days, so the last week is still open (revenue at risk): 40% of drops credited in full, 50% recovered, the rest denied; 5% of completed passes disputed, 70% of those credited 25% to 60%; 65% of decisions auto-decide |
 | SLA terms | `sla_terms.json`, `sla_contracts.json` | Credit formula, Kp exclusion, maintenance notice, minimum elevation, filing window |
 | Claims | `claims.json`, `incoming_claims.json` | Escalated claims and the incoming claims with conflicting evidence |
 | Space weather | `space_weather.json` | The simulated 24-hour storm curve |
@@ -554,7 +584,7 @@ Telemetry and space weather say what happened to a pass. They cannot say what it
 | CLM-20007 | Kp was above the exclusion: the contract excuses the loss even though the message asks for credit |
 | CLM-20008 | 30% of the contact was lost, but the customer asks for 100% of the fee |
 
-Each conflict lowers confidence by a stated penalty, which is how Approvals explains why a claim is below 95%.
+Each conflict lowers confidence by a stated penalty, which is how the Claims page explains why a claim is below 95%.
 
 ### Repository layout
 

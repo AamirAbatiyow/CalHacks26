@@ -6,6 +6,8 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    // The globe reads station antennas and satellite bands from server/fixtures.
+    fs: { allow: ['..'] },
   },
   build: {
     target: 'esnext',
