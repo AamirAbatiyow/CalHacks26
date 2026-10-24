@@ -2,18 +2,21 @@
 //!
 //! Synthetic but structured like a real review desk. Claim volume per station and
 //! month is the station's pass count (monthly revenue / average pass fee) times
-//! the claim rate the pass generator assumes (drops plus disputes). Reviewers follow consistent practices in some situations
+//! the claim rate the pass generator assumes (drops plus disputes) that the
+//! confidence gate leaves to a human. Reviewers follow consistent practices in some situations
 //! (minable patterns), disagree in others (contradiction zones), and occasionally
 //! decide against the evidence for reasons the record does not capture (noise).
 
 use crate::contracts::CustomerContract;
 use crate::evidence::{Features, APPROVE, DENY, PARTIAL};
 
-/// Share of passes that become a customer claim: the pass generator's drop rate
-/// plus its dispute rate (fixtures/contracts.json), so both seeds agree.
+/// Share of passes that become a claim a human decides: the pass generator's drop
+/// rate plus its dispute rate, times the share the confidence gate does not
+/// auto-decide (fixtures/contracts.json), so both seeds agree.
 pub fn claim_rate() -> f64 {
     let v: serde_json::Value = serde_json::from_str(include_str!("../../fixtures/contracts.json")).expect("contracts.json");
-    v["drop_rate"].as_f64().unwrap_or(0.015) + v["settlement"]["dispute_per_mille"].as_f64().unwrap_or(20.0) / 1000.0
+    let claims = v["drop_rate"].as_f64().unwrap_or(0.015) + v["settlement"]["dispute_per_mille"].as_f64().unwrap_or(20.0) / 1000.0;
+    claims * (100.0 - v["settlement"]["auto_decided_pct"].as_f64().unwrap_or(0.0)) / 100.0
 }
 pub const HISTORY_DAYS: i64 = 182;
 /// Share of decisions in the consistent zones that go against the usual practice.
@@ -396,7 +399,7 @@ pub mod tests {
         let revenue: i64 = volumes.iter().map(|v| v.monthly_revenue_cents * 6).sum();
         let credits: i64 = history.iter().map(|h| h.credit_cents).sum();
         let share = credits as f64 / revenue as f64;
-        assert!((0.002..0.02).contains(&share), "credits are {:.3}% of revenue", share * 100.0);
+        assert!((0.002..claim_rate()).contains(&share), "credits are {:.3}% of revenue", share * 100.0);
         assert!(history.iter().all(|h| h.credit_cents <= h.features.pass_fee_cents));
     }
 

@@ -5,7 +5,8 @@
 //   - the hand-written passes in passes.json (Break It and Overview reference them);
 //   - the Claim page's NOAA-20 pass (find-claim-pass.mjs).
 // Every pass is priced at AWS Ground Station on-demand rates per started minute,
-// and each station's monthly revenue is the sum of its billed passes.
+// times the fleet multiplier, and each station's monthly revenue is the sum of its
+// billed passes.
 // Usage: node generate-passes.mjs <fixtures_dir> <now_micros>  (JSON on stdout)
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
@@ -45,7 +46,10 @@ const rate = noradId =>
   satById.get(noradId)?.band === 'narrowband'
     ? config.pricing.narrowband_cents_per_minute
     : config.pricing.wideband_cents_per_minute;
-const price = (noradId, startMs, endMs) => Math.ceil((endMs - startMs) / MINUTE) * rate(noradId);
+// Each generated pass row stands for `fleet_multiplier` contacts of the operator's
+// full network (see contracts.json), so revenue scales without multiplying rows.
+const fleetMultiplier = config.fleet_multiplier ?? 1;
+const price = (noradId, startMs, endMs) => Math.ceil((endMs - startMs) / MINUTE) * rate(noradId) * fleetMultiplier;
 
 const stormWindows = weather
   .filter(w => w.kp_index >= 5)

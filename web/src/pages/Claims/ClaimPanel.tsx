@@ -173,17 +173,12 @@ export function ClaimPanel({ claim, evidence, decision, outcome, weather, reason
 
 export function ClaimSkeleton() {
   return (
-    <div className="claim-page">
-      <div className="claim-content">
-        <div className="claim-globe-section claim-globe-skeleton"><Skeleton width={420} height={420} radius={210} /></div>
-        <div className="claim-detail-panel">
-          <Skeleton width={140} height={10} />
-          <Skeleton width={120} height={28} />
-          <Skeleton width="100%" height={70} />
-          <Skeleton width="100%" height={8} />
-          <SkeletonGraph columns={3} />
-        </div>
-      </div>
+    <div className="claim-detail-panel">
+      <Skeleton width={140} height={10} />
+      <Skeleton width={120} height={28} />
+      <Skeleton width="100%" height={70} />
+      <Skeleton width="100%" height={8} />
+      <SkeletonGraph columns={3} />
     </div>
   );
 }
