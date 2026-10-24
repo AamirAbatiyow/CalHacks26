@@ -230,9 +230,7 @@ export function Globe({ stations, satellites, passes, spaceWeather, currentTime,
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
       renderer.dispose();
-      if (containerRef.current && renderer.domElement.parentNode === containerRef.current) {
-        containerRef.current.removeChild(renderer.domElement);
-      }
+      renderer.domElement.remove();
     };
   }, [prefersReducedMotion]);
 

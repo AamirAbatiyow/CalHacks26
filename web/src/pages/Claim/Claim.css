@@ -1,0 +1,322 @@
+.claim-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: var(--color-bg);
+}
+
+.claim-loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-secondary);
+  font-size: var(--font-body);
+}
+
+.claim-content {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.claim-globe-section {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+}
+
+.claim-globe-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.claim-globe {
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+.claim-globe:active {
+  cursor: grabbing;
+}
+
+.signal-lost-label {
+  position: absolute;
+  top: 50%;
+  left: 40%;
+  transform: translate(-50%, -50%);
+  color: var(--color-amber);
+  font-size: var(--font-metadata);
+  font-weight: 500;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 4px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--color-amber);
+  pointer-events: none;
+}
+
+.claim-detail-panel {
+  width: 360px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--color-muted);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  overflow-y: auto;
+}
+
+.claim-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  font-size: var(--font-body);
+  line-height: 1.6;
+}
+
+.claim-id {
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.claim-separator {
+  color: var(--color-secondary);
+}
+
+.claim-customer {
+  color: var(--color-primary);
+}
+
+.claim-amount {
+  color: var(--color-primary);
+}
+
+.claim-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.claim-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.section-title {
+  font-size: var(--font-body);
+  font-weight: 600;
+  color: var(--color-primary);
+  margin: 0;
+}
+
+.section-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: var(--font-body);
+}
+
+.section-label {
+  color: var(--color-secondary);
+}
+
+.section-value {
+  color: var(--color-primary);
+}
+
+.section-value.pass {
+  color: var(--color-green);
+  font-weight: 500;
+}
+
+.section-value.fail {
+  color: var(--color-red);
+  font-weight: 500;
+}
+
+.section-value.muted {
+  color: var(--color-secondary);
+}
+
+.decision-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-muted);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.decision-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  font-size: var(--font-body);
+}
+
+.decision-credit {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.decision-separator {
+  color: var(--color-secondary);
+}
+
+.decision-confidence {
+  color: var(--color-primary);
+}
+
+.decision-gate {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: var(--font-metadata);
+  font-weight: 500;
+}
+
+.decision-gate.auto {
+  background: rgba(34, 197, 94, 0.2);
+  color: var(--color-green);
+}
+
+.decision-gate.approval {
+  background: var(--color-amber-muted);
+  color: var(--color-amber);
+}
+
+.decision-gate.escalated {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--color-red);
+}
+
+.decision-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  font-size: var(--font-metadata);
+  color: var(--color-secondary);
+}
+
+.outcome-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-metadata);
+  color: var(--color-secondary);
+  padding-top: 8px;
+  border-top: 1px solid var(--color-muted);
+}
+
+.outcome-item {
+  color: var(--color-secondary);
+}
+
+.outcome-separator {
+  color: var(--color-muted);
+}
+
+/* Claim Playback Bar */
+.claim-playback-bar {
+  height: var(--playback-bar-height);
+  border-top: 1px solid var(--color-muted);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 24px;
+  flex-shrink: 0;
+  background: var(--color-bg);
+}
+
+.claim-scrubber-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.claim-scrubber {
+  height: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.claim-scrubber-track {
+  width: 100%;
+  height: 4px;
+  background: var(--color-muted);
+  border-radius: 2px;
+  position: relative;
+}
+
+.claim-scrubber-progress {
+  height: 100%;
+  background: var(--color-secondary);
+  border-radius: 2px;
+}
+
+.claim-scrubber-event {
+  position: absolute;
+  top: -4px;
+  width: 3px;
+  height: 12px;
+  transform: translateX(-50%);
+  border-radius: 1px;
+}
+
+.signal-lost-tick {
+  background: var(--color-amber);
+}
+
+.claim-scrubber-handle {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  background: var(--color-primary);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.claim-scrubber-labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  height: 16px;
+}
+
+.scrubber-label-btn {
+  font-size: 10px;
+  color: var(--color-secondary);
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.scrubber-label-btn:hover {
+  color: var(--color-primary);
+}
+
+.scrubber-label-btn.signal-lost {
+  position: absolute;
+  transform: translateX(-50%);
+  color: var(--color-amber);
+}
+
+.scrubber-label-btn.signal-lost:hover {
+  color: var(--color-amber);
+  text-decoration: underline;
+}

@@ -105,3 +105,71 @@ export interface LayerState {
 }
 
 export type PlaybackSpeed = 1 | 4 | 16;
+
+export const ClaimGate = {
+  Auto: 'Auto',
+  Approval: 'Approval',
+  Escalated: 'Escalated',
+} as const;
+export type ClaimGate = (typeof ClaimGate)[keyof typeof ClaimGate];
+
+export const DataIntegrityStatus = {
+  Pass: 'Pass',
+  Fail: 'Fail',
+  Pending: 'Pending',
+} as const;
+export type DataIntegrityStatus = (typeof DataIntegrityStatus)[keyof typeof DataIntegrityStatus];
+
+export interface Claim {
+  id: string;
+  customerName: string;
+  amountClaimedCents: bigint;
+  passId: bigint;
+  createdAt: bigint;
+}
+
+export interface ClaimPass {
+  id: bigint;
+  claimId: string;
+  stationLat: number;
+  stationLon: number;
+  stationName: string;
+  satelliteNoradId: number;
+  satelliteTle1: string;
+  satelliteTle2: string;
+  contactStartTime: bigint;
+  signalLostTime: bigint;
+  contactEndTime: bigint;
+  maxElevationDeg: number;
+}
+
+export interface ClaimEvidence {
+  claimId: string;
+  dataIntegrityStatus: DataIntegrityStatus;
+  estimatedLossCents: bigint;
+  missingEvidenceCents: bigint;
+}
+
+export interface ClaimDecision {
+  claimId: string;
+  creditAmountCents: bigint;
+  confidencePercent: number;
+  gate: ClaimGate;
+  rule: string;
+  policyVersion: string;
+  modelVersion: string;
+  decidedAt: bigint;
+}
+
+export interface ClaimOutcome {
+  claimId: string;
+  creditMemoSent: boolean;
+  ledgerPosted: boolean;
+  completedAt: bigint | null;
+}
+
+export interface ClaimWeather {
+  claimId: string;
+  kpIndex: number;
+  stormActive: boolean;
+}

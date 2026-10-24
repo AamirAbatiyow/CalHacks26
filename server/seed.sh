@@ -73,4 +73,18 @@ echo "Initializing authority..."
 "$SPACETIME" call "$MODULE" init_confidence_config --server "$SERVER" || true
 "$SPACETIME" call "$MODULE" register_actor --server "$SERVER" -- '"ops_reviewer"' 1 '"Ops Reviewer"' || true
 
+# Claim detail (CLM-10021): a real NOAA-20 pass over SvalSat from the last few hours
+echo "Seeding claims..."
+if CLAIM_PASS=$(node "$SCRIPT_DIR/scripts/find-claim-pass.mjs" "$FIXTURES_DIR/satellites.json" "$FIXTURES_DIR/stations.json" 43013 svalsat 2>/dev/null); then
+  claim_pass() { echo "$CLAIM_PASS" | jq -r ".$1"; }
+  "$SPACETIME" call "$MODULE" seed_claim --server "$SERVER" -- '"CLM-10021"' '"Northpoint Orbital"' 1820000 10021 || true
+  "$SPACETIME" call "$MODULE" seed_claim_pass --server "$SERVER" -- 10021 '"CLM-10021"' "$(claim_pass latitude)" "$(claim_pass longitude)" "\"$(claim_pass station_name)\"" "$(claim_pass norad_id)" "\"$(claim_pass tle1)\"" "\"$(claim_pass tle2)\"" "$(claim_pass start_micros)" "$(claim_pass signal_lost_micros)" "$(claim_pass end_micros)" "$(claim_pass max_elevation_deg)" || true
+  "$SPACETIME" call "$MODULE" seed_claim_evidence --server "$SERVER" -- '"CLM-10021"' 0 240000 158000 || true
+  "$SPACETIME" call "$MODULE" seed_claim_decision --server "$SERVER" -- '"CLM-10021"' 115000 96 0 '"credit_auto_limit"' '"v4"' '"v2"' || true
+  "$SPACETIME" call "$MODULE" seed_claim_outcome --server "$SERVER" -- '"CLM-10021"' true true || true
+  "$SPACETIME" call "$MODULE" seed_claim_weather --server "$SERVER" -- '"CLM-10021"' 6.0 true || true
+else
+  "$SPACETIME" call "$MODULE" seed_demo_claim --server "$SERVER" || true
+fi
+
 echo "Seeding complete!"

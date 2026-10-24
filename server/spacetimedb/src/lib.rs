@@ -2,6 +2,7 @@ use spacetimedb::{ReducerContext, ScheduleAt, SpacetimeType, Table, Timestamp};
 use std::time::Duration;
 
 pub mod authority;
+pub mod claim;
 pub mod confidence_gate;
 pub mod events;
 pub mod sla;
