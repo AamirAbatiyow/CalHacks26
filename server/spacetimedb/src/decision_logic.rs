@@ -216,6 +216,12 @@ pub fn parse_evidence_ref(s: &str) -> Option<(&str, &str)> {
     TABLES.contains(&table).then_some((table, key))
 }
 
+/// Whether a `contract_term:<key>` citation names the claim's own contract. The row is keyed by
+/// customer, and the clause's canonical id is its `contract_id` (e.g. `NEX-2025-07`); both are accepted.
+pub fn contract_ref_matches(key: &str, customer: &str, contract_id: &str) -> bool {
+    key == customer || (!contract_id.is_empty() && key == contract_id)
+}
+
 /// Whether a claim must go to System 2 even if System 1 is confident: late-delivery
 /// claims are customer-reported, and a denial must not be issued without reading the customer's side.
 pub fn needs_text(claim_type: &str, s1_approves: bool, has_message: bool) -> bool {
@@ -312,6 +318,18 @@ mod tests {
         assert_eq!(parse_evidence_ref("cedar_policy_store:v4"), None);
         assert_eq!(parse_evidence_ref("pass:"), None);
         assert_eq!(parse_evidence_ref("nonsense"), None);
+        assert_eq!(parse_evidence_ref("contract"), None);
+        assert_eq!(parse_evidence_ref("contract:NEX-2025-07"), None);
+    }
+
+    #[test]
+    fn contract_refs_accept_customer_key_and_canonical_id_of_own_contract_only() {
+        assert!(contract_ref_matches("Nexus Corp", "Nexus Corp", "NEX-2025-07"));
+        assert!(contract_ref_matches("NEX-2025-07", "Nexus Corp", "NEX-2025-07"));
+        assert!(!contract_ref_matches("SKY-2026-01", "Nexus Corp", "NEX-2025-07"));
+        assert!(!contract_ref_matches("SkyNet Communications", "Nexus Corp", "NEX-2025-07"));
+        assert!(!contract_ref_matches("", "Nexus Corp", ""));
+        assert!(!contract_ref_matches("nex-2025-07", "Nexus Corp", "NEX-2025-07"));
     }
 
     #[test]
