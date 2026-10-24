@@ -197,7 +197,15 @@ export function DivergingBars({ data, height, label }: DivergingBarsProps) {
             }}
           />
           <Bar dataKey="value" radius={[2, 2, 2, 2]} isAnimationActive={false} maxBarSize={10}
-            label={{ position: 'right', fill: C.secondary, fontSize: 10, formatter: (v: unknown) => `${Number(v) >= 0 ? '+' : '−'}${Math.abs(Number(v)).toFixed(2)}` }}>
+            label={({ x, y, width, height: h, value }) => {
+              const v = Number(value);
+              const right = Math.max(Number(x), Number(x) + Number(width));
+              return (
+                <text x={right + 4} y={Number(y) + Number(h) / 2} dy={3} fill={C.secondary} fontSize={10}>
+                  {`${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(2)}`}
+                </text>
+              );
+            }}>
             {data.map(d => <Cell key={d.name} fill={d.value >= 0 ? C.accent : C.amber} />)}
           </Bar>
         </BarChart>
