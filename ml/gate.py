@@ -1,12 +1,13 @@
 """
 Map calibrated failure scores to the Rust confidence gate.
 
-`confidence_gate::determine_route` auto-decides at confidence >= 95 (and
-amount <= $300), sends 80-94 to human approval and escalates below 80. The
-model therefore reports, as `confidence_percent`, the precision measured on
+`confidence_gate::determine_route` auto-decides at confidence >= 95 and
+escalates everything else to a human. The model therefore reports, as `confidence_percent`, the precision measured on
 held-out stations for the strictest operating point the pass clears. A
 "failed" call is auto-decided only when that measured precision is >= 95%.
-Everything else, including every "pass was fine" call, goes to a human.
+Everything else, including every "pass was fine" call, goes to a human; the
+sub-95 values still order the queue (measured precision for passes that clear
+a lower operating point, calibrated probability capped at 79 otherwise).
 """
 
 from typing import Dict, List, Optional

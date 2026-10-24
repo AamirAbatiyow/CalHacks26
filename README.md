@@ -395,12 +395,12 @@ What helped, from the ablation in `ml/reports/heldout_v110_census_ablation.md`:
 ### Confidence gate
 
 `score.py` emits `gate_confidence_percent` and `gate_route` for
-`confidence_gate::process_claim_decision`. A "pass failed" call is sent as confidence ≥ 95 (auto)
-only when its calibrated score clears the lowest threshold whose *measured* held-out-station
-precision is ≥ 0.95. In v1.2.0 that threshold is 0.923, at 0.953 measured precision and 0.35
-recall. Scores that clear only the 0.90 operating point get the measured precision capped at 94,
-which routes to human approval. Everything else, including every "pass was fine" call, gets a
-confidence below 80 and is escalated. The gate's $300 amount cap still applies.
+`confidence_gate::process_claim_decision`, which auto-decides at confidence ≥ 95 and escalates
+everything else to a human. A "pass failed" call is sent as ≥ 95 only when its calibrated score
+clears the lowest threshold whose *measured* held-out-station precision is ≥ 0.95. In v1.2.0 that
+threshold is 0.923, at 0.953 measured precision and 0.35 recall. Every other call, including every
+"pass was fine" call, escalates: passes that clear only the 0.90 operating point carry its measured
+precision capped at 94, and the rest carry the calibrated probability capped at 79.
 
 ### Running the ML Pipeline
 
