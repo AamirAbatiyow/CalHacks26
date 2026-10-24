@@ -264,6 +264,50 @@ The annual figures are 12 times the trailing-30-day KPIs:
 
 Exact figures move slightly with the seed time, because pass geometry and the trailing 30-day window depend on `now`.
 
+## Decision architecture
+
+Reducers cannot call external services, so every model runs in `worker/`, a Node process that subscribes to the decision tables and writes results back through reducers. The module (`server/spacetimedb/src/decision.rs`) owns the evidence, the routing, Cedar and every final decision; the worker only proposes.
+
+```
+claim -> file_case (module builds the feature snapshot from pass, telemetry, space weather,
+         station history and maintenance, SLA terms and the ML failure probability)
+      -> System 1 (worker): logistic regression on structured features, never customer text
+           >= 95% and Cedar permits             -> auto-decided by System 1
+           a promoted learned rule matches       -> auto-decided by the rule (policy "v4+L<id>")
+           otherwise, or the text is needed      -> injection screen (worker)
+                flagged                          -> escalated by Guard, System 2 not invoked
+                passed                           -> System 2 (worker): LLM analyst reads every source
+      -> submit_system2 re-verifies in the module: cited evidence must exist and belong to the claim,
+         credit <= entitlement, telemetry/System 1 sanity checks, the 95% threshold, then Cedar
+           -> auto-decided by System 2, or escalated to Approvals with the evidence package and case summary
+```
+
+Run it after `seed.sh` (which also seeds `fixtures/sla_terms.json`, maintenance windows and 2,409 labeled decisions over 180 days):
+
+```bash
+cd worker && npm install && npm start      # System 2 in mock mode
+npm test                                   # worker tests
+```
+
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| `LLM_API_KEY` | unset | Enables the real System 2. Any OpenAI-compatible `/chat/completions` endpoint |
+| `LLM_BASE_URL` | `https://api.openai.com/v1` | Endpoint base URL |
+| `LLM_MODEL` | `gpt-4o-mini` | Model name, recorded on every System 2 decision |
+| `LIVE_LABEL_WEIGHT` | `20` | Weight of a live human label relative to one historical label |
+| `STDB_HOST`, `STDB_MODULE` | `ws://localhost:3000`, `ground-truth` | SpacetimeDB connection |
+
+**Mock mode.** Without `LLM_API_KEY`, System 2 is `mockAnalyst` (`worker/src/system2.ts`), a deterministic stand-in that is deliberately credulous: it obeys instructions in the customer message and believes asserted outages and cited ids. Break It therefore measures the guards around System 2, not the mock.
+
+**Prompt-injection defense.** The customer message is untrusted: it never enters the system prompt, it is passed in the user turn as one JSON-escaped string between `<<<CUSTOMER_MESSAGE>>>` markers with hidden characters stripped and delimiters neutralised, and a cheap screen (`worker/src/screen.ts`: Unicode tag decoding, zero-width and bidi stripping, NFKC, homoglyph folding, base64 decoding, instruction patterns) runs first. Whatever System 2 returns is re-verified by the module, and Cedar has the final say. Break It's Prompt injection row files 12 attacks as real claims (`run_injection_attacks`).
+
+**Learning.** Two channels, never trained on the policies themselves:
+
+1. Model weights. Every human decision in Approvals (`human_decide_case`) writes a `labeled_decision` with the full package the reviewer saw (snapshot, customer message and extracted fields, ML probability and SHAP terms, System 1 and System 2 outputs, rules fired), the verdict, credit, reason code and text, decisive evidence, reviewer, versions and claim type. The worker refits System 1 on all human labels (warm-started Newton/IRLS), replays it on the labeled history, and `register_model_version` promotes it only if auto-approve precision does not regress (the module re-checks). `model_version.latency_ms` is measured on the module clock from the human decision to the new version being registered.
+2. Policies. `worker/src/miner.ts` proposes a rule only when at least three reviewers made the same decision on the same claim type, cited the same decisive evidence, and no labeled decision with those feature values went the other way. A single decision never creates a rule, and customer text is never a rule input. The module stores the rule as Cedar text (`learned_rule.cedar_text`), re-counts support and contradictions over every label through Cedar, and promotes it only if replay precision does not regress. When nothing qualifies, the Decisions page shows "No consistent pattern found ..., so no rule was proposed".
+
+Every step of every decision is a `case_decision` row with the deciding system (System 1, System 2, learned rule, guard or human), model and policy versions, inputs and cited evidence; final decisions also write `decision_record`. The Decisions page shows model versions, retrain latency, learned rules and the audit feed; Approvals shows escalated cases with their evidence and the labeling form.
+
 ## Development
 
 ### Generate TypeScript Bindings
