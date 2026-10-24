@@ -8,6 +8,7 @@ export const AttackType = {
   MessyData: 'MessyData',
   ModelStress: 'ModelStress',
   Recovery: 'Recovery',
+  PromptInjection: 'PromptInjection',
 } as const;
 export type AttackType = (typeof AttackType)[keyof typeof AttackType];
 
@@ -58,6 +59,7 @@ export const ATTACK_TYPE_LABELS: Record<AttackType, string> = {
   MessyData: 'Messy data',
   ModelStress: 'Model stress',
   Recovery: 'Recovery',
+  PromptInjection: 'Prompt injection',
 };
 
 export const ATTACK_TYPE_CODES: Record<AttackType, number> = {
@@ -70,6 +72,7 @@ export const ATTACK_TYPE_CODES: Record<AttackType, number> = {
   MessyData: 6,
   ModelStress: 7,
   Recovery: 8,
+  PromptInjection: 9,
 };
 
 export const ATTACK_TYPES_ORDER: AttackType[] = [
@@ -82,4 +85,5 @@ export const ATTACK_TYPES_ORDER: AttackType[] = [
   AttackType.MessyData,
   AttackType.ModelStress,
   AttackType.Recovery,
+  AttackType.PromptInjection,
 ];

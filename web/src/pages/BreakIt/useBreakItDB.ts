@@ -57,6 +57,11 @@ export function useBreakItDB() {
   }, []);
 
   const runAttackType = useCallback((attackType: AttackType) => {
+    // Injection attacks are filed as real claims and scored as the decision worker decides them.
+    if (attackType === 'PromptInjection') {
+      reducers()?.runInjectionAttacks({});
+      return;
+    }
     reducers()?.runAttackType({ attackTypeCode: ATTACK_TYPE_CODES[attackType] });
   }, []);
 
