@@ -3,7 +3,7 @@ import type { Station, Satellite, Pass, SpaceWeather, SimClock, Kpi, PlaybackSpe
 import { PassStatus, FlareClass } from '../types';
 import { SPACETIMEDB_HOST, SPACETIMEDB_MODULE } from '../config';
 import { DbConnection, tables, type SubscriptionHandle } from '../module_bindings';
-import { DbConnectionBuilder, Timestamp } from 'spacetimedb';
+import { Timestamp } from 'spacetimedb';
 
 function extractMicros(timestamp: unknown): bigint {
   if (timestamp instanceof Timestamp) {
@@ -92,19 +92,19 @@ export function useSpacetimeDB() {
         const conn = builder
           .withUri(SPACETIMEDB_HOST)
           .withDatabaseName(SPACETIMEDB_MODULE)
-          .onConnect((connection, identity, token) => {
+          .onConnect((connection, identity) => {
             console.log('Connected to SpacetimeDB! Identity:', identity.toHexString());
             setConnectionState('connected');
             
             // Subscribe to all tables after connection
             const sub = connection.subscriptionBuilder()
-              .onApplied((subCtx) => {
+              .onApplied(() => {
                 console.log('Subscription applied, syncing data...');
                 syncAllData(connection.db);
               })
-              .onError((subCtx, err) => {
-                console.error('Subscription error:', err);
-                setError(String(err));
+              .onError((errCtx) => {
+                console.error('Subscription error:', errCtx.event);
+                setError(String(errCtx.event ?? 'Subscription error'));
               })
               .subscribe([
                 tables.station,
@@ -117,12 +117,12 @@ export function useSpacetimeDB() {
             
             subscriptionRef.current = sub;
           })
-          .onDisconnect((ctx, err) => {
+          .onDisconnect((_ctx, err) => {
             console.log('Disconnected from SpacetimeDB:', err);
             setConnectionState('disconnected');
             if (err) setError(String(err));
           })
-          .onConnectError((ctx, err) => {
+          .onConnectError((_ctx, err) => {
             console.error('Connection error:', err);
             setConnectionState('error');
             setError(String(err));
@@ -132,7 +132,7 @@ export function useSpacetimeDB() {
         connectionRef.current = conn;
         
         // Set up table event listeners
-        conn.db.station.onInsert((ctx, row) => {
+        conn.db.station.onInsert((_ctx, row) => {
           console.log('Station inserted:', row);
           setStations(prev => {
             const exists = prev.some(s => s.id === row.id);
@@ -148,11 +148,11 @@ export function useSpacetimeDB() {
           });
         });
         
-        conn.db.station.onDelete((ctx, row) => {
+        conn.db.station.onDelete((_ctx, row) => {
           setStations(prev => prev.filter(s => s.id !== row.id));
         });
         
-        conn.db.satellite.onInsert((ctx, row) => {
+        conn.db.satellite.onInsert((_ctx, row) => {
           console.log('Satellite inserted:', row);
           setSatellites(prev => {
             const exists = prev.some(s => s.noradId === row.noradId);
@@ -167,11 +167,11 @@ export function useSpacetimeDB() {
           });
         });
         
-        conn.db.satellite.onDelete((ctx, row) => {
+        conn.db.satellite.onDelete((_ctx, row) => {
           setSatellites(prev => prev.filter(s => s.noradId !== row.noradId));
         });
         
-        conn.db.pass.onInsert((ctx, row) => {
+        conn.db.pass.onInsert((_ctx, row) => {
           console.log('Pass inserted:', row);
           setPasses(prev => {
             const exists = prev.some(p => p.id === row.id);
@@ -189,11 +189,11 @@ export function useSpacetimeDB() {
           });
         });
         
-        conn.db.pass.onDelete((ctx, row) => {
+        conn.db.pass.onDelete((_ctx, row) => {
           setPasses(prev => prev.filter(p => p.id !== row.id));
         });
         
-        conn.db.pass.onUpdate((ctx, oldRow, newRow) => {
+        conn.db.pass.onUpdate((_ctx, oldRow, newRow) => {
           setPasses(prev => prev.map(p => 
             p.id === oldRow.id ? {
               id: newRow.id,
@@ -208,7 +208,7 @@ export function useSpacetimeDB() {
           ));
         });
         
-        conn.db.spaceWeather.onInsert((ctx, row) => {
+        conn.db.spaceWeather.onInsert((_ctx, row) => {
           const ts = extractMicros(row.timestamp);
           setSpaceWeather(prev => {
             const exists = prev.some(w => w.timestamp === ts);
@@ -222,12 +222,12 @@ export function useSpacetimeDB() {
           });
         });
         
-        conn.db.spaceWeather.onDelete((ctx, row) => {
+        conn.db.spaceWeather.onDelete((_ctx, row) => {
           const ts = extractMicros(row.timestamp);
           setSpaceWeather(prev => prev.filter(w => w.timestamp !== ts));
         });
         
-        conn.db.simClock.onInsert((ctx, row) => {
+        conn.db.simClock.onInsert((_ctx, row) => {
           console.log('SimClock inserted:', row);
           setSimClock({
             id: row.id,
@@ -239,7 +239,7 @@ export function useSpacetimeDB() {
           });
         });
         
-        conn.db.simClock.onUpdate((ctx, _oldRow, newRow) => {
+        conn.db.simClock.onUpdate((_ctx, _oldRow, newRow) => {
           setSimClock({
             id: newRow.id,
             currentTime: extractMicros(newRow.currentTime),
@@ -250,7 +250,7 @@ export function useSpacetimeDB() {
           });
         });
         
-        conn.db.kpi.onInsert((ctx, row) => {
+        conn.db.kpi.onInsert((_ctx, row) => {
           console.log('KPI inserted:', row);
           setKpi({
             id: row.id,
@@ -261,7 +261,7 @@ export function useSpacetimeDB() {
           });
         });
         
-        conn.db.kpi.onUpdate((ctx, _oldRow, newRow) => {
+        conn.db.kpi.onUpdate((_ctx, _oldRow, newRow) => {
           setKpi({
             id: newRow.id,
             billedThisMonthCents: newRow.billedThisMonthCents,
@@ -371,16 +371,16 @@ export function useSpacetimeDB() {
     console.log('Calling reducer:', reducerName, args);
     switch (reducerName) {
       case 'set_playback_playing':
-        conn.reducers.setPlaybackPlaying(args[0] as boolean);
+        conn.reducers.setPlaybackPlaying({ playing: args[0] as boolean });
         break;
       case 'set_playback_speed':
-        conn.reducers.setPlaybackSpeed(args[0] as number);
+        conn.reducers.setPlaybackSpeed({ speed: args[0] as number });
         break;
       case 'seek_to_time':
-        conn.reducers.seekToTime(BigInt(args[0] as number));
+        conn.reducers.seekToTime({ timestampMicros: BigInt(args[0] as number) });
         break;
       case 'go_live':
-        conn.reducers.goLive();
+        conn.reducers.goLive({});
         break;
     }
   }, []);
