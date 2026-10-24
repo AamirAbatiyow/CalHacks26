@@ -255,7 +255,7 @@ export default function DecisionsPage() {
                 <Info size={12} />
               </span>
             </div>
-            {d.worker?.note && <Chip tone="warn">{d.worker.note}</Chip>}
+            {d.worker?.note && <p className="dz-note" title={d.worker.note}>{d.worker.note}</p>}
             {d.rules.length === 0 ? (
               <EmptyState art="graph" compact title="No rule proposed" hint="No consistent pattern in the labeled decisions yet." />
             ) : (

@@ -224,7 +224,10 @@
   font-size: 12px;
   color: var(--color-amber);
   border-left: 2px solid var(--color-amber);
-  padding: 4px 10px;
+  padding: 2px 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dz-rule {
