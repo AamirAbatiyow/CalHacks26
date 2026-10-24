@@ -1,5 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { usePendingApprovals, useApprovalActions } from '../../hooks/useApprovals';
+import { useDecisionData, dollars, CLAIM_TYPE_LABELS } from '../../hooks/useDecisions';
+import { tag } from '../../hooks/useTable';
+import { CaseReview } from './CaseReview';
 import './Approvals.css';
 
 function formatDollarsExact(cents: bigint): string {
@@ -27,6 +30,19 @@ export default function ApprovalsPage() {
   const pendingClaims = usePendingApprovals();
   const { approveClaim, denyClaim, editClaim } = useApprovalActions();
   const [selectedClaimId, setSelectedClaimId] = useState<bigint | null>(null);
+  const decisionData = useDecisionData();
+  const [selectedCaseId, setSelectedCaseId] = useState<bigint | null>(null);
+  const selectedCase = selectedCaseId !== null
+    ? decisionData.cases.find(c => c.id === selectedCaseId) ?? null
+    : selectedClaimId === null ? decisionData.escalated[0] ?? null : null;
+  useEffect(() => {
+    if (selectedCaseId === null && selectedClaimId === null && decisionData.escalated[0]) {
+      setSelectedCaseId(decisionData.escalated[0].id);
+    }
+  }, [selectedCaseId, selectedClaimId, decisionData.escalated]);
+  const caseRows = selectedCase && !decisionData.escalated.includes(selectedCase)
+    ? [selectedCase, ...decisionData.escalated]
+    : decisionData.escalated;
   const [editMode, setEditMode] = useState(false);
   const [editAmount, setEditAmount] = useState('');
 
@@ -68,7 +84,7 @@ export default function ApprovalsPage() {
     setEditAmount('');
   };
 
-  if (pendingClaims.length === 0) {
+  if (pendingClaims.length === 0 && caseRows.length === 0) {
     return (
       <div className="approvals-page">
         <div className="approvals-empty">
@@ -83,15 +99,32 @@ export default function ApprovalsPage() {
   return (
     <div className="approvals-page">
       <div className="approvals-list">
+        {caseRows.map(c => {
+          const s1 = [...(decisionData.stepsByCase.get(c.id) ?? [])].reverse().find(d => tag(d.system) === 'System1');
+          const open = tag(c.status) === 'Escalated';
+          return (
+            <button
+              key={`case-${c.id}`}
+              className={`claim-row ${selectedCase?.id === c.id ? 'selected' : ''}`}
+              onClick={() => { setSelectedCaseId(c.id); setSelectedClaimId(null); }}
+            >
+              <div className="claim-source">{c.claimRef} · {CLAIM_TYPE_LABELS[tag(c.claimType)] ?? ''}</div>
+              <div className="claim-customer">{c.customer}</div>
+              <div className="claim-amount">{dollars(c.amountClaimedCents)}</div>
+              {s1 && <div className="claim-confidence">System 1 {s1.confidencePct.toFixed(1)}% {tag(s1.verdict).toLowerCase()}</div>}
+              <div className={`claim-tag ${open ? 'warning' : 'info'}`}>{open ? 'Escalated with evidence' : 'Decided'}</div>
+            </button>
+          );
+        })}
         {pendingClaims.map(claim => {
           const { label, type } = getEscalationLabel(claim.confidencePct);
-          const isSelected = selectedClaim?.id === claim.id;
+          const isSelected = !selectedCase && selectedClaim?.id === claim.id;
           
           return (
             <button
               key={String(claim.id)}
               className={`claim-row ${isSelected ? 'selected' : ''}`}
-              onClick={() => setSelectedClaimId(claim.id)}
+              onClick={() => { setSelectedClaimId(claim.id); setSelectedCaseId(null); }}
             >
               <div className="claim-customer">{claim.customerName}</div>
               <div className="claim-amount">{formatDollarsExact(claim.amountClaimedCents)}</div>
@@ -102,7 +135,11 @@ export default function ApprovalsPage() {
         })}
       </div>
       
-      {selectedClaim && (
+      {selectedCase ? (
+        <div className="approvals-detail cr-detail">
+          <CaseReview row={selectedCase} data={decisionData} />
+        </div>
+      ) : selectedClaim && (
         <div className="approvals-detail">
           <div className="detail-header">
             <h2>{selectedClaim.customerName}</h2>

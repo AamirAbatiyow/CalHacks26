@@ -12,6 +12,7 @@ import ApprovalsPage from './pages/Approvals';
 import FinancePage from './pages/Finance';
 import PoliciesPage from './pages/Policies';
 import BreakItPage from './pages/BreakIt';
+import DecisionsPage from './pages/Decisions';
 import type { LayerState, PlaybackSpeed } from './types';
 import './App.css';
 
@@ -91,6 +92,8 @@ function App() {
         return <ClaimPage />;
       case 'approvals':
         return <ApprovalsPage />;
+      case 'decisions':
+        return <DecisionsPage />;
       case 'finance':
         return <FinancePage key="summary" initialTab="summary" />;
       case 'ledger':

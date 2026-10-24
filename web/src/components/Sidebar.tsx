@@ -1,5 +1,6 @@
 import type { PageId } from '../hooks/useHashPage';
 import { usePendingApprovals } from '../hooks/useApprovals';
+import { useTable, tag } from '../hooks/useTable';
 import './Sidebar.css';
 
 export type { PageId };
@@ -15,6 +16,7 @@ const navItems: NavItem[] = [
   { id: 'overview', label: 'Overview', icon: '⌂', enabled: true },
   { id: 'claims', label: 'Claims', icon: '⚡', enabled: true },
   { id: 'approvals', label: 'Approvals', icon: '☐', enabled: true },
+  { id: 'decisions', label: 'Decisions', icon: '◐', enabled: true },
   { id: 'customers', label: 'Customers', icon: '⚇', enabled: false },
   { id: 'finance', label: 'Finance', icon: '$', enabled: true },
   { id: 'ledger', label: 'Ledger', icon: '≡', enabled: true },
@@ -29,7 +31,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({ activePage, onNavigate }: SidebarProps) {
-  const pendingApprovalsCount = usePendingApprovals().length;
+  const escalatedCases = useTable('decisionCase').filter(c => tag(c.status) === 'Escalated').length;
+  const pendingApprovalsCount = usePendingApprovals().length + escalatedCases;
 
   return (
     <nav className="sidebar">

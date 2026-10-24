@@ -131,4 +131,22 @@ echo "Seeding attack fixtures..."
 "$SPACETIME" call "$MODULE" seed_attack_fixtures --server "$SERVER" || true
 "$SPACETIME" call "$MODULE" run_all_attacks --server "$SERVER" || true
 
+# Decision architecture: SLA terms System 1/2 read, station maintenance windows, and
+# six months of human-labeled decisions the worker trains System 1 on and mines for
+# policy proposals. Start the worker (cd worker && npm start) after seeding.
+echo "Seeding SLA terms and decision history..."
+jq -c '.[]' "$FIXTURES_DIR/sla_terms.json" | while read -r c; do
+  "$SPACETIME" call "$MODULE" seed_contract_term --server "$SERVER" -- \
+    "$(echo "$c" | jq '.customer')" "$(echo "$c" | jq '.contract_id')" "$(echo "$c" | jq '.tier')" \
+    "$(echo "$c" | jq '.sla_clause')" "$(echo "$c" | jq '.credit_pct')" "$(echo "$c" | jq '.max_credit_cents')" \
+    "$(echo "$c" | jq '.weather_exclusion')" "$(echo "$c" | jq '.claim_window_days')" > /dev/null || true
+done
+"$SPACETIME" call "$MODULE" seed_decision_world --server "$SERVER" || true
+WORKER_DIR="$SCRIPT_DIR/../worker"
+if [ -d "$WORKER_DIR/node_modules" ]; then
+  (cd "$WORKER_DIR" && STDB_MODULE="$MODULE" npm run --silent seed-history) || true
+else
+  echo "Skipping labeled history: run 'npm install' in worker/ and then 'npm run seed-history' there."
+fi
+
 echo "Seeding complete!"

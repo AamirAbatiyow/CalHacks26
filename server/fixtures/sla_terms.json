@@ -1,0 +1,8 @@
+[
+  {"customer": "SkyNet Communications", "contract_id": "SKY-2026-01", "tier": "Gold", "sla_clause": "4.2 Downlink loss: credit of 60% of pass value per affected pass, prorated by data lost. Space weather is not excluded.", "credit_pct": 60, "max_credit_cents": 500000, "weather_exclusion": false, "claim_window_days": 30},
+  {"customer": "Nexus Corp", "contract_id": "NEX-2025-07", "tier": "Premium", "sla_clause": "5.1 Dropped or degraded passes are credited at 50% of pass value. Claims within 30 days.", "credit_pct": 50, "max_credit_cents": 400000, "weather_exclusion": false, "claim_window_days": 30},
+  {"customer": "Polar Data Systems", "contract_id": "PDS-2024-11", "tier": "Standard", "sla_clause": "7.3 Force majeure: outages caused by geomagnetic storms (Kp >= 5) are excluded from SLA credits.", "credit_pct": 40, "max_credit_cents": 300000, "weather_exclusion": true, "claim_window_days": 14},
+  {"customer": "Helix Orbital", "contract_id": "HLX-2026-03", "tier": "Standard", "sla_clause": "6.1 Credits of 40% of pass value; space weather excluded; claims within 14 days.", "credit_pct": 40, "max_credit_cents": 250000, "weather_exclusion": true, "claim_window_days": 14},
+  {"customer": "Aether Dynamics", "contract_id": "AET-2025-02", "tier": "Premium", "sla_clause": "3.4 Credits of 50% of pass value, prorated for degraded links.", "credit_pct": 50, "max_credit_cents": 350000, "weather_exclusion": false, "claim_window_days": 30},
+  {"customer": "Orbital Sciences Inc", "contract_id": "OSI-2026-05", "tier": "Gold", "sla_clause": "2.2 Credits of 60% of pass value; late delivery credited at 25% when caused by station maintenance.", "credit_pct": 60, "max_credit_cents": 600000, "weather_exclusion": false, "claim_window_days": 45}
+]
