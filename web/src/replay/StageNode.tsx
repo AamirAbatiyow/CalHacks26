@@ -18,16 +18,22 @@ function UsdValue({ cents, progress }: { cents: number; progress: MotionValue<nu
   return <motion.span>{text}</motion.span>;
 }
 
+/** Text headlines are cut to their first clause so every node carries one short value. */
+function shortText(text: string): string {
+  const head = text.split(/\s[·:—]\s|,\s/)[0];
+  return head.replace(/ checks?( pass(ed)?)?$/i, '');
+}
+
 function HeadlineValue({ headline, progress }: { headline: Headline; progress: MotionValue<number> }) {
   switch (headline.kind) {
     case 'pct': return <PctValue value={headline.value} digits={headline.digits ?? 1} progress={progress} />;
     case 'usd': return <UsdValue cents={headline.cents} progress={progress} />;
-    default: return <span>{headline.text}</span>;
+    default: return <span>{shortText(headline.text)}</span>;
   }
 }
 
 function StageNodeView({ data }: NodeProps<StageNode>) {
-  const { stage, index, width, height } = data;
+  const { stage, index, width, height, final } = data;
   const { t, active } = useTimelineContext();
   const shown = useTransform(t, [index - 0.001, index], [0, 1]);
   const draw = useTransform(t, [index + DRAW[0], index + DRAW[1]], [0, 1]);
@@ -37,10 +43,11 @@ function StageNodeView({ data }: NodeProps<StageNode>) {
   const stub = useTransform(t, [index + 0.38, index + 0.52], [0, 1]);
 
   const state = index === active ? 'is-active' : index < active ? 'is-past' : 'is-future';
+  const hasDetail = Boolean(stage.caption || stage.detail || stage.note || stage.checks || showsSystem(stage));
 
   return (
     <motion.div
-      className={`stage-node tone-${stage.tone} ${state}`}
+      className={`stage-node tone-${stage.tone} ${state} ${final ? 'is-final' : ''}`}
       style={{ width, height, opacity: shown }}
     >
       <Handle type="target" position={Position.Left} className="stage-handle" isConnectable={false} />
@@ -60,7 +67,7 @@ function StageNodeView({ data }: NodeProps<StageNode>) {
             <span className="stage-dot" />
             {STAGE_TITLES[stage.kind]}
           </span>
-          {stage.version && <span className="stage-version">{stage.version}</span>}
+          {stage.version && <span className="stage-version" title={stage.version}>{stage.version}</span>}
         </div>
         <div className="stage-headline">
           {stage.href ? (
@@ -71,21 +78,32 @@ function StageNodeView({ data }: NodeProps<StageNode>) {
             <HeadlineValue headline={stage.headline} progress={count} />
           )}
         </div>
-        <div className="stage-caption">{stage.caption}</div>
-        {stage.detail && <div className="stage-caption">{stage.detail}</div>}
         {stage.checks && (
-          <ul className="stage-checks">
+          <div className="stage-check-dots" aria-label={`${stage.checks.filter(c => c.ok).length} of ${stage.checks.length} checks passed`}>
             {stage.checks.map(check => (
-              <li key={check.label} className={check.ok ? 'ok' : 'fail'}>
-                <span className="check-mark">{check.ok ? '✓' : '✕'}</span>
-                {check.label}
-              </li>
+              <span key={check.label} className={`stage-check-dot ${check.ok ? 'ok' : 'fail'}`} />
             ))}
-          </ul>
+          </div>
         )}
-        {stage.note && <p className="stage-note">{stage.note}</p>}
-        {showsSystem(stage) && <div className="stage-system">{stage.system}</div>}
       </motion.div>
+      {hasDetail && (
+        <div className="stage-hover" role="tooltip">
+          {showsSystem(stage) && <div className="stage-hover-system">{stage.system}</div>}
+          {stage.caption && <div className="stage-hover-caption">{stage.caption}</div>}
+          {stage.detail && <div className="stage-hover-caption">{stage.detail}</div>}
+          {stage.checks && (
+            <ul className="stage-checks">
+              {stage.checks.map(check => (
+                <li key={check.label} className={check.ok ? 'ok' : 'fail'}>
+                  <span className="check-mark">{check.ok ? '✓' : '✕'}</span>
+                  {check.label}
+                </li>
+              ))}
+            </ul>
+          )}
+          {stage.note && <p className="stage-note">{stage.note}</p>}
+        </div>
+      )}
       {stage.untaken && (
         <motion.div className="stage-stub" style={{ opacity: stub }} aria-hidden>
           <span className="stub-line" />

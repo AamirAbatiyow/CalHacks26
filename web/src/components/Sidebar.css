@@ -31,6 +31,7 @@
 }
 
 .sidebar-item {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -44,7 +45,10 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
-.sidebar-item.active {
+.sidebar-active-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
   background: rgba(255, 255, 255, 0.1);
 }
 
@@ -54,12 +58,20 @@
 
 .sidebar-icon-wrapper {
   position: relative;
+  z-index: 1;
   display: inline-block;
 }
 
 .sidebar-icon {
-  font-size: 16px;
-  margin-bottom: 2px;
+  display: block;
+  margin-bottom: 3px;
+  color: var(--color-secondary);
+  transition: color 0.15s ease;
+}
+
+.sidebar-item:hover:not(.disabled) .sidebar-icon,
+.sidebar-item.active .sidebar-icon {
+  color: var(--color-primary);
 }
 
 .sidebar-badge {
@@ -79,6 +91,7 @@
 }
 
 .sidebar-label {
+  position: relative;
   font-size: 9px;
   color: var(--color-secondary);
   text-transform: uppercase;
@@ -86,5 +99,6 @@
 }
 
 .sidebar-item.active .sidebar-label {
+  position: relative;
   color: var(--color-primary);
 }

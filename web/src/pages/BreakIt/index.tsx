@@ -1,4 +1,9 @@
 import { useMemo, useEffect, useState, useCallback } from 'react';
+import { motion } from 'motion/react';
+import {
+  Activity, Copy, FileWarning, FileX2, Hourglass, Play, RotateCcw, Shuffle, SunMedium, Syringe, TrendingUp, Undo2, UserCog, WifiOff,
+  type LucideIcon,
+} from 'lucide-react';
 import { useTable } from '../../hooks/useTable';
 import { INJECTION_RUN_TIMEOUT_S, useWorkerStatus } from '../../hooks/useDecisions';
 import { useBreakItDB } from './useBreakItDB';
@@ -8,18 +13,14 @@ import {
   ATTACK_TYPE_LABELS,
   ATTACK_TYPES_ORDER,
 } from './types';
+import type { AttackRun } from './types';
+import { Chip } from '../../ui/Chip';
+import { Drawer } from '../../ui/Drawer';
+import { C, SplitBar } from '../../ui/charts';
+import { CountUp, compactUsd, wholeUsd } from '../../ui/CountUp';
+import { EmptyState } from '../../ui/EmptyState';
+import { Skeleton } from '../../ui/Skeleton';
 import './BreakIt.css';
-
-function formatDollars(cents: bigint): string {
-  const dollars = Number(cents) / 100;
-  if (dollars >= 1000000) {
-    return `$${(dollars / 1000000).toFixed(1)}M`;
-  }
-  if (dollars >= 1000) {
-    return `$${Math.round(dollars / 1000)}K`;
-  }
-  return `$${Math.round(dollars)}`;
-}
 
 function formatTime(timestamp: bigint, baseTimestamp: bigint): string {
   const diffMs = Number(timestamp - baseTimestamp) / 1000;
@@ -29,27 +30,25 @@ function formatTime(timestamp: bigint, baseTimestamp: bigint): string {
   return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
 
-interface StatBoxProps {
-  label: string;
-  value: string;
-  subValue?: string;
-}
-
-function StatBox({ label, value, subValue }: StatBoxProps) {
-  return (
-    <div className="breakit-stat">
-      <span className="breakit-stat-label">{label}</span>
-      <span className="breakit-stat-value">
-        {value}
-        {subValue && <span className="breakit-stat-sub">{subValue}</span>}
-      </span>
-    </div>
-  );
-}
+const ATTACK_ICONS: Record<AttackType, LucideIcon> = {
+  InflatedClaim: TrendingUp,
+  DuplicateClaim: Copy,
+  ForgedStationLog: FileWarning,
+  InsiderRaisesOwnLimit: UserCog,
+  SpaceWeatherExcuse: SunMedium,
+  ContractOutsideSla: FileX2,
+  MessyData: Shuffle,
+  ModelStress: Activity,
+  Recovery: Undo2,
+  PromptInjection: Syringe,
+};
 
 interface TypeTally {
   caught: number;
   total: number;
+  caughtCents: number;
+  missedCents: number;
+  runs: AttackRun[];
 }
 
 interface RowStatus {
@@ -58,65 +57,76 @@ interface RowStatus {
   hint?: string;
 }
 
-interface AttackRowProps {
+interface AttackTileProps {
   attackType: AttackType;
   result: TypeTally | null;
   onRun: () => void;
+  onOpen: () => void;
   isRunning: boolean;
   blocked?: boolean;
   status?: RowStatus | null;
+  index: number;
 }
 
-function AttackRow({ attackType, result, onRun, isRunning, blocked, status }: AttackRowProps) {
+function AttackTile({ attackType, result, onRun, onOpen, isRunning, blocked, status, index }: AttackTileProps) {
+  const Icon = ATTACK_ICONS[attackType];
   const missed = result ? result.total - result.caught : 0;
-  const resultClass = status ? status.tone : !result ? '' : missed > 0 ? 'missed' : 'caught';
-  const resultText = status ? status.text : result ? `${result.caught}/${result.total} caught` : '';
+  const tone = status ? 'status' : !result ? 'idle' : missed > 0 ? 'missed' : 'caught';
+  const StatusIcon = status?.tone === 'pending' ? Hourglass : WifiOff;
 
   return (
-    <>
-      <div className="breakit-attack-row">
-        <span className="breakit-attack-name">{ATTACK_TYPE_LABELS[attackType]}</span>
+    <motion.div
+      className={`breakit-tile ${tone}`}
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: index * 0.03 }}
+      whileHover={{ y: -2 }}
+      onClick={result ? onOpen : undefined}
+      role={result ? 'button' : undefined}
+      tabIndex={result ? 0 : undefined}
+      onKeyDown={e => { if (result && (e.key === 'Enter' || e.key === ' ')) onOpen(); }}
+      aria-label={`${ATTACK_TYPE_LABELS[attackType]}${result ? `: ${result.caught} of ${result.total} caught` : ''}`}
+    >
+      <div className="breakit-tile-head">
+        <Icon size={14} className="breakit-tile-icon" aria-hidden />
+        <span className="breakit-tile-name">{ATTACK_TYPE_LABELS[attackType]}</span>
         <button
           className="breakit-run-btn"
-          onClick={onRun}
+          onClick={e => { e.stopPropagation(); onRun(); }}
           disabled={isRunning || blocked}
-          title={blocked ? status?.hint : undefined}
+          title={blocked ? status?.hint : `Run ${ATTACK_TYPE_LABELS[attackType]}`}
+          aria-label={`Run ${ATTACK_TYPE_LABELS[attackType]}`}
         >
-          Run
+          <Play size={11} />
         </button>
-        <span className={`breakit-attack-result ${resultClass}`}>
-          {resultText}
-        </span>
       </div>
-      {status?.hint && <div className={`breakit-attack-hint ${status.tone}`}>{status.hint}</div>}
-    </>
-  );
-}
 
-interface LogEntry {
-  timestamp: bigint;
-  message: string;
-  isMissed: boolean;
-}
-
-interface LogPanelProps {
-  entries: LogEntry[];
-  baseTimestamp: bigint;
-}
-
-function LogPanel({ entries, baseTimestamp }: LogPanelProps) {
-  return (
-    <div className="breakit-log">
-      {entries.map((entry, idx) => (
-        <div key={idx} className="breakit-log-entry">
-          <span className="breakit-log-time">{formatTime(entry.timestamp, baseTimestamp)}</span>
-          <span className={`breakit-log-message ${entry.isMissed ? 'missed' : ''}`}>
-            {entry.message}
-            {entry.isMissed && <span className="breakit-log-missed"> MISSED</span>}
-          </span>
+      {status ? (
+        <div className="breakit-tile-status">
+          <Chip tone={status.tone === 'pending' ? 'accent' : 'warn'} icon={StatusIcon} title={status.hint}>{status.text}</Chip>
         </div>
-      ))}
-    </div>
+      ) : result ? (
+        <>
+          <div className="breakit-tile-score">
+            <span className="breakit-tile-caught">{result.caught}</span>
+            <span className="breakit-tile-total">/ {result.total}</span>
+          </div>
+          <div className="breakit-dots" aria-hidden>
+            {result.runs.map(r => (
+              <span key={String(r.id)} className={`breakit-dot ${r.result === AttackResult.Caught ? 'caught' : 'missed'}`} />
+            ))}
+          </div>
+          <div className="breakit-tile-dollars">
+            {result.missedCents > 0
+              ? <span className="missed">{compactUsd(result.missedCents)} paid out</span>
+              : <span>{compactUsd(result.caughtCents)} protected</span>}
+          </div>
+        </>
+      ) : (
+        <div className="breakit-tile-idle">Not run</div>
+      )}
+      {status?.hint && <div className="breakit-tile-hint">{status.hint}</div>}
+    </motion.div>
   );
 }
 
@@ -134,6 +144,7 @@ export default function BreakIt() {
   const cases = useTable('decisionCase');
   const { online: workerOnline, silenceS: workerSilenceS, now } = useWorkerStatus();
   const [injectionError, setInjectionError] = useState<string | null>(null);
+  const [openType, setOpenType] = useState<AttackType | null>(null);
 
   useEffect(() => {
     if (connected && fixtures.length === 0) {
@@ -146,35 +157,33 @@ export default function BreakIt() {
     return sessions.reduce((latest, s) => (s.id > latest.id ? s : latest));
   }, [sessions]);
 
+  const sessionRuns = useMemo(() => {
+    if (!latestSession) return [];
+    return attackRuns
+      .filter(r => r.runId === latestSession.id)
+      .sort((a, b) => Number(a.timestamp - b.timestamp) || Number(a.id - b.id));
+  }, [attackRuns, latestSession]);
+
   const attackTypeResults = useMemo(() => {
     const results = {} as Record<AttackType, TypeTally | null>;
     for (const t of ATTACK_TYPES_ORDER) {
       results[t] = null;
     }
-    if (!latestSession) return results;
-
-    for (const run of attackRuns) {
-      if (run.runId !== latestSession.id || run.result === AttackResult.Pending) continue;
-      const tally = results[run.attackType] ?? { caught: 0, total: 0 };
+    for (const run of sessionRuns) {
+      if (run.result === AttackResult.Pending) continue;
+      const tally = results[run.attackType] ?? { caught: 0, total: 0, caughtCents: 0, missedCents: 0, runs: [] };
       tally.total += 1;
-      if (run.result === AttackResult.Caught) tally.caught += 1;
+      tally.runs.push(run);
+      if (run.result === AttackResult.Caught) {
+        tally.caught += 1;
+        tally.caughtCents += Number(run.amountCents);
+      } else {
+        tally.missedCents += Number(run.amountCents);
+      }
       results[run.attackType] = tally;
     }
     return results;
-  }, [attackRuns, latestSession]);
-
-  const logEntries = useMemo((): LogEntry[] => {
-    if (!latestSession) return [];
-
-    return attackRuns
-      .filter(r => r.runId === latestSession.id)
-      .sort((a, b) => Number(a.timestamp - b.timestamp) || Number(a.id - b.id))
-      .map(r => ({
-        timestamp: r.timestamp,
-        message: r.logMessage.replace(/: (MISSED|caught) - /, ': '),
-        isMissed: r.result === AttackResult.Missed,
-      }));
-  }, [attackRuns, latestSession]);
+  }, [sessionRuns]);
 
   const baseTimestamp = latestSession?.startedAt ?? BigInt(0);
 
@@ -224,60 +233,127 @@ export default function BreakIt() {
     runAttackType(attackType).catch((e: unknown) => setInjectionError(e instanceof Error ? e.message : String(e)));
   }, [runAttackType]);
 
+  const protectedCents = Number(latestSession?.dollarsProtectedCents ?? 0n);
+  const badCents = Number(latestSession?.badPayoutsCents ?? 0n);
+  const loading = !connected && sessions.length === 0;
+  const scored = sessionRuns.filter(r => r.result !== AttackResult.Pending);
+  const openTally = openType ? attackTypeResults[openType] : null;
+
   return (
     <div className="breakit-page">
       <div className="breakit-content">
-        <div className="breakit-main">
-          <div className="breakit-stats-row">
-            <StatBox 
-              label="Caught" 
-              value={`${latestSession?.caught ?? 0}`}
-              subValue={` / ${latestSession?.totalAttacks ?? 0}`}
-            />
-            <StatBox 
-              label="Dollars protected" 
-              value={formatDollars(latestSession?.dollarsProtectedCents ?? 0n)} 
-            />
-            <StatBox 
-              label="Bad payouts" 
-              value={formatDollars(latestSession?.badPayoutsCents ?? 0n)} 
-            />
+        <div className="ui-tiles breakit-tiles">
+          <div className="ui-tile">
+            <span className="ui-stat-label">Caught</span>
+            <span className="ui-stat-value">
+              {loading ? <Skeleton width={60} height={20} /> : <><CountUp value={latestSession?.caught ?? 0} format={n => String(Math.round(n))} /><span className="breakit-of"> / {latestSession?.totalAttacks ?? 0}</span></>}
+            </span>
           </div>
-
-          <div className="breakit-attacks">
-            {ATTACK_TYPES_ORDER.map(attackType => (
-              <AttackRow
-                key={attackType}
-                attackType={attackType}
-                result={attackTypeResults[attackType]}
-                onRun={() => runRow(attackType)}
-                isRunning={isRunning}
-                blocked={attackType === 'PromptInjection' && !workerOnline}
-                status={attackType === 'PromptInjection' ? injectionStatus : null}
-              />
-            ))}
+          <div className="ui-tile">
+            <span className="ui-stat-label">Dollars protected</span>
+            <span className="ui-stat-value">{loading ? <Skeleton width={80} height={20} /> : <CountUp value={protectedCents} format={compactUsd} />}</span>
           </div>
+          <div className="ui-tile">
+            <span className="ui-stat-label">Bad payouts</span>
+            <span className={`ui-stat-value ${badCents > 0 ? 'tone-warn' : ''}`}>{loading ? <Skeleton width={80} height={20} /> : <CountUp value={badCents} format={compactUsd} />}</span>
+          </div>
+          <div className="ui-tile breakit-tile-split">
+            <span className="ui-stat-label">Attack dollars</span>
+            <SplitBar
+              label={`${compactUsd(protectedCents)} protected, ${compactUsd(badCents)} paid out`}
+              parts={[
+                { label: `Protected ${compactUsd(protectedCents)}`, value: protectedCents, color: C.green },
+                { label: `Paid out ${compactUsd(badCents)}`, value: badCents, color: C.red, pattern: true },
+              ]}
+            />
+            <span className="ui-legend">
+              <span className="ui-legend-item"><span className="ui-legend-swatch" style={{ background: C.green }} />Protected</span>
+              <span className="ui-legend-item"><span className="ui-legend-swatch hatched" style={{ color: C.red }} />Paid out</span>
+            </span>
+          </div>
+        </div>
 
+        <div className="breakit-section-head">
+          <span className="ui-section-title">Attacks</span>
           <div className="breakit-actions">
-            <button 
-              className="breakit-run-all-btn"
-              onClick={runAllAttacks}
-              disabled={isRunning || !connected}
-            >
-              Run all {fixtures.length}
+            <button className="breakit-run-all-btn" onClick={runAllAttacks} disabled={isRunning || !connected}>
+              <Play size={12} /> Run all {fixtures.length}
             </button>
-            <button
-              className="breakit-clear-btn"
-              onClick={clearRuns}
-              disabled={isRunning}
-            >
-              Clear
+            <button className="breakit-clear-btn" onClick={clearRuns} disabled={isRunning}>
+              <RotateCcw size={12} /> Clear
             </button>
           </div>
         </div>
 
-        <LogPanel entries={logEntries} baseTimestamp={baseTimestamp} />
+        <div className="breakit-grid">
+          {ATTACK_TYPES_ORDER.map((attackType, i) => (
+            <AttackTile
+              key={attackType}
+              index={i}
+              attackType={attackType}
+              result={attackTypeResults[attackType]}
+              onRun={() => runRow(attackType)}
+              onOpen={() => setOpenType(attackType)}
+              isRunning={isRunning}
+              blocked={attackType === 'PromptInjection' && !workerOnline}
+              status={attackType === 'PromptInjection' ? injectionStatus : null}
+            />
+          ))}
+        </div>
+
+        <div className="breakit-section-head">
+          <span className="ui-section-title">Run timeline</span>
+          {scored.length > 0 && <span className="ui-legend">
+            <span className="ui-legend-item"><span className="breakit-dot caught" />Caught</span>
+            <span className="ui-legend-item"><span className="breakit-dot missed" />Missed</span>
+          </span>}
+        </div>
+        {scored.length === 0 ? (
+          <EmptyState art="shield" compact title="No attacks run yet" hint="Run all to throw every fixture at the pipeline." />
+        ) : (
+          <div className="breakit-timeline" role="img" aria-label={`${scored.length} attacks in run order`}>
+            {scored.map(r => (
+              <motion.span
+                key={String(r.id)}
+                className={`breakit-tick ${r.result === AttackResult.Caught ? 'caught' : 'missed'}`}
+                title={`${formatTime(r.timestamp, baseTimestamp)} ${ATTACK_TYPE_LABELS[r.attackType]} · ${wholeUsd(Number(r.amountCents))} · ${r.result === AttackResult.Caught ? 'caught' : 'missed'}`}
+                initial={{ scaleY: 0 }}
+                animate={{ scaleY: 1 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => setOpenType(r.attackType)}
+              />
+            ))}
+          </div>
+        )}
       </div>
+
+      <Drawer
+        open={openTally !== null}
+        onClose={() => setOpenType(null)}
+        eyebrow="Attack log"
+        title={openType ? ATTACK_TYPE_LABELS[openType] : ''}
+      >
+        {openTally && (
+          <>
+            <div className="ui-chips">
+              <Chip tone="pass">{openTally.caught} caught</Chip>
+              {openTally.total - openTally.caught > 0 && <Chip tone="block">{openTally.total - openTally.caught} missed</Chip>}
+            </div>
+            <div className="breakit-log">
+              {openTally.runs.map(r => (
+                <div key={String(r.id)} className="breakit-log-entry" title={r.logMessage}>
+                  <span className="breakit-log-time">{formatTime(r.timestamp, baseTimestamp)}</span>
+                  <span className={`breakit-dot ${r.result === AttackResult.Caught ? 'caught' : 'missed'}`} aria-label={r.result} />
+                  <span className="breakit-log-amount">{wholeUsd(Number(r.amountCents))}</span>
+                  <span className={`breakit-log-message ${r.result === AttackResult.Missed ? 'missed' : ''}`}>
+                    {r.logMessage.replace(/: (MISSED|caught) - /, ': ').replace(/^[^:]+: /, '')}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </Drawer>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTable, micros, tag } from '../../hooks/useTable';
 import { useKpi } from '../../hooks/useKpi';
-import { formatDollars } from '../../utils/money';
+import { motion } from 'motion/react';
 import type { DecisionOutcome, DecisionRecord, DecisionType, LedgerEntry, LedgerEntryType } from '../../types';
 import { SummaryTab } from './SummaryTab';
 import { LedgerTab } from './LedgerTab';
@@ -45,9 +45,9 @@ export default function Finance({ initialTab = 'summary' }: { initialTab?: Finan
   const { decisionRecords, ledgerEntries } = useFinanceData();
   const kpi = useKpi();
 
-  const leakageAvoided = kpi ? formatDollars(kpi.leakageAvoidedCents) : '—';
-  const reviewCostSaved = kpi ? formatDollars(kpi.reviewCostSavedCents) : '—';
-  const creditsIssued = kpi ? formatDollars(kpi.creditsPaidCents) : '—';
+  const leakageAvoided = kpi ? Number(kpi.leakageAvoidedCents) : null;
+  const reviewCostSaved = kpi ? Number(kpi.reviewCostSavedCents) : null;
+  const creditsIssued = kpi ? Number(kpi.creditsPaidCents) : null;
 
   const tabs: { id: TabId; label: string }[] = [
     { id: 'summary', label: 'Summary' },
@@ -65,6 +65,7 @@ export default function Finance({ initialTab = 'summary' }: { initialTab?: Finan
             onClick={() => setActiveTab(tab.id)}
           >
             {tab.label}
+            {activeTab === tab.id && <motion.span layoutId="finance-tab" className="finance-tab-line" transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }} />}
           </button>
         ))}
       </div>

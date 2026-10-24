@@ -15,6 +15,8 @@ import { PulseEdgeComponent } from './PulseEdge';
 import { SPEEDS, TimelineContext, endPoint, restPoint, useTimeline } from './timeline';
 import { STAGE_TITLES } from './adapter';
 import { useDecisionTrace, useReplayParam } from './useDecisionTrace';
+import { Bot, Cpu, Hourglass, ScrollText, UserCheck, type LucideIcon } from 'lucide-react';
+import { SkeletonGraph } from '../ui/Skeleton';
 import type { DecidedBy, DecisionTrace, TraceStage } from './types';
 import './DecisionReplay.css';
 
@@ -34,6 +36,14 @@ const ROUTE_LABELS: Record<DecidedBy, string> = {
   system2: 'System 2 decided',
   human: 'Human decided · retrained',
   pending: 'Escalated · awaiting human',
+};
+
+const ROUTE_ICONS: Record<DecidedBy, LucideIcon> = {
+  system1: Cpu,
+  rule: ScrollText,
+  system2: Bot,
+  human: UserCheck,
+  pending: Hourglass,
 };
 
 function usd(cents: number): string {
@@ -174,6 +184,7 @@ function ReplayPanel({ trace, onClose }: { trace: DecisionTrace; onClose: () => 
   const { togglePlay, stepForward, stepBack, replay } = timeline;
   const contextValue = useMemo(() => ({ t: timeline.t, active: timeline.active }), [timeline.t, timeline.active]);
   const routeTone = trace.decidedBy === 'human' || trace.decidedBy === 'pending' ? 'warn' : 'neutral';
+  const RouteIcon = ROUTE_ICONS[trace.decidedBy];
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -207,7 +218,7 @@ function ReplayPanel({ trace, onClose }: { trace: DecisionTrace; onClose: () => 
           </div>
         </div>
         <div className="replay-header-right">
-          <span className={`replay-route tone-${routeTone}`}>{ROUTE_LABELS[trace.decidedBy]}</span>
+          <span className={`replay-route tone-${routeTone}`}><RouteIcon size={12} aria-hidden />{ROUTE_LABELS[trace.decidedBy]}</span>
           {trace.source === 'seeded' ? (
             <span className="replay-source" title="This historical decision has no recorded pipeline steps; the path is an example seeded from its row">
               seeded path
@@ -261,7 +272,10 @@ export function DecisionReplayHost() {
               <ReplayPanel key={trace.key} trace={trace} onClose={close} />
             ) : (
               <div className="replay-loading">
-                <span>Loading decision…</span>
+                <div className="replay-loading-body">
+                  <span>Loading decision…</span>
+                  <SkeletonGraph columns={5} />
+                </div>
                 <button className="replay-close" onClick={close} aria-label="Close replay">✕</button>
               </div>
             )}

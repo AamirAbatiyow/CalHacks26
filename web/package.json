@@ -14,9 +14,11 @@
     "@clockworklabs/spacetimedb-sdk": "^2.0.0",
     "@dagrejs/dagre": "^3.1.2",
     "@xyflow/react": "^12.12.0",
+    "lucide-react": "^1.61.0",
     "motion": "^14.6.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "recharts": "^3.10.1",
     "satellite.js": "^5.0.0",
     "spacetimedb": "^2.13.0",
     "three": "^0.186.1"

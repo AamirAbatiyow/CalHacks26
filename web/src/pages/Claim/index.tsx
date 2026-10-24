@@ -4,41 +4,9 @@ import { ClaimPlaybackBar } from './ClaimPlaybackBar';
 import { useClaimData } from '../../hooks/useClaimData';
 import { useHashParam } from '../../hooks/useHashPage';
 import { useTable } from '../../hooks/useTable';
-import { ClaimGate, DataIntegrityStatus } from '../../types';
-import { openReplay } from '../../replay/useDecisionTrace';
+import { EmptyState } from '../../ui/EmptyState';
+import { ClaimPanel, ClaimSkeleton } from './ClaimPanel';
 import './Claim.css';
-
-function formatDollarsExact(cents: bigint | number): string {
-  const dollars = Number(cents) / 100;
-  return `$${dollars.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-}
-
-function getGateLabel(gate: ClaimGate): string {
-  switch (gate) {
-    case ClaimGate.Auto:
-      return 'auto';
-    case ClaimGate.Escalated:
-      return 'escalated';
-  }
-}
-
-function getCreditLabel(creditCents: bigint, claimedCents: bigint): string {
-  if (creditCents <= 0n) return 'No credit';
-  return creditCents >= claimedCents ? 'Full credit' : 'Partial credit';
-}
-
-function formatShap(value: number): string {
-  return `${value >= 0 ? '+' : '\u2212'}${Math.abs(value).toFixed(2)}`;
-}
-
-function VersionLink({ label, version, policyVersion, known }: { label: string; version: string; policyVersion: string; known: boolean }) {
-  if (!known) return <span>{label} {version}</span>;
-  return (
-    <a className="decision-link" onClick={e => e.stopPropagation()} href={`#/policies/${encodeURIComponent(policyVersion)}`} title={`Open policy ${policyVersion} in Policies`}>
-      {label} {version}
-    </a>
-  );
-}
 
 export default function ClaimPage() {
   const requestedClaimId = useHashParam();
@@ -112,21 +80,16 @@ export default function ClaimPage() {
     setPlaybackSpeed(speed);
   }, []);
 
-  if (!connected) {
-    return (
-      <div className="claim-page">
-        <div className="claim-loading">Connecting to SpacetimeDB...</div>
-      </div>
-    );
+  if (!connected || (claimId && claim && (!pass || !evidence || !decision || !outcome || !weather))) {
+    return <ClaimSkeleton />;
   }
 
   if (!claim || !pass || !evidence || !decision || !outcome || !weather) {
-    const message = !claimId
-      ? 'No claims yet. Run server/seed.sh to seed one.'
-      : claim ? `Loading claim ${claimId}...` : `Claim ${claimId} not found.`;
     return (
       <div className="claim-page">
-        <div className="claim-loading">{message}</div>
+        {!claimId
+          ? <EmptyState art="orbit" title="No claims yet" hint={<>Seed one with <code>server/seed.sh</code>.</>} />
+          : <EmptyState art="orbit" title={`Claim ${claimId} not found`} hint="It may not have synced yet, or the id is wrong." />}
       </div>
     );
   }
@@ -152,91 +115,15 @@ export default function ClaimPage() {
           />
         </div>
 
-        <div className="claim-detail-panel">
-          <div className="claim-header">
-            <span className="claim-id">{claim.id}</span>
-            <span className="claim-separator">·</span>
-            <span className="claim-customer">{claim.customerName}</span>
-            <span className="claim-separator">·</span>
-            <span className="claim-amount">{formatDollarsExact(claim.amountClaimedCents)} claimed</span>
-          </div>
-
-          <div className="claim-sections">
-            <div className="claim-section">
-              <h3 className="section-title">Verified</h3>
-              <div className="section-row">
-                <span className="section-label">Data integrity check:</span>
-                <span className={`section-value ${evidence.dataIntegrityStatus === DataIntegrityStatus.Pass ? 'pass' : 'fail'}`}>
-                  {evidence.dataIntegrityStatus === DataIntegrityStatus.Pass ? 'PASS' :
-                   evidence.dataIntegrityStatus === DataIntegrityStatus.Fail ? 'FAIL' : 'PENDING'}
-                </span>
-              </div>
-            </div>
-
-            <div className="claim-section">
-              <h3 className="section-title">Model estimate</h3>
-              <div className="section-row">
-                <span className="section-label">Estimated loss:</span>
-                <span className="section-value">{formatDollarsExact(evidence.estimatedLossCents)}</span>
-              </div>
-            </div>
-
-            <div className="claim-section">
-              <h3 className="section-title">Missing</h3>
-              <div className="section-row">
-                <span className="section-label">Unverified portion:</span>
-                <span className="section-value muted">{formatDollarsExact(evidence.missingEvidenceCents)}</span>
-              </div>
-            </div>
-
-            <div
-              className="decision-card replayable"
-              role="button"
-              tabIndex={0}
-              title="Replay this decision"
-              onClick={() => openReplay(`claim:${claim.id}`)}
-              onKeyDown={(e) => { if (e.key === 'Enter') openReplay(`claim:${claim.id}`); }}
-            >
-              <div className="decision-main">
-                <span className="decision-credit">
-                  {getCreditLabel(decision.creditAmountCents, claim.amountClaimedCents)} {formatDollarsExact(decision.creditAmountCents)}
-                </span>
-                <span className="decision-separator">·</span>
-                <span className="decision-confidence">confidence {decision.confidencePercent}%</span>
-                <span className="decision-separator">·</span>
-                <span className={`decision-gate ${decision.gate.toLowerCase()}`}>{getGateLabel(decision.gate)}</span>
-              </div>
-              {reasons.length > 0 && (
-                <div className="decision-reasons">
-                  <span className="decision-reasons-title">Why (SHAP)</span>
-                  {reasons.map(reason => (
-                    <div key={String(reason.id)} className="reason-row">
-                      <span className="reason-feature">
-                        {reason.feature}
-                        {reason.detail && <span className="reason-detail"> · {reason.detail}</span>}
-                      </span>
-                      <span className={`reason-value ${reason.shapValue < 0 ? 'negative' : ''}`}>{formatShap(reason.shapValue)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="decision-meta">
-                <span>Rule: {decision.rule}</span>
-                <span className="decision-separator">·</span>
-                <VersionLink label="Policy" version={decision.policyVersion} policyVersion={decision.policyVersion} known={policyKnown} />
-                <span className="decision-separator">·</span>
-                <VersionLink label="Model" version={decision.modelVersion} policyVersion={decision.policyVersion} known={policyKnown} />
-              </div>
-              <span className="replay-trigger decision-replay"><span className="replay-trigger-glyph">▶</span>Replay decision</span>
-            </div>
-
-            <div className="outcome-row">
-              <span className="outcome-item">{outcome.creditMemoSent ? 'Credit memo sent' : 'Credit memo not sent'}</span>
-              <span className="outcome-separator">·</span>
-              <span className="outcome-item">{outcome.ledgerPosted ? 'Ledger posted' : 'Ledger not posted'}</span>
-            </div>
-          </div>
-        </div>
+        <ClaimPanel
+          claim={claim}
+          evidence={evidence}
+          decision={decision}
+          outcome={outcome}
+          weather={weather}
+          reasons={reasons}
+          policyKnown={policyKnown}
+        />
       </div>
 
       <ClaimPlaybackBar
