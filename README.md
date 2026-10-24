@@ -186,6 +186,14 @@ Toggle visibility of:
 - Event ticks (amber for disputes/dropped passes)
 - Live button to return to real-time
 
+### Decision Replay
+Click any decision (an Audit row, the Claim page decision card, or **Replay path** in Approvals) to replay that one decision's path through the pipeline. Only the stages it actually took are drawn, one at a time, with each node's output (confidence, Cedar verdict, injection screen, System 2 rationale, re-verify checks, the human's credit, the retrained model version, and any policy proposal). Branches not taken show as faint stubs.
+
+- Controls: play/pause (space), step back/forward (← / →), 0.5x–4x speed, Replay (R), close (Esc).
+- Deep link: `#/<page>?replay=<key>`, where key is `audit:<decision_record id>`, `claim:<claim id>` or `approval:<escalated_claim id>`.
+- Data: `web/src/replay/adapter.ts` normalizes `decision_record`, `claim_decision` and `escalated_claim` rows into a typed `DecisionTrace`. When the decision pipeline's per-step audit path is available, `usePipelineSteps()` in `web/src/replay/useDecisionTrace.ts` returns it and `buildTrace` uses it. Otherwise the replay shows a deterministic seeded example path, marked "seeded path" in its header.
+- Built with React Flow (`@xyflow/react`), Motion and dagre (left-to-right layout). A single motion value drives the whole timeline, so playback does not re-render React per frame.
+
 ### KPI Strip
 - Billed this month
 - Revenue at risk (amber highlight)
