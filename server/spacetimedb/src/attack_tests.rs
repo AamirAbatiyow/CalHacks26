@@ -167,6 +167,14 @@ fn weather_excuse_is_matched_to_the_pass_window() {
 }
 
 #[test]
+fn dollar_amounts_are_grouped() {
+    assert_eq!(dollars(995_000), "$9,950.00");
+    assert_eq!(dollars(10_000_000), "$100,000.00");
+    assert_eq!(dollars(5), "$0.05");
+    assert_eq!(dollars(-123_456), "-$1,234.56");
+}
+
+#[test]
 fn only_admins_may_raise_their_own_limit() {
     assert!(!may_raise_own_limit(UserRole::Customer));
     assert!(!may_raise_own_limit(UserRole::Operator));

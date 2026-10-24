@@ -213,8 +213,17 @@ pub struct ClaimInput<'a> {
     pub filed_micros: i64,
 }
 
-fn dollars(cents: i64) -> String {
-    format!("${:.2}", cents as f64 / 100.0)
+pub fn dollars(cents: i64) -> String {
+    let sign = if cents < 0 { "-" } else { "" };
+    let whole = (cents.unsigned_abs() / 100).to_string();
+    let mut grouped = String::new();
+    for (i, digit) in whole.chars().enumerate() {
+        if i > 0 && (whole.len() - i) % 3 == 0 {
+            grouped.push(',');
+        }
+        grouped.push(digit);
+    }
+    format!("{}${}.{:02}", sign, grouped, cents.unsigned_abs() % 100)
 }
 
 pub fn assess_claim(
