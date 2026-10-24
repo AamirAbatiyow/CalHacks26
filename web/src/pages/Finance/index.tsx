@@ -2,13 +2,14 @@ import { useMemo, useState } from 'react';
 import { useTable, micros, tag } from '../../hooks/useTable';
 import { useKpi } from '../../hooks/useKpi';
 import { motion } from 'motion/react';
-import type { DecisionOutcome, DecisionRecord, DecisionType, LedgerEntry, LedgerEntryType } from '../../types';
+import type { DecisionOutcome, DecisionRecord, DecisionType, LedgerEntry, LedgerEntryType, Pass } from '../../types';
 import { SummaryTab } from './SummaryTab';
 import { LedgerTab } from './LedgerTab';
 import { AuditTab } from './AuditTab';
+import { EarningsTab } from './EarningsTab';
 import './Finance.css';
 
-export type FinanceTabId = 'summary' | 'ledger' | 'audit';
+export type FinanceTabId = 'summary' | 'earnings' | 'ledger' | 'audit';
 type TabId = FinanceTabId;
 
 function useFinanceData() {
@@ -40,7 +41,13 @@ function useFinanceData() {
   return { decisionRecords, ledgerEntries };
 }
 
-export default function Finance({ initialTab = 'summary' }: { initialTab?: FinanceTabId }) {
+interface FinanceProps {
+  initialTab?: FinanceTabId;
+  passes?: Pass[];
+  simNow?: bigint | null;
+}
+
+export default function Finance({ initialTab = 'summary', passes = [], simNow = null }: FinanceProps) {
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
   const { decisionRecords, ledgerEntries } = useFinanceData();
   const kpi = useKpi();
@@ -51,6 +58,7 @@ export default function Finance({ initialTab = 'summary' }: { initialTab?: Finan
 
   const tabs: { id: TabId; label: string }[] = [
     { id: 'summary', label: 'Summary' },
+    { id: 'earnings', label: 'Earnings' },
     { id: 'ledger', label: 'Ledger' },
     { id: 'audit', label: 'Audit' },
   ];
@@ -79,6 +87,9 @@ export default function Finance({ initialTab = 'summary' }: { initialTab?: Finan
             reviewCostSaved={reviewCostSaved}
             creditsIssued={creditsIssued}
           />
+        )}
+        {activeTab === 'earnings' && (
+          <EarningsTab passes={passes} entries={ledgerEntries} simNow={simNow} />
         )}
         {activeTab === 'ledger' && (
           <LedgerTab entries={ledgerEntries} />

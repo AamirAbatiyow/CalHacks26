@@ -428,3 +428,159 @@
 .audit-amount {
   font-weight: 500;
 }
+
+/* Earnings: period toggle, tiles, then a statement with change and trend per line */
+
+.earn-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.earn-toggle {
+  display: flex;
+  border: 1px solid var(--color-muted);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.earn-toggle button {
+  padding: 6px 14px;
+  font-size: var(--font-metadata);
+  color: var(--color-secondary);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.earn-toggle button + button {
+  border-left: 1px solid #1c1c1c;
+}
+
+.earn-toggle button:hover:not(.on) {
+  color: var(--color-primary);
+}
+
+.earn-toggle button.on {
+  background: var(--color-primary);
+  color: var(--color-bg);
+}
+
+.earn-asof {
+  font-size: var(--font-metadata);
+  color: var(--color-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.earn-export {
+  margin-left: auto;
+}
+
+.earn-delta {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-secondary);
+}
+
+.earn-delta.good { color: var(--color-green); }
+.earn-delta.bad { color: var(--color-amber); }
+
+.earn-statement {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--font-body);
+}
+
+.earn-row {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.6fr) repeat(2, minmax(110px, 1fr)) minmax(100px, 0.9fr) 72px minmax(120px, 1fr);
+  gap: 16px;
+  align-items: center;
+  padding: 10px 8px;
+  border-bottom: 1px solid #141414;
+  font-variant-numeric: tabular-nums;
+}
+
+.earn-row .right {
+  text-align: right;
+}
+
+.earn-head {
+  padding-top: 0;
+  border-bottom-color: var(--color-muted);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-secondary);
+}
+
+.earn-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.earn-hint {
+  font-size: 11px;
+  color: var(--color-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.earn-amount {
+  font-weight: 500;
+}
+
+.earn-prev {
+  color: var(--color-secondary);
+}
+
+.earn-delta.right {
+  font-size: var(--font-metadata);
+}
+
+.earn-total {
+  border-top: 1px solid var(--color-muted);
+  border-bottom: 3px double var(--color-muted);
+}
+
+.earn-total .earn-label,
+.earn-total .earn-amount {
+  font-weight: 600;
+}
+
+.earn-section {
+  padding-top: 20px;
+  padding-bottom: 6px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-secondary);
+}
+
+.earn-row:not(.earn-head):not(.earn-section) {
+  transition: background 0.15s ease;
+}
+
+.earn-row:not(.earn-head):not(.earn-section):hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.earn-spark {
+  min-width: 0;
+}
+
+.earn-note {
+  font-size: 11px;
+  color: var(--color-secondary);
+  max-width: 820px;
+  line-height: 1.5;
+}
+
+.earn-note.fin-mono {
+  color: var(--color-muted);
+  overflow-wrap: anywhere;
+}
+
+.earn .fin-tiles {
+  padding-bottom: 20px;
+}

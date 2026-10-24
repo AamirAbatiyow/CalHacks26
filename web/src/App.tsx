@@ -21,7 +21,7 @@ import './App.css';
 function App() {
   const [activePage, setActivePage] = useHashPage();
   const hashParam = useHashParam();
-  const financeTab: FinanceTabId = hashParam === 'ledger' || hashParam === 'audit' ? hashParam : 'summary';
+  const financeTab: FinanceTabId = hashParam === 'earnings' || hashParam === 'ledger' || hashParam === 'audit' ? hashParam : 'summary';
   const [layers, setLayers] = useState<LayerState>({
     groundStations: true,
     satellitesAndRoutes: true,
@@ -104,7 +104,7 @@ function App() {
       case 'decisions':
         return <DecisionsPage />;
       case 'finance':
-        return <FinancePage key={financeTab} initialTab={financeTab} />;
+        return <FinancePage key={financeTab} initialTab={financeTab} passes={passes} simNow={simClock?.currentTime ?? null} />;
       case 'policies':
         return <PoliciesPage />;
       case 'breakit':
