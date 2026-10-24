@@ -23,7 +23,7 @@ export interface Contract {
 }
 
 export const CONTRACTS: Contract[] = JSON.parse(
-  readFileSync(fileURLToPath(new URL('../../server/fixtures/contracts.json', import.meta.url)), 'utf8'),
+  readFileSync(fileURLToPath(new URL('../../server/fixtures/sla_terms.json', import.meta.url)), 'utf8'),
 );
 
 export interface HistoryRow {
@@ -213,12 +213,12 @@ export function generateHistory(opts: HistoryOptions = {}): HistoryRow[] {
   };
   const credited = ['telemetry', 'space_weather', 'contract_clause'];
   // A consistent pattern: four reviewers credited heavy storm degradation without a weather exclusion.
-  niche('Northpoint Orbital', 46, true, 'storm_degradation_credited', credited, 'a.okafor', 150);
-  niche('Kestrel Imaging', 52, true, 'storm_degradation_credited', credited, 'm.lindqvist', 112);
+  niche('SkyNet Communications', 46, true, 'storm_degradation_credited', credited, 'a.okafor', 150);
+  niche('Nexus Corp', 52, true, 'storm_degradation_credited', credited, 'm.lindqvist', 112);
   niche('Aether Dynamics', 43, true, 'storm_degradation_credited', credited, 'r.sato', 77);
   niche('Orbital Sciences Inc', 57, true, 'storm_degradation_credited', credited, 'j.alvarez', 41);
   // One decision short of a pattern: moderate storm degradation, two reviewers.
-  niche('Northpoint Orbital', 31, true, 'storm_degradation_credited', credited, 'p.nair', 96);
+  niche('SkyNet Communications', 31, true, 'storm_degradation_credited', credited, 'p.nair', 96);
   niche('Aether Dynamics', 36, true, 'storm_degradation_credited', credited, 'k.brandt', 29);
   // Contradicted: storm degradation under weather-exclusion contracts went both ways.
   niche('Polar Data Systems', 44, true, 'storm_degradation_credited', ['space_weather', 'contract_clause'], 'e.moreau', 133);

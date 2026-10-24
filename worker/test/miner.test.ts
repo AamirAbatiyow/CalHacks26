@@ -28,7 +28,7 @@ test('the derived rule turns a held-out similar claim from escalated into auto-d
   const { rows, labels } = historyLabels();
   const { weights } = retrain(labels, null);
   const seeded = rows.find(r => r.reviewer === 'r.sato' && r.claim_type === 'degraded_link' && r.snapshot.weather.storm)!;
-  const heldOut = similarSnapshot(seeded.snapshot, 42, 'Northpoint Orbital');
+  const heldOut = similarSnapshot(seeded.snapshot, 42, 'SkyNet Communications');
 
   const without = route(weights, heldOut, []);
   assert.equal(without.kind, 'system2', 'System 1 alone should not be confident enough');
