@@ -1,0 +1,82 @@
+[
+  {
+    "id": "svalbard",
+    "name": "Svalbard",
+    "latitude": 78.2297,
+    "longitude": 15.4074,
+    "altitude_m": 464,
+    "monthly_revenue_cents": 4500000000
+  },
+  {
+    "id": "troll",
+    "name": "Antarctica (Troll)",
+    "latitude": -72.0117,
+    "longitude": 2.5353,
+    "altitude_m": 1275,
+    "monthly_revenue_cents": 3200000000
+  },
+  {
+    "id": "inuvik",
+    "name": "Inuvik",
+    "latitude": 68.3607,
+    "longitude": -133.7230,
+    "altitude_m": 103,
+    "monthly_revenue_cents": 2100000000
+  },
+  {
+    "id": "punta-arenas",
+    "name": "Punta Arenas",
+    "latitude": -53.1638,
+    "longitude": -70.9171,
+    "altitude_m": 37,
+    "monthly_revenue_cents": 1800000000
+  },
+  {
+    "id": "mauritius",
+    "name": "Mauritius",
+    "latitude": -20.3484,
+    "longitude": 57.5522,
+    "altitude_m": 420,
+    "monthly_revenue_cents": 1500000000
+  },
+  {
+    "id": "hartebeesthoek",
+    "name": "Hartebeesthoek",
+    "latitude": -25.8872,
+    "longitude": 27.7075,
+    "altitude_m": 1415,
+    "monthly_revenue_cents": 1200000000
+  },
+  {
+    "id": "singapore",
+    "name": "Singapore",
+    "latitude": 1.3521,
+    "longitude": 103.8198,
+    "altitude_m": 15,
+    "monthly_revenue_cents": 980000000
+  },
+  {
+    "id": "dubai",
+    "name": "Dubai",
+    "latitude": 25.2048,
+    "longitude": 55.2708,
+    "altitude_m": 16,
+    "monthly_revenue_cents": 850000000
+  },
+  {
+    "id": "grimstad",
+    "name": "Grimstad",
+    "latitude": 58.3405,
+    "longitude": 8.5934,
+    "altitude_m": 12,
+    "monthly_revenue_cents": 720000000
+  },
+  {
+    "id": "awarua",
+    "name": "Awarua",
+    "latitude": -46.5289,
+    "longitude": 168.3806,
+    "altitude_m": 30,
+    "monthly_revenue_cents": 680000000
+  }
+]

@@ -1,0 +1,227 @@
+[
+  {
+    "satellite_id": 25544,
+    "station_id": "svalbard",
+    "start_offset_minutes": -1380,
+    "duration_minutes": 12,
+    "status": 2,
+    "max_elevation_deg": 78.5,
+    "revenue_cents": 450000
+  },
+  {
+    "satellite_id": 43013,
+    "station_id": "svalbard",
+    "start_offset_minutes": -1260,
+    "duration_minutes": 14,
+    "status": 2,
+    "max_elevation_deg": 85.2,
+    "revenue_cents": 520000
+  },
+  {
+    "satellite_id": 41866,
+    "station_id": "troll",
+    "start_offset_minutes": -1200,
+    "duration_minutes": 11,
+    "status": 3,
+    "max_elevation_deg": 45.8,
+    "revenue_cents": 380000
+  },
+  {
+    "satellite_id": 25544,
+    "station_id": "inuvik",
+    "start_offset_minutes": -1140,
+    "duration_minutes": 10,
+    "status": 2,
+    "max_elevation_deg": 62.3,
+    "revenue_cents": 410000
+  },
+  {
+    "satellite_id": 38771,
+    "station_id": "svalbard",
+    "start_offset_minutes": -1080,
+    "duration_minutes": 13,
+    "status": 2,
+    "max_elevation_deg": 72.1,
+    "revenue_cents": 490000
+  },
+  {
+    "satellite_id": 43437,
+    "station_id": "punta-arenas",
+    "start_offset_minutes": -1020,
+    "duration_minutes": 12,
+    "status": 3,
+    "max_elevation_deg": 58.4,
+    "revenue_cents": 440000
+  },
+  {
+    "satellite_id": 49260,
+    "station_id": "mauritius",
+    "start_offset_minutes": -960,
+    "duration_minutes": 9,
+    "status": 2,
+    "max_elevation_deg": 35.6,
+    "revenue_cents": 320000
+  },
+  {
+    "satellite_id": 43013,
+    "station_id": "troll",
+    "start_offset_minutes": -900,
+    "duration_minutes": 14,
+    "status": 2,
+    "max_elevation_deg": 81.9,
+    "revenue_cents": 550000
+  },
+  {
+    "satellite_id": 39084,
+    "station_id": "hartebeesthoek",
+    "start_offset_minutes": -840,
+    "duration_minutes": 11,
+    "status": 2,
+    "max_elevation_deg": 52.7,
+    "revenue_cents": 400000
+  },
+  {
+    "satellite_id": 36508,
+    "station_id": "svalbard",
+    "start_offset_minutes": -780,
+    "duration_minutes": 15,
+    "status": 2,
+    "max_elevation_deg": 88.3,
+    "revenue_cents": 580000
+  },
+  {
+    "satellite_id": 25544,
+    "station_id": "singapore",
+    "start_offset_minutes": -720,
+    "duration_minutes": 8,
+    "status": 2,
+    "max_elevation_deg": 28.5,
+    "revenue_cents": 280000
+  },
+  {
+    "satellite_id": 41866,
+    "station_id": "dubai",
+    "start_offset_minutes": -660,
+    "duration_minutes": 10,
+    "status": 2,
+    "max_elevation_deg": 41.2,
+    "revenue_cents": 350000
+  },
+  {
+    "satellite_id": 43013,
+    "station_id": "grimstad",
+    "start_offset_minutes": -600,
+    "duration_minutes": 12,
+    "status": 3,
+    "max_elevation_deg": 65.8,
+    "revenue_cents": 460000
+  },
+  {
+    "satellite_id": 38771,
+    "station_id": "awarua",
+    "start_offset_minutes": -540,
+    "duration_minutes": 13,
+    "status": 2,
+    "max_elevation_deg": 70.4,
+    "revenue_cents": 480000
+  },
+  {
+    "satellite_id": 27424,
+    "station_id": "svalbard",
+    "start_offset_minutes": -480,
+    "duration_minutes": 11,
+    "status": 2,
+    "max_elevation_deg": 55.9,
+    "revenue_cents": 420000
+  },
+  {
+    "satellite_id": 40697,
+    "station_id": "troll",
+    "start_offset_minutes": -420,
+    "duration_minutes": 8,
+    "status": 2,
+    "max_elevation_deg": 32.1,
+    "revenue_cents": 290000
+  },
+  {
+    "satellite_id": 54234,
+    "station_id": "mauritius",
+    "start_offset_minutes": -360,
+    "duration_minutes": 7,
+    "status": 2,
+    "max_elevation_deg": 24.8,
+    "revenue_cents": 250000
+  },
+  {
+    "satellite_id": 28654,
+    "station_id": "inuvik",
+    "start_offset_minutes": -300,
+    "duration_minutes": 14,
+    "status": 2,
+    "max_elevation_deg": 79.2,
+    "revenue_cents": 530000
+  },
+  {
+    "satellite_id": 43437,
+    "station_id": "svalbard",
+    "start_offset_minutes": -240,
+    "duration_minutes": 12,
+    "status": 2,
+    "max_elevation_deg": 68.7,
+    "revenue_cents": 470000
+  },
+  {
+    "satellite_id": 25544,
+    "station_id": "punta-arenas",
+    "start_offset_minutes": -180,
+    "duration_minutes": 9,
+    "status": 2,
+    "max_elevation_deg": 38.4,
+    "revenue_cents": 330000
+  },
+  {
+    "satellite_id": 49260,
+    "station_id": "troll",
+    "start_offset_minutes": -120,
+    "duration_minutes": 13,
+    "status": 2,
+    "max_elevation_deg": 74.6,
+    "revenue_cents": 500000
+  },
+  {
+    "satellite_id": 43013,
+    "station_id": "hartebeesthoek",
+    "start_offset_minutes": -60,
+    "duration_minutes": 10,
+    "status": 1,
+    "max_elevation_deg": 48.3,
+    "revenue_cents": 370000
+  },
+  {
+    "satellite_id": 41866,
+    "station_id": "svalbard",
+    "start_offset_minutes": 5,
+    "duration_minutes": 14,
+    "status": 0,
+    "max_elevation_deg": 82.1,
+    "revenue_cents": 540000
+  },
+  {
+    "satellite_id": 38771,
+    "station_id": "singapore",
+    "start_offset_minutes": 30,
+    "duration_minutes": 11,
+    "status": 0,
+    "max_elevation_deg": 56.8,
+    "revenue_cents": 430000
+  },
+  {
+    "satellite_id": 36508,
+    "station_id": "dubai",
+    "start_offset_minutes": 60,
+    "duration_minutes": 9,
+    "status": 0,
+    "max_elevation_deg": 36.2,
+    "revenue_cents": 310000
+  }
+]
