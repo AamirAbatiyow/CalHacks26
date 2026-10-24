@@ -189,3 +189,54 @@ export interface LedgerEntry {
   referenceId: string | null;
   amountCents: bigint;
 }
+
+export const PolicyStatus = {
+  Proposed: 'Proposed',
+  Current: 'Current',
+  Retired: 'Retired',
+} as const;
+export type PolicyStatus = (typeof PolicyStatus)[keyof typeof PolicyStatus];
+
+export const ReplayStatus = {
+  Pending: 'Pending',
+  Running: 'Running',
+  Completed: 'Completed',
+  Blocked: 'Blocked',
+} as const;
+export type ReplayStatus = (typeof ReplayStatus)[keyof typeof ReplayStatus];
+
+export interface PolicyVersion {
+  id: string;
+  version: number;
+  status: PolicyStatus;
+  author: string;
+  createdAt: bigint;
+  decisionCount: bigint;
+}
+
+export interface CedarRule {
+  id: string;
+  policyVersionId: string;
+  name: string;
+  description: string;
+  cedarCode: string;
+  enabled: boolean;
+  orderIndex: number;
+}
+
+export interface PolicyReplay {
+  id: bigint;
+  proposedVersionId: string;
+  currentVersionId: string;
+  status: ReplayStatus;
+  totalClaims: number;
+  currentClaim: number;
+  precisionBefore: number;
+  precisionAfter: number;
+  decisionsChanged: number;
+  dollarImpactCents: bigint;
+  blockReason: string;
+  createdAt: bigint;
+  isPlaying: boolean;
+  speedMultiplier: number;
+}

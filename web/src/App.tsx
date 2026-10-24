@@ -8,6 +8,7 @@ import { useSpacetimeDB } from './hooks/useSpacetimeDB';
 import { useHashPage } from './hooks/useHashPage';
 import ClaimPage from './pages/Claim';
 import FinancePage from './pages/Finance';
+import PoliciesPage from './pages/Policies';
 import type { LayerState, PlaybackSpeed } from './types';
 import './App.css';
 
@@ -91,6 +92,8 @@ function App() {
         return <FinancePage key="ledger" initialTab="ledger" />;
       case 'audit':
         return <FinancePage key="audit" initialTab="audit" />;
+      case 'policies':
+        return <PoliciesPage />;
       default:
         return null;
     }

@@ -8,6 +8,7 @@ pub mod claim;
 pub mod confidence_gate;
 pub mod events;
 pub mod ledger;
+pub mod policy;
 pub mod sla;
 
 #[cfg(test)]
@@ -302,6 +303,7 @@ pub fn init(ctx: &ReducerContext) {
         pass_id: None,
         station_id: None,
     });
+    policy::seed_initial_policies(ctx);
     
     log::info!("Ground Truth module initialized");
 }
