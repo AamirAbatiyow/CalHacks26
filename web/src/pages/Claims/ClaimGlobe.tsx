@@ -41,6 +41,62 @@ function ptTime(ms: number): string {
   return new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', timeZone: 'America/Los_Angeles' });
 }
 
+type Box = { x: number; y: number; w: number; h: number };
+
+function overlaps(a: Box, b: Box): boolean {
+  return a.x < b.x + b.w + 4 && b.x < a.x + a.w + 4 && a.y < b.y + b.h + 4 && b.y < a.y + a.h + 4;
+}
+
+/** Box of size w x h centered `gap` px from `from` along `dir`. */
+function boxAlong(from: { x: number; y: number }, dir: { x: number; y: number }, gap: number, w: number, h: number): Box {
+  const reach = gap + 0.5 * Math.abs(dir.x) * w + 0.5 * Math.abs(dir.y) * h;
+  return { x: from.x + dir.x * reach - w / 2, y: from.y + dir.y * reach - h / 2, w, h };
+}
+
+function show(el: HTMLDivElement, box: Box | null) {
+  if (!box) {
+    el.style.opacity = '0';
+    return;
+  }
+  el.style.opacity = '1';
+  el.style.transform = `translate(${Math.round(box.x)}px, ${Math.round(box.y)}px)`;
+}
+
+/**
+ * Station label on the side away from the satellite, satellite label beyond the
+ * satellite, link label beside the link's midpoint; the link label flips sides or
+ * stacks past the satellite label rather than overlap the others.
+ */
+function layoutLabels(scene: GlobeScene, at: Anchors, [stationEl, satEl, linkEl]: (HTMLDivElement | null)[]) {
+  if (!stationEl || !satEl || !linkEl) return;
+  const s = projectToScreen(scene, at.station);
+  const t = at.satellite ? projectToScreen(scene, at.satellite) : null;
+  let dir = { x: 0.7, y: -0.7 };
+  if (t) {
+    const len = Math.hypot(t.x - s.x, t.y - s.y);
+    if (len > 1) dir = { x: (t.x - s.x) / len, y: (t.y - s.y) / len };
+  }
+  const stationBox = s.visible ? boxAlong(s, { x: -dir.x, y: -dir.y }, 14, stationEl.offsetWidth, stationEl.offsetHeight) : null;
+  const satBox = t?.visible ? boxAlong(t, dir, 12, satEl.offsetWidth, satEl.offsetHeight) : null;
+  show(stationEl, stationBox);
+  show(satEl, satBox);
+
+  const m = at.link ? projectToScreen(scene, at.link) : null;
+  if (!m || !m.visible) {
+    show(linkEl, null);
+    return;
+  }
+  const w = linkEl.offsetWidth;
+  const h = linkEl.offsetHeight;
+  const placed = [stationBox, satBox].filter((b): b is Box => b !== null);
+  const candidates = [
+    boxAlong(m, { x: -dir.y, y: dir.x }, 10, w, h),
+    boxAlong(m, { x: dir.y, y: -dir.x }, 10, w, h),
+  ];
+  if (satBox) candidates.push(boxAlong({ x: satBox.x + satBox.w / 2, y: satBox.y + satBox.h / 2 }, { x: 0, y: dir.y < 0 ? -1 : 1 }, satBox.h / 2 + 6, w, h));
+  show(linkEl, candidates.find(c => !placed.some(p => overlaps(c, p))) ?? candidates[candidates.length - 1]);
+}
+
 interface Anchors {
   station: THREE.Vector3;
   satellite: THREE.Vector3 | null;
@@ -53,24 +109,9 @@ export function ClaimGlobe({ focus, currentTime }: { focus: ClaimFocus; currentT
   const satLabel = useRef<HTMLDivElement>(null);
   const linkLabel = useRef<HTMLDivElement>(null);
 
-  const place = (scene: GlobeScene, el: HTMLDivElement | null, at: THREE.Vector3 | null) => {
-    if (!el) return;
-    const p = at ? projectToScreen(scene, at) : null;
-    if (!p || !p.visible) {
-      el.style.opacity = '0';
-      return;
-    }
-    el.style.opacity = '1';
-    el.style.transform = `translate(${p.x}px, ${p.y}px)`;
-  };
-
   const { containerRef, scene } = useGlobeScene(
     { focus: { lat: focus.stationLat, lon: focus.stationLon }, cameraDistance: 2.7 },
-    s => {
-      place(s, stationLabel.current, anchors.current.station);
-      place(s, satLabel.current, anchors.current.satellite);
-      place(s, linkLabel.current, anchors.current.link);
-    },
+    s => layoutLabels(s, anchors.current, [stationLabel.current, satLabel.current, linkLabel.current]),
   );
 
   const layer = useRef<{ static: THREE.Group; moving: THREE.Group } | null>(null);

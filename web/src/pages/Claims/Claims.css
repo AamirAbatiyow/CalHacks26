@@ -64,7 +64,6 @@
 }
 
 .globe-label.station {
-  margin: 12px 0 0 12px;
   border-color: rgba(56, 189, 248, 0.6);
 }
 
@@ -72,12 +71,7 @@
   color: #38bdf8;
 }
 
-.globe-label.satellite {
-  margin: -44px 0 0 12px;
-}
-
 .globe-label.link {
-  margin: -14px 0 0 -40px;
   font-variant-numeric: tabular-nums;
 }
 
