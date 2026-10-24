@@ -230,9 +230,7 @@ export function Globe({ stations, satellites, passes, spaceWeather, currentTime,
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
       renderer.dispose();
-      if (containerRef.current && renderer.domElement.parentNode === containerRef.current) {
-        containerRef.current.removeChild(renderer.domElement);
-      }
+      renderer.domElement.remove();
     };
   }, [prefersReducedMotion]);
 
@@ -262,10 +260,10 @@ export function Globe({ stations, satellites, passes, spaceWeather, currentTime,
 
     if (layers.groundStations && stations.length > 0) {
       stations.forEach((station) => {
-        const pos = latLonToVector3(station.latitude, station.longitude, EARTH_RADIUS);
-        const size = Math.max(0.015, Math.min(0.045, Number(station.monthlyRevenueCents) / 5000000000));
-        const geometry = new THREE.BoxGeometry(size, size, size);
-        const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const pos = latLonToVector3(station.latitude, station.longitude, EARTH_RADIUS + 0.002);
+        const revenueShare = Math.min(1, Number(station.monthlyRevenueCents) / 5000000000);
+        const geometry = new THREE.CircleGeometry(0.005 + 0.007 * revenueShare, 24);
+        const material = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
         const mesh = new THREE.Mesh(geometry, material);
         mesh.position.copy(pos);
         mesh.lookAt(0, 0, 0);

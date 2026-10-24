@@ -32,6 +32,14 @@ export const DecisionOutcome = {
 } as const;
 export type DecisionOutcome = (typeof DecisionOutcome)[keyof typeof DecisionOutcome];
 
+export const EscalatedClaimStatus = {
+  Pending: 'Pending',
+  Approved: 'Approved',
+  Denied: 'Denied',
+  Edited: 'Edited',
+} as const;
+export type EscalatedClaimStatus = (typeof EscalatedClaimStatus)[keyof typeof EscalatedClaimStatus];
+
 export interface Station {
   id: string;
   name: string;
@@ -97,6 +105,19 @@ export interface DecisionRecord {
   modelVersion: string;
 }
 
+export interface EscalatedClaim {
+  id: bigint;
+  customerName: string;
+  amountClaimedCents: bigint;
+  proposedAmountCents: bigint;
+  confidencePct: number;
+  escalationReason: string;
+  status: EscalatedClaimStatus;
+  policyVersion: string;
+  modelVersion: string;
+  createdAt: bigint;
+}
+
 export interface LayerState {
   groundStations: boolean;
   satellitesAndRoutes: boolean;
@@ -105,3 +126,138 @@ export interface LayerState {
 }
 
 export type PlaybackSpeed = 1 | 4 | 16;
+
+export const ClaimGate = {
+  Auto: 'Auto',
+  Approval: 'Approval',
+  Escalated: 'Escalated',
+} as const;
+export type ClaimGate = (typeof ClaimGate)[keyof typeof ClaimGate];
+
+export const DataIntegrityStatus = {
+  Pass: 'Pass',
+  Fail: 'Fail',
+  Pending: 'Pending',
+} as const;
+export type DataIntegrityStatus = (typeof DataIntegrityStatus)[keyof typeof DataIntegrityStatus];
+
+export interface Claim {
+  id: string;
+  customerName: string;
+  amountClaimedCents: bigint;
+  passId: bigint;
+  createdAt: bigint;
+}
+
+export interface ClaimPass {
+  id: bigint;
+  claimId: string;
+  stationLat: number;
+  stationLon: number;
+  stationName: string;
+  satelliteNoradId: number;
+  satelliteTle1: string;
+  satelliteTle2: string;
+  contactStartTime: bigint;
+  signalLostTime: bigint;
+  contactEndTime: bigint;
+  maxElevationDeg: number;
+}
+
+export interface ClaimEvidence {
+  claimId: string;
+  dataIntegrityStatus: DataIntegrityStatus;
+  estimatedLossCents: bigint;
+  missingEvidenceCents: bigint;
+}
+
+export interface ClaimDecision {
+  claimId: string;
+  creditAmountCents: bigint;
+  confidencePercent: number;
+  gate: ClaimGate;
+  rule: string;
+  policyVersion: string;
+  modelVersion: string;
+  decidedAt: bigint;
+}
+
+export interface ClaimOutcome {
+  claimId: string;
+  creditMemoSent: boolean;
+  ledgerPosted: boolean;
+  completedAt: bigint | null;
+}
+
+export interface ClaimWeather {
+  claimId: string;
+  kpIndex: number;
+  stormActive: boolean;
+}
+
+export const LedgerEntryType = {
+  Credit: 'Credit',
+  Invoice: 'Invoice',
+  Recovery: 'Recovery',
+} as const;
+export type LedgerEntryType = (typeof LedgerEntryType)[keyof typeof LedgerEntryType];
+
+export interface LedgerEntry {
+  id: bigint;
+  createdAt: bigint;
+  entryType: LedgerEntryType;
+  description: string;
+  referenceId: string | null;
+  amountCents: bigint;
+}
+
+export const PolicyStatus = {
+  Proposed: 'Proposed',
+  Current: 'Current',
+  Retired: 'Retired',
+} as const;
+export type PolicyStatus = (typeof PolicyStatus)[keyof typeof PolicyStatus];
+
+export const ReplayStatus = {
+  Pending: 'Pending',
+  Running: 'Running',
+  Completed: 'Completed',
+  Blocked: 'Blocked',
+} as const;
+export type ReplayStatus = (typeof ReplayStatus)[keyof typeof ReplayStatus];
+
+export interface PolicyVersion {
+  id: string;
+  version: number;
+  status: PolicyStatus;
+  author: string;
+  createdAt: bigint;
+  decisionCount: bigint;
+}
+
+export interface CedarRule {
+  id: string;
+  policyVersionId: string;
+  name: string;
+  description: string;
+  cedarCode: string;
+  enabled: boolean;
+  orderIndex: number;
+}
+
+export interface PolicyReplay {
+  id: bigint;
+  proposedVersionId: string;
+  currentVersionId: string;
+  status: ReplayStatus;
+  totalClaims: number;
+  currentClaim: number;
+  precisionBefore: number;
+  precisionAfter: number;
+  decisionsChanged: number;
+  dollarImpactCents: bigint;
+  blockReason: string;
+  createdAt: bigint;
+  isPlaying: boolean;
+  speedMultiplier: number;
+}

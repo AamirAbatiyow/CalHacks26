@@ -134,7 +134,8 @@ SPACETIMEDB_MODULE=ground-truth
 | `pass` | Scheduled/active/completed passes |
 | `space_weather` | Kp index, flare events, Dst index |
 | `sim_clock` | Simulation time control |
-| `kpi` | Financial KPIs (mock data) |
+| `kpi` | Financial KPIs; credits paid and recovered are kept equal to the ledger totals |
+| `escalated_claim` | Approvals queue: claims the confidence gate escalated for human review |
 | `decision_record` | Audit log for AI decisions with `policy_version` and `model_version` |
 
 ### Decision Record Schema
@@ -159,6 +160,10 @@ All AI-driven decisions (disputes, credits, pass classifications) are logged to 
 | `go_live` | Return to live time |
 | `record_decision` | Log an AI decision with policy/model versions |
 | `update_kpi` | Update financial KPIs |
+| `seed_finance_history` | Seed audit decisions and ledger entries against already-seeded passes |
+| `seed_escalated_claim` | Add a claim to the Approvals queue (only if the confidence gate escalates it) |
+| `approve_escalated_claim` / `deny_escalated_claim` / `edit_escalated_claim` | Human decisions on escalated claims |
+| `seek_replay` | Jump a policy replay to a given claim |
 
 ## UI Features
 

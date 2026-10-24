@@ -1,14 +1,21 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Sidebar } from './components/Sidebar';
+import { Sidebar, type PageId } from './components/Sidebar';
 import { KpiStrip } from './components/KpiStrip';
 import { Globe } from './components/Globe';
 import { LayerPanel } from './components/LayerPanel';
 import { PlaybackBar } from './components/PlaybackBar';
 import { useSpacetimeDB } from './hooks/useSpacetimeDB';
+import { useHashPage } from './hooks/useHashPage';
+import ClaimPage from './pages/Claim';
+import ApprovalsPage from './pages/Approvals';
+import FinancePage from './pages/Finance';
+import PoliciesPage from './pages/Policies';
+import BreakItPage from './pages/BreakIt';
 import type { LayerState, PlaybackSpeed } from './types';
 import './App.css';
 
 function App() {
+  const [activePage, setActivePage] = useHashPage();
   const [layers, setLayers] = useState<LayerState>({
     groundStations: true,
     satellitesAndRoutes: true,
@@ -77,11 +84,35 @@ function App() {
       }, spaceWeather[0])
     : null;
 
+  const renderPage = (page: PageId) => {
+    switch (page) {
+      case 'claims':
+        return <ClaimPage />;
+      case 'approvals':
+        return <ApprovalsPage />;
+      case 'finance':
+        return <FinancePage key="summary" initialTab="summary" />;
+      case 'ledger':
+        return <FinancePage key="ledger" initialTab="ledger" />;
+      case 'audit':
+        return <FinancePage key="audit" initialTab="audit" />;
+      case 'policies':
+        return <PoliciesPage />;
+      case 'breakit':
+        return <BreakItPage />;
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="app">
-      <Sidebar />
+      <Sidebar activePage={activePage} onNavigate={setActivePage} />
       <main className="main">
         <KpiStrip kpi={kpi} connectionState={connectionState} />
+        {activePage !== 'overview' ? (
+          <div className="page-content">{renderPage(activePage)}</div>
+        ) : (<>
         <div className="globe-container">
           <Globe
             stations={stations}
@@ -110,6 +141,7 @@ function App() {
           onSeek={handleSeek}
           onGoLive={handleGoLive}
         />
+        </>)}
       </main>
     </div>
   );

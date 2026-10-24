@@ -1,15 +1,29 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type {
-  Station,
-  Satellite,
-  Pass,
-  SpaceWeather,
-  SimClock,
-  Kpi,
-  PlaybackSpeed,
-} from '../types';
+import type { Station, Satellite, Pass, SpaceWeather, SimClock, Kpi, PlaybackSpeed } from '../types';
 import { PassStatus, FlareClass } from '../types';
 import { SPACETIMEDB_HOST, SPACETIMEDB_MODULE } from '../config';
+import { DbConnection, tables, type SubscriptionHandle } from '../module_bindings';
+import { Timestamp } from 'spacetimedb';
+
+function extractMicros(timestamp: unknown): bigint {
+  if (timestamp instanceof Timestamp) {
+    return timestamp.microsSinceUnixEpoch;
+  }
+  if (typeof timestamp === 'bigint') {
+    return timestamp;
+  }
+  if (typeof timestamp === 'number') {
+    return BigInt(timestamp);
+  }
+  if (timestamp && typeof timestamp === 'object' && '__timestamp_micros_since_unix_epoch__' in timestamp) {
+    return BigInt((timestamp as { __timestamp_micros_since_unix_epoch__: bigint | number }).__timestamp_micros_since_unix_epoch__);
+  }
+  if (timestamp && typeof timestamp === 'object' && 'microsSinceUnixEpoch' in timestamp) {
+    return BigInt((timestamp as { microsSinceUnixEpoch: bigint | number }).microsSinceUnixEpoch);
+  }
+  console.warn('Unknown timestamp format:', timestamp);
+  return BigInt(Date.now() * 1000);
+}
 
 export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'error';
 
@@ -23,9 +37,9 @@ function mapPassStatus(status: unknown): PassStatus {
     }
   }
   if (typeof status === 'object' && status !== null) {
-    if ('active' in status) return PassStatus.Active;
-    if ('ok' in status) return PassStatus.Ok;
-    if ('dropped' in status) return PassStatus.Dropped;
+    if ('Active' in status) return PassStatus.Active;
+    if ('Ok' in status) return PassStatus.Ok;
+    if ('Dropped' in status) return PassStatus.Dropped;
   }
   return PassStatus.Scheduled;
 }
@@ -40,23 +54,11 @@ function mapFlareClass(flare: unknown): FlareClass {
     }
   }
   if (typeof flare === 'object' && flare !== null) {
-    if ('c' in flare) return FlareClass.C;
-    if ('m' in flare) return FlareClass.M;
-    if ('x' in flare) return FlareClass.X;
+    if ('C' in flare) return FlareClass.C;
+    if ('M' in flare) return FlareClass.M;
+    if ('X' in flare) return FlareClass.X;
   }
   return FlareClass.None;
-}
-
-function extractTimestamp(timeField: unknown): bigint {
-  if (typeof timeField === 'bigint') return timeField;
-  if (typeof timeField === 'number') return BigInt(timeField);
-  if (typeof timeField === 'object' && timeField !== null) {
-    const t = timeField as Record<string, unknown>;
-    if ('microseconds' in t) return BigInt(t.microseconds as number);
-    if ('microsSinceUnixEpoch' in t) return BigInt(t.microsSinceUnixEpoch as number);
-    if ('micros_since_unix_epoch' in t) return BigInt(t.micros_since_unix_epoch as number);
-  }
-  return BigInt(Date.now() * 1000);
 }
 
 export function useSpacetimeDB() {
@@ -69,213 +71,318 @@ export function useSpacetimeDB() {
   const [kpi, setKpi] = useState<Kpi | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<number | null>(null);
-  const reconnectAttempts = useRef(0);
-
-  const connect = useCallback(() => {
-    const wsProtocol = SPACETIMEDB_HOST.startsWith('https') ? 'wss' : 'ws';
-    const wsHost = SPACETIMEDB_HOST.replace(/^https?:\/\//, '');
-    const wsUrl = `${wsProtocol}://${wsHost}/database/subscribe/${SPACETIMEDB_MODULE}`;
-    
-    console.log('Connecting to SpacetimeDB:', wsUrl);
-    setConnectionState('connecting');
-    setError(null);
-    
-    try {
-      const ws = new WebSocket(wsUrl);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        console.log('WebSocket connected, subscribing to tables...');
-        reconnectAttempts.current = 0;
-        
-        const subscribeMsg = JSON.stringify({
-          subscribe: {
-            query_strings: [
-              'SELECT * FROM station',
-              'SELECT * FROM satellite', 
-              'SELECT * FROM pass',
-              'SELECT * FROM space_weather',
-              'SELECT * FROM sim_clock',
-              'SELECT * FROM kpi',
-            ],
-          },
-        });
-        console.log('Sending subscription:', subscribeMsg);
-        ws.send(subscribeMsg);
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data);
-          console.log('Received message type:', msg.type || 'unknown', msg);
-          
-          if (msg.type === 'IdentityToken') {
-            console.log('Received identity token');
-            setConnectionState('connected');
-          }
-          
-          if (msg.type === 'InitialSubscription' || msg.type === 'TransactionUpdate') {
-            setConnectionState('connected');
-            const tables = msg.database_update?.tables || msg.data?.database_update?.tables || [];
-            
-            for (const table of tables) {
-              const tableName = table.table_name;
-              const inserts = table.inserts || [];
-              const deletes = table.deletes || [];
-
-              console.log(`Table ${tableName}: ${inserts.length} inserts, ${deletes.length} deletes`);
-
-              switch (tableName) {
-                case 'station':
-                  setStations(prev => {
-                    const deleteIds = new Set(deletes.map((d: Record<string, unknown>) => d.id));
-                    const filtered = prev.filter(s => !deleteIds.has(s.id));
-                    const newStations = inserts.map((row: Record<string, unknown>) => ({
-                      id: String(row.id),
-                      name: String(row.name),
-                      latitude: Number(row.latitude),
-                      longitude: Number(row.longitude),
-                      altitudeM: Number(row.altitude_m),
-                      monthlyRevenueCents: BigInt(Number(row.monthly_revenue_cents) || 0),
-                    }));
-                    return [...filtered, ...newStations];
-                  });
-                  break;
-
-                case 'satellite':
-                  setSatellites(prev => {
-                    const deleteIds = new Set(deletes.map((d: Record<string, unknown>) => d.norad_id));
-                    const filtered = prev.filter(s => !deleteIds.has(s.noradId));
-                    const newSatellites = inserts.map((row: Record<string, unknown>) => ({
-                      noradId: Number(row.norad_id),
-                      name: String(row.name),
-                      tleLine1: String(row.tle_line1 || row.tle_line_1),
-                      tleLine2: String(row.tle_line2 || row.tle_line_2),
-                      operator: String(row.operator),
-                    }));
-                    return [...filtered, ...newSatellites];
-                  });
-                  break;
-
-                case 'pass':
-                  setPasses(prev => {
-                    const deleteIds = new Set(deletes.map((d: Record<string, unknown>) => BigInt(Number(d.id))));
-                    const filtered = prev.filter(p => !deleteIds.has(p.id));
-                    const newPasses = inserts.map((row: Record<string, unknown>) => ({
-                      id: BigInt(Number(row.id) || 0),
-                      satelliteId: Number(row.satellite_id),
-                      stationId: String(row.station_id),
-                      startTime: extractTimestamp(row.start_time),
-                      endTime: extractTimestamp(row.end_time),
-                      status: mapPassStatus(row.status),
-                      maxElevationDeg: Number(row.max_elevation_deg),
-                      revenueCents: BigInt(Number(row.revenue_cents) || 0),
-                    }));
-                    return [...filtered, ...newPasses];
-                  });
-                  break;
-
-                case 'space_weather':
-                  setSpaceWeather(prev => {
-                    const deleteTimes = new Set(deletes.map((d: Record<string, unknown>) => extractTimestamp(d.timestamp)));
-                    const filtered = prev.filter(w => !deleteTimes.has(w.timestamp));
-                    const newWeather = inserts.map((row: Record<string, unknown>) => ({
-                      timestamp: extractTimestamp(row.timestamp),
-                      kpIndex: Number(row.kp_index),
-                      flareClass: mapFlareClass(row.flare_class),
-                      dstIndex: Number(row.dst_index),
-                    }));
-                    return [...filtered, ...newWeather];
-                  });
-                  break;
-
-                case 'sim_clock':
-                  if (inserts.length > 0) {
-                    const row = inserts[inserts.length - 1] as Record<string, unknown>;
-                    setSimClock({
-                      id: Number(row.id),
-                      currentTime: extractTimestamp(row.current_time),
-                      speedMultiplier: Number(row.speed_multiplier),
-                      isPlaying: Boolean(row.is_playing),
-                      realTimeAnchor: extractTimestamp(row.real_time_anchor),
-                      simTimeAnchor: extractTimestamp(row.sim_time_anchor),
-                    });
-                  }
-                  break;
-
-                case 'kpi':
-                  if (inserts.length > 0) {
-                    const row = inserts[inserts.length - 1] as Record<string, unknown>;
-                    setKpi({
-                      id: String(row.id),
-                      billedThisMonthCents: BigInt(Number(row.billed_this_month_cents) || 0),
-                      revenueAtRiskCents: BigInt(Number(row.revenue_at_risk_cents) || 0),
-                      creditsPaidCents: BigInt(Number(row.credits_paid_cents) || 0),
-                      recoveredCents: BigInt(Number(row.recovered_cents) || 0),
-                    });
-                  }
-                  break;
-              }
-            }
-          }
-        } catch (e) {
-          console.error('Failed to parse message:', e, event.data);
-        }
-      };
-
-      ws.onclose = (event) => {
-        console.log('WebSocket closed:', event.code, event.reason);
-        setConnectionState('disconnected');
-        
-        const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
-        reconnectAttempts.current++;
-        console.log(`Reconnecting in ${delay}ms (attempt ${reconnectAttempts.current})`);
-        reconnectTimeoutRef.current = window.setTimeout(connect, delay);
-      };
-
-      ws.onerror = (event) => {
-        console.error('WebSocket error:', event);
-        setConnectionState('error');
-        setError('Failed to connect to SpacetimeDB');
-      };
-    } catch (err) {
-      console.error('Failed to create WebSocket:', err);
-      setConnectionState('error');
-      setError(err instanceof Error ? err.message : 'Connection failed');
-      
-      const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
-      reconnectAttempts.current++;
-      reconnectTimeoutRef.current = window.setTimeout(connect, delay);
-    }
-  }, []);
+  const connectionRef = useRef<DbConnection | null>(null);
+  const subscriptionRef = useRef<SubscriptionHandle | null>(null);
 
   useEffect(() => {
-    connect();
+    console.log('Initializing SpacetimeDB connection...');
+    console.log('Host:', SPACETIMEDB_HOST, 'Module:', SPACETIMEDB_MODULE);
+    
+    const connect = async () => {
+      try {
+        setConnectionState('connecting');
+        setError(null);
+        
+        // Build the connection using the typed builder from generated bindings
+        const builder = DbConnection.builder();
+        
+        const conn = builder
+          .withUri(SPACETIMEDB_HOST)
+          .withDatabaseName(SPACETIMEDB_MODULE)
+          .onConnect((connection, identity) => {
+            console.log('Connected to SpacetimeDB! Identity:', identity.toHexString());
+            setConnectionState('connected');
+            
+            // Subscribe to all tables after connection
+            const sub = connection.subscriptionBuilder()
+              .onApplied(() => {
+                console.log('Subscription applied, syncing data...');
+                syncAllData(connection.db);
+              })
+              .onError((errCtx) => {
+                console.error('Subscription error:', errCtx.event);
+                setError(String(errCtx.event ?? 'Subscription error'));
+              })
+              .subscribe([
+                tables.station,
+                tables.satellite,
+                tables.pass,
+                tables.spaceWeather,
+                tables.simClock,
+                tables.kpi,
+              ]);
+            
+            subscriptionRef.current = sub;
+          })
+          .onDisconnect((_ctx, err) => {
+            console.log('Disconnected from SpacetimeDB:', err);
+            setConnectionState('disconnected');
+            if (err) setError(String(err));
+          })
+          .onConnectError((_ctx, err) => {
+            // StrictMode's simulated unmount closes the first socket mid-handshake.
+            if (disposed) return;
+            console.error('Connection error:', err);
+            setConnectionState('error');
+            setError(String(err));
+          })
+          .build();
+        
+        connectionRef.current = conn;
+        
+        // Set up table event listeners
+        conn.db.station.onInsert((_ctx, row) => {
+          console.log('Station inserted:', row);
+          setStations(prev => {
+            const exists = prev.some(s => s.id === row.id);
+            if (exists) return prev;
+            return [...prev, {
+              id: row.id,
+              name: row.name,
+              latitude: row.latitude,
+              longitude: row.longitude,
+              altitudeM: row.altitudeM,
+              monthlyRevenueCents: row.monthlyRevenueCents,
+            }];
+          });
+        });
+        
+        conn.db.station.onDelete((_ctx, row) => {
+          setStations(prev => prev.filter(s => s.id !== row.id));
+        });
+        
+        conn.db.satellite.onInsert((_ctx, row) => {
+          console.log('Satellite inserted:', row);
+          setSatellites(prev => {
+            const exists = prev.some(s => s.noradId === row.noradId);
+            if (exists) return prev;
+            return [...prev, {
+              noradId: row.noradId,
+              name: row.name,
+              tleLine1: row.tleLine1,
+              tleLine2: row.tleLine2,
+              operator: row.operator,
+            }];
+          });
+        });
+        
+        conn.db.satellite.onDelete((_ctx, row) => {
+          setSatellites(prev => prev.filter(s => s.noradId !== row.noradId));
+        });
+        
+        conn.db.pass.onInsert((_ctx, row) => {
+          console.log('Pass inserted:', row);
+          setPasses(prev => {
+            const exists = prev.some(p => p.id === row.id);
+            if (exists) return prev;
+            return [...prev, {
+              id: row.id,
+              satelliteId: row.satelliteId,
+              stationId: row.stationId,
+              startTime: extractMicros(row.startTime),
+              endTime: extractMicros(row.endTime),
+              status: mapPassStatus(row.status),
+              maxElevationDeg: row.maxElevationDeg,
+              revenueCents: row.revenueCents,
+            }];
+          });
+        });
+        
+        conn.db.pass.onDelete((_ctx, row) => {
+          setPasses(prev => prev.filter(p => p.id !== row.id));
+        });
+        
+        conn.db.pass.onUpdate((_ctx, oldRow, newRow) => {
+          setPasses(prev => prev.map(p => 
+            p.id === oldRow.id ? {
+              id: newRow.id,
+              satelliteId: newRow.satelliteId,
+              stationId: newRow.stationId,
+              startTime: extractMicros(newRow.startTime),
+              endTime: extractMicros(newRow.endTime),
+              status: mapPassStatus(newRow.status),
+              maxElevationDeg: newRow.maxElevationDeg,
+              revenueCents: newRow.revenueCents,
+            } : p
+          ));
+        });
+        
+        conn.db.spaceWeather.onInsert((_ctx, row) => {
+          const ts = extractMicros(row.timestamp);
+          setSpaceWeather(prev => {
+            const exists = prev.some(w => w.timestamp === ts);
+            if (exists) return prev;
+            return [...prev, {
+              timestamp: ts,
+              kpIndex: row.kpIndex,
+              flareClass: mapFlareClass(row.flareClass),
+              dstIndex: row.dstIndex,
+            }];
+          });
+        });
+        
+        conn.db.spaceWeather.onDelete((_ctx, row) => {
+          const ts = extractMicros(row.timestamp);
+          setSpaceWeather(prev => prev.filter(w => w.timestamp !== ts));
+        });
+        
+        conn.db.simClock.onInsert((_ctx, row) => {
+          console.log('SimClock inserted:', row);
+          setSimClock({
+            id: row.id,
+            currentTime: extractMicros(row.currentTime),
+            speedMultiplier: row.speedMultiplier,
+            isPlaying: row.isPlaying,
+            realTimeAnchor: extractMicros(row.realTimeAnchor),
+            simTimeAnchor: extractMicros(row.simTimeAnchor),
+          });
+        });
+        
+        conn.db.simClock.onUpdate((_ctx, _oldRow, newRow) => {
+          setSimClock({
+            id: newRow.id,
+            currentTime: extractMicros(newRow.currentTime),
+            speedMultiplier: newRow.speedMultiplier,
+            isPlaying: newRow.isPlaying,
+            realTimeAnchor: extractMicros(newRow.realTimeAnchor),
+            simTimeAnchor: extractMicros(newRow.simTimeAnchor),
+          });
+        });
+        
+        conn.db.kpi.onInsert((_ctx, row) => {
+          console.log('KPI inserted:', row);
+          setKpi({
+            id: row.id,
+            billedThisMonthCents: row.billedThisMonthCents,
+            revenueAtRiskCents: row.revenueAtRiskCents,
+            creditsPaidCents: row.creditsPaidCents,
+            recoveredCents: row.recoveredCents,
+          });
+        });
+        
+        conn.db.kpi.onUpdate((_ctx, _oldRow, newRow) => {
+          setKpi({
+            id: newRow.id,
+            billedThisMonthCents: newRow.billedThisMonthCents,
+            revenueAtRiskCents: newRow.revenueAtRiskCents,
+            creditsPaidCents: newRow.creditsPaidCents,
+            recoveredCents: newRow.recoveredCents,
+          });
+        });
 
-    return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      if (wsRef.current) {
-        wsRef.current.close();
+      } catch (err) {
+        console.error('Failed to connect:', err);
+        setConnectionState('error');
+        setError(err instanceof Error ? err.message : String(err));
       }
     };
-  }, [connect]);
+    
+    const syncAllData = (db: DbConnection['db']) => {
+      const stationRows = Array.from(db.station.iter());
+      console.log('Syncing stations:', stationRows.length);
+      setStations(stationRows.map(row => ({
+        id: row.id,
+        name: row.name,
+        latitude: row.latitude,
+        longitude: row.longitude,
+        altitudeM: row.altitudeM,
+        monthlyRevenueCents: row.monthlyRevenueCents,
+      })));
+      
+      const satelliteRows = Array.from(db.satellite.iter());
+      console.log('Syncing satellites:', satelliteRows.length);
+      setSatellites(satelliteRows.map(row => ({
+        noradId: row.noradId,
+        name: row.name,
+        tleLine1: row.tleLine1,
+        tleLine2: row.tleLine2,
+        operator: row.operator,
+      })));
+      
+      const passRows = Array.from(db.pass.iter());
+      console.log('Syncing passes:', passRows.length);
+      setPasses(passRows.map(row => ({
+        id: row.id,
+        satelliteId: row.satelliteId,
+        stationId: row.stationId,
+        startTime: extractMicros(row.startTime),
+        endTime: extractMicros(row.endTime),
+        status: mapPassStatus(row.status),
+        maxElevationDeg: row.maxElevationDeg,
+        revenueCents: row.revenueCents,
+      })));
+      
+      const weatherRows = Array.from(db.spaceWeather.iter());
+      console.log('Syncing space weather:', weatherRows.length);
+      setSpaceWeather(weatherRows.map(row => ({
+        timestamp: extractMicros(row.timestamp),
+        kpIndex: row.kpIndex,
+        flareClass: mapFlareClass(row.flareClass),
+        dstIndex: row.dstIndex,
+      })));
+      
+      const clockRows = Array.from(db.simClock.iter());
+      if (clockRows.length > 0) {
+        const row = clockRows[clockRows.length - 1];
+        console.log('Syncing sim clock:', row);
+        setSimClock({
+          id: row.id,
+          currentTime: extractMicros(row.currentTime),
+          speedMultiplier: row.speedMultiplier,
+          isPlaying: row.isPlaying,
+          realTimeAnchor: extractMicros(row.realTimeAnchor),
+          simTimeAnchor: extractMicros(row.simTimeAnchor),
+        });
+      }
+      
+      const kpiRows = Array.from(db.kpi.iter());
+      if (kpiRows.length > 0) {
+        const row = kpiRows[kpiRows.length - 1];
+        console.log('Syncing KPI:', row);
+        setKpi({
+          id: row.id,
+          billedThisMonthCents: row.billedThisMonthCents,
+          revenueAtRiskCents: row.revenueAtRiskCents,
+          creditsPaidCents: row.creditsPaidCents,
+          recoveredCents: row.recoveredCents,
+        });
+      }
+    };
+    
+    let disposed = false;
+    connect();
+    
+    return () => {
+      disposed = true;
+      if (subscriptionRef.current) {
+        subscriptionRef.current.unsubscribe();
+      }
+      if (connectionRef.current) {
+        connectionRef.current.disconnect();
+      }
+    };
+  }, []);
 
   const callReducer = useCallback((reducerName: string, args: unknown[]) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      const msg = JSON.stringify({
-        call: {
-          reducer: reducerName,
-          args,
-        },
-      });
-      console.log('Calling reducer:', reducerName, args);
-      wsRef.current.send(msg);
-    } else {
-      console.warn('Cannot call reducer, WebSocket not connected');
+    const conn = connectionRef.current;
+    if (!conn) {
+      console.warn('Cannot call reducer, not connected');
+      return;
+    }
+    console.log('Calling reducer:', reducerName, args);
+    switch (reducerName) {
+      case 'set_playback_playing':
+        conn.reducers.setPlaybackPlaying({ playing: args[0] as boolean });
+        break;
+      case 'set_playback_speed':
+        conn.reducers.setPlaybackSpeed({ speed: args[0] as number });
+        break;
+      case 'seek_to_time':
+        conn.reducers.seekToTime({ timestampMicros: BigInt(args[0] as number) });
+        break;
+      case 'go_live':
+        conn.reducers.goLive({});
+        break;
     }
   }, []);
 

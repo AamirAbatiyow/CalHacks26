@@ -52,9 +52,30 @@
   opacity: 0.4;
 }
 
+.sidebar-icon-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
 .sidebar-icon {
   font-size: 16px;
   margin-bottom: 2px;
+}
+
+.sidebar-badge {
+  position: absolute;
+  top: -6px;
+  right: -10px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  background: var(--color-red);
+  color: var(--color-primary);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+  border-radius: 8px;
 }
 
 .sidebar-label {

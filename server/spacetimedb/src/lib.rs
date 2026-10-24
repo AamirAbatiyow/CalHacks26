@@ -1,8 +1,23 @@
 use spacetimedb::{ReducerContext, ScheduleAt, SpacetimeType, Table, Timestamp};
 use std::time::Duration;
 
-// ML model predictions module
+use ledger::{ledger_entry, sync_ledger_kpis, LedgerEntry, LedgerEntryType};
+
+pub mod approvals;
+pub mod attack_run;
+pub mod authority;
+pub mod claim;
+pub mod confidence_gate;
+pub mod events;
+pub mod ledger;
 pub mod ml;
+pub mod policy;
+pub mod sla;
+
+#[cfg(test)]
+mod authority_tests;
+#[cfg(test)]
+mod tests;
 
 #[derive(SpacetimeType, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PassStatus {
@@ -140,18 +155,21 @@ pub fn init(ctx: &ReducerContext) {
         sim_time_anchor: ctx.timestamp,
     });
 
+    // Credits paid and recovered are derived from the ledger (see ledger::sync_ledger_kpis).
     ctx.db.kpi().insert(Kpi {
         id: "main".to_string(),
         billed_this_month_cents: 1940000000,
         revenue_at_risk_cents: 41200000,
-        credits_paid_cents: 8600000,
-        recovered_cents: 13100000,
+        credits_paid_cents: 0,
+        recovered_cents: 0,
     });
 
     ctx.db.sim_tick_schedule().insert(SimTickSchedule {
         scheduled_id: 0,
         scheduled_at: ScheduleAt::Interval(Duration::from_millis(1000).into()),
     });
+
+    policy::seed_initial_policies(ctx);
     
     log::info!("Ground Truth module initialized");
 }
@@ -305,6 +323,106 @@ pub fn seed_space_weather(ctx: &ReducerContext, timestamp_micros: i64, kp: f32, 
         flare_class,
         dst_index: dst,
     });
+}
+
+pub const CURRENT_POLICY_VERSION: &str = "v4";
+pub const CURRENT_MODEL_VERSION: &str = "v2";
+
+/// Seeds the audit trail and ledger against passes that already exist, so every
+/// pass number on the Audit and Ledger pages points at a real `pass` row and the
+/// credits-paid / recovered KPIs equal the ledger totals. Run after `seed_pass`.
+#[spacetimedb::reducer]
+pub fn seed_finance_history(ctx: &ReducerContext) {
+    if ctx.db.ledger_entry().iter().next().is_some() {
+        log::info!("Ledger already seeded, skipping finance history");
+        return;
+    }
+
+    let now = ctx.timestamp.to_micros_since_unix_epoch();
+    let minute: i64 = 60 * 1_000_000;
+    let mut past: Vec<Pass> = ctx
+        .db
+        .pass()
+        .iter()
+        .filter(|p| p.end_time.to_micros_since_unix_epoch() < now)
+        .collect();
+    past.sort_by_key(|p| p.start_time);
+    let dropped: Vec<&Pass> = past.iter().filter(|p| p.status == PassStatus::Dropped).collect();
+    let completed: Vec<&Pass> = past.iter().filter(|p| p.status == PassStatus::Ok).collect();
+
+    let decide = |pass: &Pass, after_min: i64, decision_type, outcome, amount_cents: i64, reason: String| {
+        ctx.db.decision_record().insert(DecisionRecord {
+            id: 0,
+            created_at: Timestamp::from_micros_since_unix_epoch(
+                pass.end_time.to_micros_since_unix_epoch() + after_min * minute,
+            ),
+            decision_type,
+            outcome,
+            pass_id: Some(pass.id),
+            station_id: Some(pass.station_id.clone()),
+            amount_cents,
+            reason,
+            policy_version: CURRENT_POLICY_VERSION.to_string(),
+            model_version: CURRENT_MODEL_VERSION.to_string(),
+        });
+    };
+    let post = |pass: Option<&Pass>, at_micros: i64, entry_type, description: String, reference: String, amount_cents: i64| {
+        ctx.db.ledger_entry().insert(LedgerEntry {
+            id: 0,
+            created_at: Timestamp::from_micros_since_unix_epoch(at_micros),
+            entry_type,
+            description,
+            reference_id: Some(reference),
+            amount_cents,
+            dispute_id: None,
+            pass_id: pass.map(|p| p.id),
+            station_id: pass.map(|p| p.station_id.clone()),
+        });
+    };
+    let after = |pass: &Pass, min: i64| pass.end_time.to_micros_since_unix_epoch() + min * minute;
+
+    // Credits: one entry per credited pass, summing to $86,000.
+    let credits: [(Option<&&Pass>, DecisionType, DecisionOutcome, i64, &str); 5] = [
+        (dropped.first(), DecisionType::CreditIssued, DecisionOutcome::Approved, 2450000, "Pass dropped with no downlink; SLA credit approved after review"),
+        (dropped.get(2), DecisionType::CreditIssued, DecisionOutcome::Approved, 3100000, "Pass dropped mid-contact; SLA credit approved after review"),
+        (completed.get(3), DecisionType::DisputeResolved, DecisionOutcome::Approved, 1850000, "Customer dispute approved after manual review"),
+        (completed.get(9), DecisionType::DisputeResolved, DecisionOutcome::Approved, 1180000, "Partial credit for degraded link quality"),
+        (completed.get(15), DecisionType::CreditIssued, DecisionOutcome::AutoApproved, 20000, "Short contact under SLA minimum; auto-approved under $300 cap"),
+    ];
+    for (pass, decision_type, outcome, amount, reason) in credits {
+        if let Some(pass) = pass {
+            decide(pass, 25, decision_type, outcome, amount, reason.to_string());
+            post(Some(*pass), after(pass, 30), LedgerEntryType::Credit,
+                format!("Credit issued for Pass #{}", pass.id), format!("CR-2026-{}", pass.id), -amount);
+        }
+    }
+
+    // Recoveries: summing to $131,000.
+    if let Some(pass) = dropped.get(1) {
+        decide(pass, 40, DecisionType::PassRecovered, DecisionOutcome::Approved, 8850000,
+            "Backup ground station captured pass data".to_string());
+        post(Some(*pass), after(pass, 45), LedgerEntryType::Recovery,
+            format!("Recovered revenue from backup capture of Pass #{}", pass.id), format!("REC-2026-{}", pass.id), 8850000);
+    }
+    post(None, now - 2880 * minute, LedgerEntryType::Recovery,
+        "Insurance recovery for storm damage claim".to_string(), "REC-2026-INS-07".to_string(), 4250000);
+
+    // Open and denied items: audit only, no money moved.
+    if let Some(pass) = completed.get(6) {
+        decide(pass, 35, DecisionType::DisputeCreated, DecisionOutcome::Pending, 3200000,
+            "Customer reported incomplete data transfer".to_string());
+    }
+    if let Some(pass) = completed.get(12) {
+        decide(pass, 50, DecisionType::CreditIssued, DecisionOutcome::Denied, 15600000,
+            "Claim exceeds policy threshold; denied after review".to_string());
+    }
+
+    post(None, now - 90 * minute, LedgerEntryType::Invoice,
+        "Monthly service invoice - SvalSat".to_string(), "INV-2026-SVB-10".to_string(), 4850000);
+    post(None, now - 1440 * minute, LedgerEntryType::Invoice,
+        "Monthly service invoice - TrollSat".to_string(), "INV-2026-ANT-10".to_string(), 3200000);
+
+    sync_ledger_kpis(ctx);
 }
 
 #[spacetimedb::reducer]
