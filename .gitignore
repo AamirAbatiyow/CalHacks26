@@ -31,3 +31,5 @@ npm-debug.log*
 web/src/module_bindings/
 __pycache__/
 *.pyc
+# Large data files - regenerate with ml/fetch_labeled.py
+data/raw/satnogs_observations_labeled.json

@@ -237,17 +237,19 @@ The model uses the following features:
 - **Station**: latitude, longitude (high-latitude aurora risk)
 - **Derived**: elevation bins, short pass flag, Kp-latitude interaction
 
-### Model Metrics (v1.0.0)
+### Model Metrics (v1.1.0)
 
 | Metric | Value |
 |--------|-------|
-| AUC-ROC | 0.66 |
-| AUC-PR | 0.35 |
-| Brier Score | 0.17 |
-| ECE (Calibration) | 0.09 |
-| Accuracy | 0.76 |
+| AUC-ROC | **0.89** |
+| AUC-PR | 0.87 |
+| Brier Score | 0.13 |
+| ECE (Calibration) | 0.04 |
+| Accuracy | 0.82 |
 
-**Training Data**: 99 real SatNOGS observations + 2,901 synthetic samples (3,000 total)
+**Training Data**: 3,500 real labeled SatNOGS observations
+- Good passes: 2,000
+- Bad/Failed passes: 1,500
 
 ### Running the ML Pipeline
 

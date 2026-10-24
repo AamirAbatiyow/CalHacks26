@@ -138,12 +138,16 @@ def prepare_features(
         if col in X.columns:
             X[col] = X[col].astype("category")
     
-    # Fill missing values
+    # Fill missing values and ensure numeric types
     for col in X.columns:
         if X[col].dtype.name == "category":
             X[col] = X[col].cat.add_categories(["_missing"]).fillna("_missing")
         else:
-            X[col] = X[col].fillna(X[col].median() if X[col].notna().any() else 0)
+            # Convert to numeric, coercing errors to NaN
+            X[col] = pd.to_numeric(X[col], errors='coerce')
+            # Fill with median or 0
+            median_val = X[col].median() if X[col].notna().any() else 0
+            X[col] = X[col].fillna(median_val)
     
     logger.info(f"Prepared {len(feature_list)} features for {len(X)} samples")
     
