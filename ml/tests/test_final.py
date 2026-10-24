@@ -66,7 +66,8 @@ def synthetic_store(n_stations=40, hours=36, seed=0):
 @pytest.fixture(scope="module")
 def synth():
     raw, hours, stations = synthetic_store()
-    df = cf.build_dataset(raw, stations, cf.KpSeries({}), hours, lag_hours=1.0)
+    df = cf.build_dataset(raw, stations, cf.KpSeries({}), hours, lag_hours=1.0,
+                          lookback_hours=fm.LOOKBACK_H, long_lookback_hours=fm.LONG_LOOKBACK_H)
     return raw, hours, stations, df
 
 
@@ -104,7 +105,7 @@ def test_history_is_strictly_causal(synth):
 
 def test_coverage_excludes_warmup(synth):
     _, _, _, df = synth
-    assert df["start_ts"].min() >= pd.Timestamp(T0) + pd.Timedelta(hours=13)
+    assert df["start_ts"].min() >= pd.Timestamp(T0) + pd.Timedelta(hours=fm.LOOKBACK_H + 1)
     assert {"ground_station", "y", "status"} <= set(df.columns)
     assert not any(c in fm.VARIANTS["full_causal"]["numeric"] for c in ("ground_station", "station_lat", "id"))
 
