@@ -1,7 +1,7 @@
 use spacetimedb::{ReducerContext, ScheduleAt, SpacetimeType, Table, Timestamp};
 use std::time::Duration;
 
-mod attack_run;
+pub mod attack_run;
 pub use attack_run::*;
 
 #[derive(SpacetimeType, Clone, Copy, PartialEq, Eq, Debug)]
