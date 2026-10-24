@@ -458,3 +458,16 @@
   align-items: center;
   justify-content: center;
 }
+
+.claim-credit-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.claim-reason {
+  margin: 0;
+  font-size: var(--font-metadata);
+  color: var(--color-secondary);
+  line-height: 1.5;
+}
