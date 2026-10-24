@@ -1,6 +1,6 @@
 use spacetimedb::{ReducerContext, SpacetimeType, Table, Timestamp};
 
-use crate::{kpi, Kpi};
+use crate::kpis::sync_kpis;
 
 #[derive(SpacetimeType, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum LedgerEntryType {
@@ -46,26 +46,6 @@ pub fn station_credits_cents(ctx: &ReducerContext, station_id: &str) -> i64 {
         .sum()
 }
 
-/// Keeps the credits-paid and recovered KPIs equal to the ledger totals.
-/// Call after every ledger insert.
-pub fn sync_ledger_kpis(ctx: &ReducerContext) {
-    let (mut credits, mut recovered) = (0i64, 0i64);
-    for entry in ctx.db.ledger_entry().iter() {
-        match entry.entry_type {
-            LedgerEntryType::Credit => credits -= entry.amount_cents,
-            LedgerEntryType::Recovery => recovered += entry.amount_cents,
-            LedgerEntryType::Invoice => {}
-        }
-    }
-    if let Some(kpi) = ctx.db.kpi().id().find("main".to_string()) {
-        ctx.db.kpi().id().update(Kpi {
-            credits_paid_cents: credits,
-            recovered_cents: recovered,
-            ..kpi
-        });
-    }
-}
-
 #[spacetimedb::reducer]
 pub fn record_ledger_entry(
     ctx: &ReducerContext,
@@ -85,7 +65,7 @@ pub fn record_ledger_entry(
         pass_id: None,
         station_id: None,
     });
-    sync_ledger_kpis(ctx);
+    sync_kpis(ctx);
 }
 
 #[spacetimedb::reducer]
@@ -108,5 +88,5 @@ pub fn seed_ledger_entry(
         pass_id: None,
         station_id: None,
     });
-    sync_ledger_kpis(ctx);
+    sync_kpis(ctx);
 }
