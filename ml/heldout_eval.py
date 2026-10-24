@@ -100,6 +100,32 @@ def feature_variants(df: pd.DataFrame) -> Dict[str, Variant]:
     return v
 
 
+FEATURE_GROUPS = {
+    "kp": ["kp_at_time", "kp_max_6h", "kp_latitude_risk"],
+    "frequency_band": ["log10_freq_hz", "band"],
+    "day_night": ["sun_elev_deg", "is_night"],
+    "tle_age": ["tle_age_days"],
+    "geometry": ["max_elevation_deg", "duration_sec", "elev_margin_deg"],
+    "station_hardware": ["min_horizon_deg", "has_directional", "has_omni", "n_antennas",
+                         "station_alt_m", "station_age_days"],
+    "station_location": ["station_lat", "station_abs_lat", "station_lon"],
+    "transmitter_mode": ["transmitter_mode"],
+    "station_state_online1h": [f"{c}_lag1h" for c in ds.RECENT_STATE_FEATURES],
+}
+
+
+def ablation_variants(df: pd.DataFrame, base: str = "physical+online1h") -> Dict[str, Variant]:
+    b = feature_variants(df)[base]
+    out = {base: b}
+    for group, cols in FEATURE_GROUPS.items():
+        num = [c for c in b.numeric if c not in cols]
+        cat = [c for c in b.categorical if c not in cols]
+        if len(num) + len(cat) < len(b.numeric) + len(b.categorical):
+            out[f"-{group}"] = Variant(f"-{group}", num, cat, b.station_id_feature,
+                                       b.station_history, b.class_weight, b.calibrate)
+    return out
+
+
 def add_online_features(df: pd.DataFrame) -> pd.DataFrame:
     for lag in ONLINE_LAGS_H:
         rs = ds.station_recent_state(df, lag_hours=lag)
@@ -334,7 +360,12 @@ def run(dataset: str, variants: List[str], splits: List[str], out_dir: Path) -> 
     df = load_dataset(dataset)
     logger.info("dataset %s: %d rows, %d stations, failure rate %.3f",
                 dataset, len(df), df["station_id"].nunique(), df["y"].mean())
-    all_variants = feature_variants(df)
+    all_variants = {**feature_variants(df), **ablation_variants(df)}
+    if variants == ["ablation"]:
+        variants = list(ablation_variants(df))
+        dataset_tag = f"{dataset}_ablation"
+    else:
+        dataset_tag = dataset
     results = []
     for kind in splits:
         for name in variants:
@@ -346,10 +377,10 @@ def run(dataset: str, variants: List[str], splits: List[str], out_dir: Path) -> 
             results.append(r)
     out_dir.mkdir(parents=True, exist_ok=True)
     plotted = [r for r in results if r["variant"] in ("v110_station_id", "physical", "physical+online1h")]
-    if plotted:
+    if plotted and dataset_tag == dataset:
         plot_pr_curves(plotted, out_dir / f"pr_curve_{dataset}.png", f"Held-out PR curves ({dataset})")
     summary = {
-        "dataset": dataset,
+        "dataset": dataset_tag,
         "n_rows": int(len(df)),
         "n_stations": int(df["station_id"].nunique()),
         "status_counts": df["status"].value_counts().to_dict(),
@@ -358,9 +389,50 @@ def run(dataset: str, variants: List[str], splits: List[str], out_dir: Path) -> 
     }
     if "status_counts_all" in df.attrs:
         summary["status_counts_including_unlabeled"] = df.attrs["status_counts_all"]
-    with open(out_dir / f"heldout_{dataset}.json", "w") as f:
+    with open(out_dir / f"heldout_{dataset_tag}.json", "w") as f:
         json.dump(summary, f, indent=1, default=str)
+    with open(out_dir / f"heldout_{dataset_tag}.md", "w") as f:
+        f.write(to_markdown(summary))
     return results
+
+
+def _fmt(x, nd=3):
+    return "–" if x is None else f"{x:.{nd}f}"
+
+
+def to_markdown(summary: dict) -> str:
+    lines = [
+        f"# Held-out evaluation: `{summary['dataset']}`",
+        "",
+        f"{summary['n_rows']} labeled passes, {summary['n_stations']} stations, "
+        f"{summary['time_range'][0]} to {summary['time_range'][1]}. "
+        f"Status counts: {summary['status_counts']}. Failure = bad or failed.",
+        "",
+        "## Threshold 0.5",
+        "",
+        "| split | variant | AUC | AP | precision | recall | F1 | accuracy | confusion [[TN, FP], [FN, TP]] |",
+        "|---|---|---|---|---|---|---|---|---|",
+    ]
+    for r in summary["results"]:
+        lines.append(
+            f"| {r['split']} | {r['variant']} | {_fmt(r['auc_roc'])} | {_fmt(r['auc_pr'])} | "
+            f"{_fmt(r['precision'])} | {_fmt(r['recall'])} | {_fmt(r['f1'])} | "
+            f"{_fmt(r['accuracy'])} | {r['confusion_matrix']} |")
+    lines += [
+        "",
+        "## Precision targets (threshold chosen on inner OOF, measured on the outer fold)",
+        "",
+        "| split | variant | target | precision | 95% CI | recall | recall failed / bad | flagged |",
+        "|---|---|---|---|---|---|---|---|",
+    ]
+    for r in summary["results"]:
+        for t, a in r["at_precision_target"].items():
+            lo, hi = a["precision_95ci"]
+            lines.append(
+                f"| {r['split']} | {r['variant']} | {t} | {_fmt(a['precision'])} | "
+                f"{_fmt(lo, 2)}–{_fmt(hi, 2)} | {_fmt(a['recall'])} | "
+                f"{_fmt(a['recall_failed_only'], 2)} / {_fmt(a['recall_bad_only'], 2)} | {a['flagged']} |")
+    return "\n".join(lines) + "\n"
 
 
 def main():

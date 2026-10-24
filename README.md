@@ -219,73 +219,133 @@ The `/ml` directory contains a gradient-boosted model (LightGBM) for predicting 
 
 ```
 /ml
-├── __init__.py          # Module initialization
-├── data_loader.py       # SatNOGS data loading + synthetic augmentation
-├── features.py          # Feature engineering
-├── train.py             # Training pipeline
-├── score.py             # Scoring with SHAP explanations
-├── models/              # Saved model artifacts
-│   ├── model_v1.0.0.lgb
-│   ├── config_v1.0.0.json
-│   └── metrics_v1.0.0.json
-├── tests/
-│   └── test_model.py    # Unit tests
-└── requirements.txt     # Python dependencies
+├── fetch_labeled.py     # SatNOGS fetch: every status per time slice (no per-status quotas)
+├── datasets.py          # Labeled datasets + leakage-safe physical / station-state features
+├── heldout_eval.py      # Random vs station-grouped vs time split, nested threshold tuning
+├── gate.py              # Score -> confidence_percent for confidence_gate.rs
+├── verify_labels.py     # Compare v1.1.0 labels with an unfiltered re-fetch
+├── train.py             # --pipeline heldout (v1.2+) or legacy (v1.0/v1.1)
+├── score.py             # Scoring with SHAP explanations and gate fields
+├── data_loader.py       # Legacy loader + synthetic augmentation (legacy pipeline only)
+├── features.py          # Legacy feature engineering (station_id removed)
+├── models/              # Model artifacts (v1.2.0 adds calibrator + PR curve)
+├── reports/             # Held-out evaluation tables, JSON and PR curves
+└── tests/
 ```
 
-### Features
+### Training data and its problems
 
-The model uses the following features:
-- **Pass geometry**: max elevation, duration, satellite inclination/period/apogee
-- **Space weather**: Kp index, solar flare class (None/C/M/X)
-- **Local weather**: cloud cover, precipitation, temperature, humidity, wind speed
-- **Station**: latitude, longitude (high-latitude aurora risk)
-- **Derived**: elevation bins, short pass flag, Kp-latitude interaction
+`data/processed/passes_features.parquet` holds 3,500 real SatNOGS observations.
+Its statuses are real SatNOGS values, but the 2,000 good / 1,000 bad / 500 failed
+split was set by hand: v1.1.0 fetched each status separately, newest first,
+until a quota was reached. As a result:
 
-### Model Metrics (v1.1.0)
+- The class ratio is chosen, not observed. Unvetted (`unknown`) passes, roughly
+  40% of all passes, are excluded entirely.
+- Each class covers a different time window. Bad passes go back to Oct 22 20:38,
+  good to Oct 23 06:01 and failed only to Oct 23 21:17. Kp, and anything else that
+  varies with time, therefore leaks the label. On this data `kp_max_6h` becomes the
+  top feature.
+- `bad` is set by a human vetter, while `good` is set automatically when decoded
+  frames exist. A pass labelled `bad` therefore also means someone vetted it.
 
-| Metric | Value |
-|--------|-------|
-| AUC-ROC | **0.89** |
-| AUC-PR | 0.87 |
-| Brier Score | 0.13 |
-| ECE (Calibration) | 0.04 |
-| Accuracy | 0.82 |
+From Oct 23 21:17:20 onward, all three statuses were fetched completely, so that
+window (1,559 passes, 253 stations: 815 good, 500 failed, 244 bad) has no
+class-window bias. v1.2.0 trains on it, and `ml/reports/heldout_v110_census.md`
+is the evaluation to rely on. `fetch_labeled.py` now fetches every status per time
+slice. Anonymous API access allows about 60 requests (1,500 observations) per hour.
 
-**Training Data**: 3,500 real labeled SatNOGS observations
-- Good passes: 2,000
-- Bad/Failed passes: 1,500
+Failures are dominated by station outages. After a `failed` pass, 90% of the same
+station's next passes also fail, and 61 stations failed every pass in the window.
+
+### Features (v1.2.0)
+
+- **Pass geometry**: max elevation, duration, margin above the station's elevation mask (`min_horizon`)
+- **Station hardware/location**: latitude, longitude, altitude, antenna type, station age.
+  There is no station ID.
+- **Radio**: downlink frequency (log) and band, transmitter mode
+- **Space weather / time**: GFZ Kp at pass time and the 6h max, Kp × latitude, solar elevation and day/night
+- **TLE age**: only for slices from the new fetcher; the v1.1.0 parquet has no TLEs
+- **Station state, past only**: over the station's passes that ended at least 1h before this
+  pass starts, the fraction and recency of `failed` passes. `failed` (no artifacts uploaded)
+  is known within that lag; `bad` waits for a vetter and is never used. In production the caller
+  must supply `recent_*_lag1h` from its own record of the station's passes.
+
+An in-fold station target encoding is implemented as `physical+history`. It helps on random and
+time splits but hurts on unseen stations, so v1.2.0 does not use it.
+
+### Held-out metrics (census window, failure = bad or failed, base rate 0.48)
+
+At a 0.5 threshold:
+
+| Model | Split | AUC | Precision | Recall | F1 | Accuracy |
+|---|---|---|---|---|---|---|
+| v1.1.0 features + station ID | random 5-fold | 0.85 | 0.75 | 0.75 | 0.75 | 0.76 |
+| v1.1.0 features + station ID | **held-out stations** | **0.71** | 0.70 | 0.40 | 0.51 | 0.63 |
+| v1.2.0 (physical + station state, isotonic) | random 5-fold | 0.89 | 0.81 | 0.77 | 0.79 | 0.80 |
+| v1.2.0 | **held-out stations** | **0.85** | 0.79 | 0.73 | 0.76 | 0.78 |
+| v1.2.0 | time (last 30%) | 0.92 | 0.88 | 0.76 | 0.82 | 0.83 |
+
+The v1.1.0 figure of AUC 0.89 / accuracy 0.82 came from a random split, with early stopping
+on the test set, on the quota-sampled data.
+
+With precision targets on held-out stations (5-fold GroupKFold), each threshold is chosen on
+inner station-grouped out-of-fold predictions of the training fold and then measured once on the
+outer fold:
+
+| Target | Measured precision (95% CI) | Recall | Recall on failed / bad | Flagged |
+|---|---|---|---|---|
+| 0.90 | 0.908 (0.87–0.93) | 0.45 | 0.59 / 0.17 | 369 |
+| 0.95 | 0.953 (0.92–0.97) | 0.35 | 0.51 / 0.03 | 274 |
+| 0.98 | 0.967 (0.93–0.99) | 0.20 | 0.29 / 0.00 | 153 |
+
+Per-fold precision at the 0.95 target ranges from 0.91 to 1.00. The v1.1.0 feature set with
+station ID never reaches 0.90 precision on held-out stations at any threshold that flags 20 or more
+passes, even when the threshold is tuned on the test folds. Full tables,
+confusion matrices and PR curves are in `ml/reports/` and `ml/models/pr_curve_v1.2.0.png`.
+
+What helped, from the ablation in `ml/reports/heldout_v110_census_ablation.md`:
+
+- **Past-only station state** is the only large gain: held-out-station AUC goes from 0.755 to 0.855,
+  and recall at 0.95 precision from about 0 to 0.35–0.39.
+- **Frequency/band and transmitter mode** help a little (about +0.02 AUC, +3–5 points of recall).
+- **Kp, day/night, geometry and station hardware** make no measurable difference on this data. Kp
+  only ranges from 1.3 to 4.3 within the 12h window, so its effect is untested rather than shown
+  to be zero.
+- **Class weighting and isotonic calibration** change held-out precision and recall by less than
+  the confidence interval. Calibration is kept because the gate needs meaningful probabilities.
+
+### Confidence gate
+
+`score.py` emits `gate_confidence_percent` and `gate_route` for
+`confidence_gate::process_claim_decision`. A "pass failed" call is sent as confidence ≥ 95 (auto)
+only when its calibrated score clears the lowest threshold whose *measured* held-out-station
+precision is ≥ 0.95. In v1.2.0 that threshold is 0.923, at 0.953 measured precision and 0.35
+recall. Scores that clear only the 0.90 operating point get the measured precision capped at 94,
+which routes to human approval. Everything else, including every "pass was fine" call, gets a
+confidence below 80 and is escalated. The gate's $300 amount cap still applies.
 
 ### Running the ML Pipeline
 
-**Install dependencies:**
 ```bash
 pip install -r ml/requirements.txt
-```
-
-**Train a model:**
-```bash
-python -m ml.train --samples 3000 --version "v1.0.0"
-```
-
-**Score passes:**
-```bash
-python -m ml.score --demo  # Demo with synthetic data
+python -m ml.fetch_labeled --start 2026-10-05 --end 2026-10-22 --hours-per-day 4  # optional, rate limited
+python -m ml.heldout_eval --dataset v110_census       # or v110, window, window_census
+python -m ml.heldout_eval --dataset v110_census --variants ablation --splits station,time
+python -m ml.train --version v1.2.0                   # heldout pipeline (default)
+python -m ml.train --pipeline legacy --version v1.1.x # old pipeline, station_id removed
 python -m ml.score --input passes.json --output predictions.json
-```
-
-**Run tests:**
-```bash
 pytest ml/tests/ -v
 ```
 
 ### Output Format
 
 Each prediction includes:
-- `failure_probability`: Float [0.0, 1.0]
+- `failure_probability`: calibrated probability in [0.0, 1.0] (v1.2+)
 - `estimated_loss_cents`: failure_probability × pass_value_cents
-- `shap_contributions`: Per-factor explanations (e.g., {"Kp Index": +0.15, "Max Elevation": -0.08})
-- `model_version`: Version string for audit trail
+- `shap_contributions`: per-factor explanations (raw model log-odds)
+- `model_version`: version string for the audit trail
+- `gate_confidence_percent`, `gate_route` (v1.2+): inputs for the confidence gate
 
 ### SpacetimeDB Integration
 
@@ -308,11 +368,10 @@ Decision records reference `model_version` to maintain audit trail.
 
 ### Extending with More Data
 
-To train on more real data:
-1. Run the data pipeline: `python -m pipeline.run --obs-limit 10000`
-2. Retrain: `python -m ml.train --samples 10000 --version "v2.0.0"`
-
-The model will use real data when available and fall back to synthetic augmentation.
+`python -m ml.fetch_labeled` writes unfiltered time slices to `data/raw/satnogs_window/`
+(gitignored). `python -m ml.train` then trains on the census window plus any slices whose passes
+ended at least 24h before they were fetched, which gives vetting time to settle. Run
+`python -m ml.verify_labels` to compare slices that overlap the v1.1.0 data against its labels.
 
 ## Mock Data Note
 

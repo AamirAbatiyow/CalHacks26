@@ -1,0 +1,143 @@
+{
+  "version": "v1.2.0",
+  "pipeline": "heldout",
+  "variant": "physical+online1h+isotonic",
+  "numeric_features": [
+    "max_elevation_deg",
+    "duration_sec",
+    "station_lat",
+    "station_abs_lat",
+    "station_lon",
+    "station_alt_m",
+    "min_horizon_deg",
+    "elev_margin_deg",
+    "has_directional",
+    "has_omni",
+    "n_antennas",
+    "station_age_days",
+    "kp_at_time",
+    "kp_max_6h",
+    "kp_latitude_risk",
+    "log10_freq_hz",
+    "sun_elev_deg",
+    "is_night",
+    "recent_n_lag1h",
+    "recent_failed_frac_lag1h",
+    "last_known_failed_lag1h",
+    "hours_since_last_known_lag1h"
+  ],
+  "categorical_features": [
+    "band",
+    "transmitter_mode"
+  ],
+  "categories": {
+    "band": [
+      "C+",
+      "L",
+      "S",
+      "UHF",
+      "VHF"
+    ],
+    "transmitter_mode": [
+      "AFSK",
+      "AFSK TUBiX10",
+      "BPSK",
+      "BPSK PMT-A3",
+      "CERTO",
+      "CW",
+      "DUV",
+      "FM",
+      "FSK",
+      "FSK AX.100 Mode 5",
+      "FSK AX.25 G3RUH",
+      "FSK QUBIK",
+      "GENESIS FSK",
+      "GFSK",
+      "GFSK Pkst",
+      "GMSK",
+      "GMSK USP",
+      "LRPT",
+      "LoRa",
+      "MSK",
+      "MSK AX.100 Mode 5",
+      "NA",
+      "QPSK",
+      "SSTV",
+      "UNKNOWN",
+      "USB",
+      "WSJT"
+    ]
+  },
+  "feature_names": [
+    "max_elevation_deg",
+    "duration_sec",
+    "station_lat",
+    "station_abs_lat",
+    "station_lon",
+    "station_alt_m",
+    "min_horizon_deg",
+    "elev_margin_deg",
+    "has_directional",
+    "has_omni",
+    "n_antennas",
+    "station_age_days",
+    "kp_at_time",
+    "kp_max_6h",
+    "kp_latitude_risk",
+    "log10_freq_hz",
+    "sun_elev_deg",
+    "is_night",
+    "recent_n_lag1h",
+    "recent_failed_frac_lag1h",
+    "last_known_failed_lag1h",
+    "hours_since_last_known_lag1h",
+    "band",
+    "transmitter_mode"
+  ],
+  "online_lag_hours": 1,
+  "shap_expected_value": -0.04452761280659244,
+  "created_at": "2026-10-24T12:32:10.745788Z",
+  "gate": {
+    "auto_precision": 0.95,
+    "operating_points": [
+      {
+        "target": 0.9,
+        "threshold": 0.7272727272727273,
+        "heldout_precision": 0.907859078590786,
+        "heldout_precision_95ci": [
+          0.8739992299044271,
+          0.9333141171040612
+        ],
+        "heldout_recall": 0.45026881720430106
+      },
+      {
+        "target": 0.95,
+        "threshold": 0.9230769230769231,
+        "heldout_precision": 0.9525547445255474,
+        "heldout_precision_95ci": [
+          0.9205285814027125,
+          0.9720663359890677
+        ],
+        "heldout_recall": 0.35080645161290325
+      },
+      {
+        "target": 0.98,
+        "threshold": 0.967741935483871,
+        "heldout_precision": 0.9673202614379085,
+        "heldout_precision_95ci": [
+          0.9257857310783825,
+          0.9859621725390252
+        ],
+        "heldout_recall": 0.1989247311827957
+      }
+    ],
+    "auto_threshold": 0.9230769230769231
+  },
+  "metrics_summary": {
+    "evaluation": "GroupKFold by station (5 folds), thresholds nested",
+    "auc_roc": 0.848664984497658,
+    "auc_pr": 0.8451242961451917,
+    "brier_score": 0.15750117454757026,
+    "ece": 0.04554020915664637
+  }
+}
