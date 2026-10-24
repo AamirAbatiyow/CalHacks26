@@ -329,3 +329,52 @@
   padding: 8px 0 24px;
   border-bottom: 1px solid var(--color-muted);
 }
+
+.approvals-detail.case {
+  padding: 20px 28px;
+  overflow-y: auto;
+}
+
+.claim-case {
+  font-size: 11px;
+  color: var(--color-secondary);
+  margin-bottom: 4px;
+}
+
+.mining-banner {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--color-secondary);
+  border: 1px solid var(--color-muted);
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin-bottom: 16px;
+  line-height: 1.45;
+}
+
+.mining-banner.proposed {
+  border-color: var(--color-secondary);
+  color: var(--color-primary);
+}
+
+.mining-banner.error {
+  border-color: var(--color-red);
+  color: var(--color-red);
+}
+
+.mining-banner .mb-case {
+  color: var(--color-primary);
+  white-space: nowrap;
+}
+
+.mining-banner a {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.approvals-empty .mining-banner {
+  max-width: 720px;
+  margin-bottom: 32px;
+}

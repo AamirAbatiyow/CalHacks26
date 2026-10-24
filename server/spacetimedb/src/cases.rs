@@ -498,7 +498,7 @@ fn record_evidence(ctx: &ReducerContext, case_id: &str, f: &Features, a: &Assess
             detail: format!("requires confidence >= 95%; this claim is {}%", g.confidence),
         });
     }
-    for rule in ctx.db.learned_rule().policy_version_id().filter(&policy_version.to_string()) {
+    for rule in ctx.db.learned_rule().iter().filter(|r| r.status == "active") {
         if g.fired.iter().any(|r| r.policy == rule.rule_id) {
             continue;
         }
