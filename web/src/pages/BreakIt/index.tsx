@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { motion } from 'motion/react';
 import {
   Activity, ChevronLeft, Copy, FileWarning, FileX2, Hourglass, Play, RotateCcw, Shuffle, SunMedium, Syringe, TrendingUp, Undo2, UserCog, WifiOff,
@@ -23,7 +23,8 @@ import { EmptyState } from '../../ui/EmptyState';
 import { Skeleton } from '../../ui/Skeleton';
 import { AttackDetail, InjectionDetail } from './AttackDetail';
 import { BeforeAfter } from './BeforeAfter';
-import { attackTitle, attackTypeOf, outcomeTone, usd, useAttackEvals, type AttackEvalRow } from './useAttackEvals';
+import { LiveLearning, ReviewForm } from './LiveLearning';
+import { CLUSTER_PARAM, attackTitle, attackTypeOf, outcomeTone, usd, useAttackEvals, type AttackEvalRow } from './useAttackEvals';
 import './BreakIt.css';
 
 function formatTime(timestamp: bigint, baseTimestamp: bigint): string {
@@ -154,7 +155,6 @@ export default function BreakIt() {
     attackRuns,
     sessions,
     fixtures,
-    seedFixtures,
     runAttackType,
     runAllAttacks,
     clearRuns,
@@ -164,12 +164,6 @@ export default function BreakIt() {
   const [injectionError, setInjectionError] = useState<string | null>(null);
   const [open, setOpen] = useState<Open | null>(null);
   const tech = useTechMode();
-
-  useEffect(() => {
-    if (connected && fixtures.length === 0) {
-      seedFixtures();
-    }
-  }, [connected, fixtures.length, seedFixtures]);
 
   const latestSession = useMemo(() => {
     if (sessions.length === 0) return null;
@@ -184,6 +178,7 @@ export default function BreakIt() {
   }, [attackRuns, latestSession]);
 
   const evals = useAttackEvals(latestSession?.id ?? null);
+  const clusterIds = useMemo(() => new Set(fixtures.filter(f => f.attackParams.includes(CLUSTER_PARAM)).map(f => f.id)), [fixtures]);
 
   const attackTypeResults = useMemo(() => {
     const results = {} as Record<AttackType, TypeTally | null>;
@@ -315,6 +310,13 @@ export default function BreakIt() {
           </div>}
         </div>
 
+        <LiveLearning
+          after={evals.after}
+          clusterIds={clusterIds}
+          clearances={evals.clearances}
+          onOpen={row => setOpen({ kind: 'eval', id: row.id })}
+        />
+
         <BeforeAfter before={evals.before} after={evals.after} />
 
         <div className="breakit-section-head">
@@ -419,7 +421,13 @@ export default function BreakIt() {
             </div>
           </>
         )}
-        {openEval && <AttackDetail row={openEval} before={evals.beforeByFixture.get(openEval.fixtureId)} />}
+        {openEval && (
+          <AttackDetail
+            row={openEval}
+            before={evals.beforeByFixture.get(openEval.fixtureId)}
+            review={openEval.outcome === 'escalated' && !openEval.review ? <ReviewForm row={openEval} /> : undefined}
+          />
+        )}
         {openRunRow && (openRunRow.attackType === 'PromptInjection' ? <InjectionDetail run={openRunRow} /> : <p>{openRunRow.logMessage}</p>)}
       </Drawer>
     </div>
