@@ -67,6 +67,10 @@ jq -c '.[]' "$FIXTURES_DIR/space_weather.json" | while read -r weather; do
   "$SPACETIME" call "$MODULE" seed_space_weather --server "$SERVER" -- "$timestamp_micros" "$kp" "$flare" "$dst" || true
 done
 
+# Audit trail + ledger, referencing the passes seeded above
+echo "Seeding finance history..."
+"$SPACETIME" call "$MODULE" seed_finance_history --server "$SERVER" || true
+
 # Cedar authority + confidence gate
 echo "Initializing authority..."
 "$SPACETIME" call "$MODULE" init_authority --server "$SERVER" || true

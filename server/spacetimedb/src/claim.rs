@@ -258,8 +258,8 @@ pub fn seed_demo_claim(ctx: &ReducerContext) {
         confidence_percent: 96,
         gate: ClaimGate::Auto,
         rule: "credit_auto_limit".to_string(),
-        policy_version: "v4".to_string(),
-        model_version: "v2".to_string(),
+        policy_version: crate::CURRENT_POLICY_VERSION.to_string(),
+        model_version: crate::CURRENT_MODEL_VERSION.to_string(),
         decided_at: ctx.timestamp,
     });
 

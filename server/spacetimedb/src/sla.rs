@@ -13,7 +13,7 @@ use spacetimedb::{ReducerContext, ScheduleAt, SpacetimeType, Table, Timestamp};
 use std::time::Duration;
 
 use crate::events::{EventType, record_event};
-use crate::ledger::{ledger_entry, station_credits_cents, LedgerEntry, LedgerEntryType};
+use crate::ledger::{ledger_entry, station_credits_cents, sync_ledger_kpis, LedgerEntry, LedgerEntryType};
 
 /// SLA tier determines response deadlines and credit percentages
 #[derive(SpacetimeType, Clone, Copy, PartialEq, Eq, Debug)]
@@ -227,6 +227,7 @@ pub fn check_sla_deadline(ctx: &ReducerContext, timer: SlaDeadlineSchedule) {
                 pass_id: Some(dispute.pass_id),
                 station_id: Some(dispute.station_id.clone()),
             });
+            sync_ledger_kpis(ctx);
             
             // Record audit log
             ctx.db.audit_log().insert(AuditLog {
@@ -297,6 +298,7 @@ pub fn approve_dispute(ctx: &ReducerContext, dispute_id: u64, notes: String) {
             pass_id: Some(dispute.pass_id),
             station_id: Some(dispute.station_id.clone()),
         });
+        sync_ledger_kpis(ctx);
         
         ctx.db.audit_log().insert(AuditLog {
             id: 0,
@@ -399,6 +401,7 @@ pub fn issue_manual_credit(
         pass_id,
         station_id: Some(station_id.clone()),
     });
+    sync_ledger_kpis(ctx);
     
     ctx.db.audit_log().insert(AuditLog {
         id: 0,

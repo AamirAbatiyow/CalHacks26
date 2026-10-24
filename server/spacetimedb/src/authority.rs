@@ -81,7 +81,7 @@ pub struct AuthorizationLog {
 }
 
 const DEFAULT_CEDAR_POLICY: &str = r#"
-// Ground Truth Cedar Policy v1.0.0
+// Ground Truth Cedar Policy v4
 // Defines authorization rules for the AI billing analyst system
 
 // AI Analyst permissions - limited authority
@@ -323,7 +323,7 @@ pub fn evaluate_authorization(
 #[spacetimedb::reducer]
 pub fn init_authority(ctx: &ReducerContext) {
     ctx.db.cedar_policy_store().insert(CedarPolicyStore {
-        version: "1.0.0".to_string(),
+        version: crate::CURRENT_POLICY_VERSION.to_string(),
         policy_text: DEFAULT_CEDAR_POLICY.to_string(),
         created_at: ctx.timestamp,
         is_active: true,
