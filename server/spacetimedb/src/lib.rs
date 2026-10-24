@@ -6,13 +6,18 @@ use ledger::{ledger_entry, LedgerEntry, LedgerEntryType};
 pub mod approvals;
 pub mod attack_run;
 pub mod authority;
+pub mod cases;
 pub mod claim;
 pub mod confidence_gate;
+pub mod contracts;
 pub mod decision;
 pub mod decision_logic;
 pub mod pipeline;
 pub mod events;
+pub mod evidence;
+pub mod history;
 pub mod kpis;
+pub mod learning;
 pub mod ledger;
 pub mod policy;
 pub mod settlement;
@@ -81,6 +86,7 @@ pub struct Satellite {
 }
 
 #[spacetimedb::table(accessor = pass, public)]
+#[derive(Clone)]
 pub struct Pass {
     #[primary_key]
     #[auto_inc]

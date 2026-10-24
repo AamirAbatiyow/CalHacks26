@@ -316,6 +316,62 @@ npm test                                   # worker tests
 
 Every step of every decision is a `case_decision` row with the deciding system (System 1, System 2, learned rule, guard or human), model and policy versions, inputs and cited evidence; final decisions also write `decision_record`. The Decisions page shows model versions, retrain latency, learned rules and the audit feed; Approvals shows escalated cases with their evidence and the labeling form.
 
+## Policy learning on the Policies page
+
+A second, module-only implementation of the policy channel: versioned Cedar policies (`policy_version`, `cedar_rule`) learned from human audit decisions, replayed over six months and promoted by a human. It runs entirely inside the reducers (no worker needed) and its tables are namespaced so they do not collide with the decision pipeline above.
+
+### Third source: SLA contracts and customer messages
+
+Telemetry and space weather say what happened to a pass. They cannot say what it is worth or whether it is excused: that is in the customer's contract. And the claim itself arrives as a message that asserts its own version of events. So the evidence has three sources:
+
+| Source | Where | What it decides |
+|--------|-------|-----------------|
+| Telemetry, pass and timeline | `pass`, modeled elevation curve | How much of the contact was lost, at what elevation, and whether data integrity passed |
+| Space weather and station history | `space_weather`, `maintenance_log` | Whether a storm or notified maintenance could explain the loss |
+| Contract, SLA terms and message | `server/fixtures/sla_contracts.json` (`customer_contract`), `claim_message` | Credit formula, Kp exclusion, maintenance notice period, minimum elevation, filing window, and what the customer claims |
+
+The incoming claims (`server/fixtures/incoming_claims.json`) are written so the sources disagree in realistic ways:
+
+| Claim | Disagreement |
+|-------|--------------|
+| CLM-20002, CLM-20003 | The message blames a geomagnetic storm, but Kp stayed below the Gold contract's exclusion, so the storm does not excuse the provider |
+| CLM-20004 | Maintenance was announced, but less than the contract's notice period ahead |
+| CLM-20005 | The customer claims total corruption, telemetry shows 18% lost, and the integrity check is still pending |
+| CLM-20006 | A new account, no history to compare against |
+| CLM-20007 | Kp was above the exclusion: the contract excuses the loss even though the message asks for credit |
+| CLM-20008 | 30% of the contact was lost, but the customer asks for 100% of the fee |
+
+Each conflict lowers confidence by a stated penalty (`case_conflict`), which is how Approvals explains why a claim is below 95%.
+
+### Six months of human audit decisions
+
+`seed_learning_history` (`history.rs`) writes about 10,000 `audit_decision` rows over 182 days. Volume per station and month is the station's pass count times `claim_rate()`, the pass generator's drop rate plus its dispute rate from `contracts.json`, so the history is sized from pass revenue. Five reviewers follow consistent practices in some situations (minable patterns), disagree in others (contradiction zones), and decide against practice 1% of the time (noise). Every row stores the full evidence snapshot (`decision_snapshot`), outcome, credit, reason code and text, decisive evidence, reviewer, model and policy versions, and claim type. The Policies page's History entry shows it by month, by reason and by most recent decision.
+
+### The loop
+
+1. **Escalation.** A claim below 95% opens on Approvals with the evidence handoff: telemetry and modeled elevation timeline, the Kp curve against the contract exclusion, station history and maintenance, the contract clause and formula credit, the customer message and their history, the failure model's probability with exact SHAP terms, every Cedar rule that matched or did not and why, why confidence is below 95%, similar past decisions, and the options with their dollar impact.
+2. **Decision.** `decide_case` stores the decision with its snapshot and the evidence the reviewer marked decisive.
+3. **Mining.** `learn_from_decision` takes the claim type plus the decisive features as a pattern and counts labeled decisions with the same values. It proposes a rule only with at least 3 consistent decisions and none contradicting. Otherwise it records why (`below_support`, `contradicted`, `no_decisive_evidence`), and Approvals and History show "no rule proposed" with the count. A single decision never creates a rule.
+4. **Rule text.** `TemplateRuleWriter` ("template-v1") writes the Cedar `permit` on action `apply_precedent` with `@id`, `@outcome`, `@confidence` and `@support` annotations. Generation is deterministic; `RuleWriter` is the seam for an LLM writer, whose output would still be parsed by Cedar and replayed before anyone can promote it.
+5. **Replay and version.** The proposal is a new `policy_version` with a `policy_proposal` linking it to the human decision that caused it. Every labeled decision is replayed through the current and the proposed Cedar policy sets. Promotion is disabled if precision regresses or if the version would auto-decide below 95%.
+6. **Promotion.** `promote_policy_version` makes the version current. New claims matching the rule auto-decide at the rule's confidence, citing the rule id and policy version.
+
+The four governing rules (auto-decide at 95%, escalate below 95%, AI cannot edit policies, human approver authority) are fixed: `toggle_rule` refuses them.
+
+### Measured on a fresh seed
+
+| Version | Escalations | Precision | Regressions | Settled automatically | Drift from human credits | Result |
+|---------|-------------|-----------|-------------|-----------------------|--------------------------|--------|
+| v5 (threshold 90%) | 2,772 → 2,278 | 98.89% → 98.91% | 4 | $54,700 | +$736 | Blocked by the 95% floor |
+| v6 (7 rules mined from history) | 2,772 → 1,362 | 98.89% → 99.07% | 0 | $129,519 | $0 | Promoted |
+| v7 (learned from CLM-20003) | 1,364 → 1,361 | 99.07% → 99.07% | 0 | $673 | $0 | Promoted |
+
+Live: one decision on CLM-20002 (approve $300: storm below the exclusion, total loss, integrity passed) produced no rule: 2 of 3 consistent decisions. The same decision on CLM-20003 made 3 with none contradicting, so v7 was proposed. After promotion, a similar new claim (CLM-20009, TrollSat, Kp 5.0, 95% lost) auto-approved at 99% for $325, citing `v7-learned-1` under policy v7. Exact figures move slightly with the seed time.
+
+### Relation to the decision pipeline
+
+Both stacks mine human decisions into Cedar rules. This one owns `audit_decision`, `mined_rule`, `policy_proposal`, `mining_result`, `claim_case` and `maintenance_log`/`claim_message`; the pipeline owns `labeled_decision`, `learned_rule` and `decision_case`. Labels from `decide_case` do not yet feed the worker's System 1 retraining, and the pipeline's labels do not feed this miner. They should be consolidated into one label table and one miner.
+
 ## Development
 
 ### Generate TypeScript Bindings

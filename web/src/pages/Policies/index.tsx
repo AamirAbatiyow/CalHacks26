@@ -18,7 +18,19 @@ import { EmptyState } from '../../ui/EmptyState';
 import { DataTable, type Column } from '../../ui/DataTable';
 import { useTechMode } from '../../hooks/useTechMode';
 import { SkeletonGraph, SkeletonRows } from '../../ui/Skeleton';
+import { useAuditDecisions, useProposals } from '../../hooks/useCases';
+import { HistoryView, ProposalPanel } from './Learning';
 import './Policies.css';
+
+const HISTORY = 'history';
+
+// Mirrors GOVERNING_RULES in server/spacetimedb/src/policy.rs: the 95% gate cannot be switched off.
+const GOVERNING_RULES = new Set([
+  'Auto-decide at 95% confidence',
+  'Escalate below 95%',
+  'AI cannot edit policies',
+  'Human approver authority',
+]);
 
 function formatDate(micros: bigint): string {
   const date = new Date(Number(micros) / 1000);
@@ -178,7 +190,7 @@ function RuleList({ rules, changed, onToggleRule, onOpen, onCreateVersion, canEd
     { key: 'description', label: 'What it does', width: 'minmax(0, 1.4fr)', sort: r => r.description, render: r => <span className="ui-table-muted">{r.description}</span> },
     {
       key: 'enabled', label: 'Status', width: '70px', align: 'right', sort: r => (r.enabled ? 1 : 0),
-      render: r => canEdit ? (
+      render: r => GOVERNING_RULES.has(r.name) ? <Chip>Fixed</Chip> : canEdit ? (
         <button
           className={`toggle-btn ${r.enabled ? 'enabled' : ''}`}
           role="switch"
@@ -230,6 +242,8 @@ export default function Policies() {
   } = usePoliciesDB();
   const learnedRows = useTable('learnedRule');
   const labelRows = useTable('labeledDecision');
+  const decisions = useAuditDecisions();
+  const proposals = useProposals();
 
   const linkedVersionId = useHashParam();
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
@@ -239,7 +253,7 @@ export default function Policies() {
 
   useEffect(() => {
     if (policyVersions.length === 0) return;
-    if (linkedVersionId && linkedVersionId !== appliedLinkId && policyVersions.some(v => v.id === linkedVersionId)) {
+    if (linkedVersionId && linkedVersionId !== appliedLinkId && (linkedVersionId === HISTORY || policyVersions.some(v => v.id === linkedVersionId))) {
       setSelectedVersionId(linkedVersionId);
       setAppliedLinkId(linkedVersionId);
     } else if (!selectedVersionId) {
@@ -249,6 +263,7 @@ export default function Policies() {
   }, [policyVersions, selectedVersionId, linkedVersionId, appliedLinkId]);
 
   const selectedVersion = policyVersions.find(v => v.id === selectedVersionId);
+  const selectedProposal = proposals.find(p => p.versionId === selectedVersionId);
   const currentVersion = policyVersions.find(v => v.status === PolicyStatus.Current);
   const selectedRules = cedarRules.filter(r => r.policyVersionId === selectedVersionId);
 
@@ -257,7 +272,7 @@ export default function Policies() {
       (r.status === ReplayStatus.Running || r.status === ReplayStatus.Blocked || r.status === ReplayStatus.Completed)
   );
 
-  const showReplay = selectedVersion?.status === PolicyStatus.Proposed && currentVersion && activeReplay;
+  const showReplay = selectedVersion?.status === PolicyStatus.Proposed && currentVersion && activeReplay && !selectedProposal;
 
   const changedRules = useMemo(() => {
     if (!currentVersion || selectedVersionId === currentVersion.id) return [];
@@ -380,6 +395,19 @@ export default function Policies() {
         <div className="versions-panel">
           <div className="ui-eyebrow versions-eyebrow">Versions</div>
           <div className="versions-list">
+            {!loading && (
+              <button
+                className={`version-item history-item ${selectedVersionId === HISTORY ? 'selected' : ''}`}
+                onClick={() => setSelectedVersionId(HISTORY)}
+              >
+                {selectedVersionId === HISTORY && <motion.span layoutId="policy-version-active" className="version-active-bg" transition={{ type: 'spring', stiffness: 500, damping: 40 }} />}
+                <span className="version-number">History</span>
+                <span className="version-meta">
+                  <History size={11} aria-hidden />
+                  <span className="version-status">{decisions.length.toLocaleString()} decisions</span>
+                </span>
+              </button>
+            )}
             {loading ? <SkeletonRows rows={5} /> : policyVersions.map(version => (
               <VersionItem
                 key={version.id}
@@ -392,7 +420,11 @@ export default function Policies() {
         </div>
 
         <div className="policies-content">
-          {tech && <section className="policy-section">
+          {selectedVersionId === HISTORY && <HistoryView decisions={decisions} />}
+
+          {selectedProposal && <ProposalPanel proposal={selectedProposal} decisions={decisions} />}
+
+          {tech && selectedVersionId !== HISTORY && <section className="policy-section">
             <div className="policy-section-head">
               <span className="ui-section-title">Rule lineage</span>
               <span className="ui-legend">

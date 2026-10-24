@@ -5,6 +5,8 @@ import { usePendingApprovals, useApprovalActions } from '../../hooks/useApproval
 import { useDecisionData, CLAIM_TYPE_LABELS } from '../../hooks/useDecisions';
 import { tag, useConnected } from '../../hooks/useTable';
 import { CaseReview, escalationChip } from './CaseReview';
+import { useClaimCases, useContracts, useAuditDecisions, useMiningResults, humanize, type MiningResult } from '../../hooks/useCases';
+import CaseDetail, { type DecisionNotice } from './CaseDetail';
 import { useTechMode } from '../../hooks/useTechMode';
 import { plainEscalation } from '../../utils/plainReason';
 import { DataTable, type Column } from '../../ui/DataTable';
@@ -20,6 +22,28 @@ import './Approvals.css';
 
 const AUTO_APPROVE_CONFIDENCE = 95;
 const LOW_CONFIDENCE = 80;
+
+function MiningBanner({ result, error }: { result?: MiningResult; error?: string }) {
+  if (error) {
+    return <div className="mining-banner error">Decision not recorded: {error}</div>;
+  }
+  if (!result) return null;
+  const proposed = result.proposalVersion;
+  const pattern = result.pattern.map(p => humanize(p.replace('=', ': '))).join(' · ');
+  return (
+    <div className={`mining-banner ${proposed ? 'proposed' : ''}`}>
+      <span className="mb-case">{result.caseId} decided</span>
+      {proposed ? (
+        <span>
+          Rule proposed as <b>{proposed}</b>: {result.consistent} consistent decisions, none contradicting ({pattern} → {result.outcome}).
+          {' '}<a href={`#/policies/${proposed}`}>Review replay on Policies</a>
+        </span>
+      ) : (
+        <span>No rule proposed. {result.detail}.{pattern && <> Pattern: {pattern} → {result.outcome}.</>}</span>
+      )}
+    </div>
+  );
+}
 
 interface QueueItem {
   key: string;
@@ -192,6 +216,18 @@ export default function ApprovalsPage() {
     pendingClaims.find(c => c.id === selectedClaimId) || pendingClaims[0] || null,
     [pendingClaims, selectedClaimId]
   );
+  const claimCases = useClaimCases();
+  const contracts = useContracts();
+  const decisions = useAuditDecisions();
+  const miningResults = useMiningResults();
+  const [notice, setNotice] = useState<DecisionNotice | null>(null);
+  const caseByEscalation = useMemo(
+    () => new Map(claimCases.filter(c => c.escalationId !== undefined).map(c => [c.escalationId as bigint, c])),
+    [claimCases],
+  );
+  const lastResult = notice ? miningResults.find(r => r.caseId === notice.caseId) : miningResults[0];
+  const banner = <MiningBanner result={notice?.error ? undefined : lastResult} error={notice?.error} />;
+  const linkedCase = !selectedCase && selectedClaim ? caseByEscalation.get(selectedClaim.id) : undefined;
   const tech = useTechMode();
   const columns = useMemo(() => queueColumns(tech), [tech]);
   const queue = useMemo<QueueItem[]>(() => [
@@ -203,12 +239,18 @@ export default function ApprovalsPage() {
         confidence: s1 ? s1.confidencePct : null, open: tag(c.status) === 'Escalated', reason: c.escalationReason,
       };
     }),
-    ...pendingClaims.map(claim => ({
-      key: `claim-${claim.id}`, kind: 'claim' as const, id: claim.id, customer: claim.customerName,
-      sub: `${claim.passIds.length} pass${claim.passIds.length === 1 ? '' : 'es'}`, cents: Number(claim.amountClaimedCents),
-      confidence: claim.confidencePct, open: true, reason: claim.escalationReason,
-    })),
-  ], [caseRows, pendingClaims, decisionData.stepsByCase]);
+    ...pendingClaims.map(claim => {
+      const linked = caseByEscalation.get(claim.id);
+      return {
+        key: `claim-${claim.id}`, kind: 'claim' as const, id: claim.id, customer: claim.customerName,
+        sub: linked
+          ? `${linked.caseId} · ${humanize(linked.claimType)}`
+          : `${claim.passIds.length} pass${claim.passIds.length === 1 ? '' : 'es'}`,
+        cents: Number(claim.amountClaimedCents),
+        confidence: claim.confidencePct, open: true, reason: claim.escalationReason,
+      };
+    }),
+  ], [caseRows, pendingClaims, decisionData.stepsByCase, caseByEscalation]);
   const selectedKey = selectedCase ? `case-${selectedCase.id}` : selectedClaim ? `claim-${selectedClaim.id}` : null;
 
   if (!connected) {
@@ -224,6 +266,7 @@ export default function ApprovalsPage() {
     return (
       <div className="approvals-page">
         <div className="approvals-empty">
+          {banner}
           <EmptyState art="inbox" title="All caught up" hint="No claims are waiting for review." />
         </div>
       </div>
@@ -253,21 +296,31 @@ export default function ApprovalsPage() {
 
       <motion.div
         key={selectedCase ? `case-${selectedCase.id}` : `claim-${selectedClaim?.id}`}
-        className="approvals-detail cr-detail"
+        className={`approvals-detail cr-detail${linkedCase ? ' case' : ''}`}
         initial={{ opacity: 0, x: 6 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
       >
         {selectedCase ? (
           <CaseReview row={selectedCase} data={decisionData} />
-        ) : selectedClaim && (
+        ) : selectedClaim && linkedCase ? (<>
+          {banner}
+          <CaseDetail
+            key={linkedCase.caseId}
+            c={linkedCase}
+            contract={contracts.get(linkedCase.customerId)}
+            decisions={decisions}
+            onDecided={setNotice}
+          />
+        </>) : selectedClaim && (<>
+          {banner}
           <ClaimDetail
             claim={selectedClaim}
             onApprove={() => approveClaim(selectedClaim.id, selectedClaim.policyVersion, selectedClaim.modelVersion)}
             onDeny={() => denyClaim(selectedClaim.id, selectedClaim.policyVersion, selectedClaim.modelVersion)}
             onEdit={cents => editClaim(selectedClaim.id, cents, selectedClaim.policyVersion, selectedClaim.modelVersion)}
           />
-        )}
+        </>)}
       </motion.div>
     </div>
   );

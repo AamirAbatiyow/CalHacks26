@@ -82,7 +82,8 @@ const DEFAULT_CEDAR_POLICY: &str = r#"
 // Ground Truth Cedar Policy v4
 // Defines authorization rules for the AI billing analyst system
 
-// AI Analyst permissions - auto-approval is gated on confidence only
+// AI Analyst permissions - automatic decisions are gated on confidence only
+@id("auto-decide-95")
 permit(
     principal == GroundTruth::Actor::"ai_analyst",
     action == GroundTruth::Action::"auto_approve",

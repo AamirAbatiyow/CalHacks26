@@ -126,6 +126,14 @@ jq -c '.[]' "$FIXTURES_DIR/claims.json" | while read -r claim; do
     "$(echo "$claim" | jq '.model_version')" || true
 done
 
+# SLA contracts (fixtures/sla_contracts.json), six months of labeled human decisions (mined into the
+# promoted learned policy), then live claims analyzed against all three sources.
+# Escalated ones land in Approvals with their full evidence.
+echo "Seeding contracts, decision history and incoming claims..."
+"$SPACETIME" call "$MODULE" seed_contracts --server "$SERVER" || true
+"$SPACETIME" call "$MODULE" seed_learning_history --server "$SERVER" || true
+"$SPACETIME" call "$MODULE" seed_incoming_claims --server "$SERVER" || true
+
 # Break It: attack fixtures plus one measured run
 echo "Seeding attack fixtures..."
 "$SPACETIME" call "$MODULE" seed_attack_fixtures --server "$SERVER" || true

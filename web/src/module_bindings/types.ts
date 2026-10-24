@@ -180,6 +180,48 @@ export const AuditAction = __t.enum("AuditAction", {
 });
 export type AuditAction = __Infer<typeof AuditAction>;
 
+export const AuditDecision = __t.object("AuditDecision", {
+  id: __t.u64(),
+  source: __t.string(),
+  caseId: __t.string(),
+  decidedAt: __t.timestamp(),
+  reviewer: __t.string(),
+  claimType: __t.string(),
+  customerId: __t.string(),
+  customerName: __t.string(),
+  tier: __t.string(),
+  stationId: __t.string(),
+  passFeeCents: __t.i64(),
+  claimedCents: __t.i64(),
+  contractCreditCents: __t.i64(),
+  lostPct: __t.i64(),
+  maxElevationDeg: __t.f64(),
+  kp: __t.f32(),
+  kpExclusion: __t.f32(),
+  maintenance: __t.string(),
+  noticeHours: __t.i64(),
+  requiredNoticeHours: __t.i64(),
+  integrity: __t.string(),
+  msgCitesWeather: __t.bool(),
+  msgClaimsFullLoss: __t.bool(),
+  msgMentionsMaintenance: __t.bool(),
+  newAccount: __t.bool(),
+  fullCreditLostPct: __t.i64(),
+  minElevationDeg: __t.f64(),
+  aiRecommended: __t.string(),
+  aiConfidence: __t.i64(),
+  mlFailureProb: __t.f32(),
+  escalated: __t.bool(),
+  outcome: __t.string(),
+  creditCents: __t.i64(),
+  reasonCode: __t.string(),
+  reasonText: __t.string(),
+  decisive: __t.array(__t.string()),
+  policyVersion: __t.string(),
+  modelVersion: __t.string(),
+});
+export type AuditDecision = __Infer<typeof AuditDecision>;
+
 export const AuditLog = __t.object("AuditLog", {
   id: __t.u64(),
   timestamp: __t.timestamp(),
@@ -215,6 +257,15 @@ export const AuthzDecision = __t.enum("AuthzDecision", {
 });
 export type AuthzDecision = __Infer<typeof AuthzDecision>;
 
+export const CaseConflict = __t.object("CaseConflict", {
+  id: __t.u64(),
+  caseId: __t.string(),
+  sources: __t.string(),
+  detail: __t.string(),
+  penalty: __t.i64(),
+});
+export type CaseConflict = __Infer<typeof CaseConflict>;
+
 export const CaseDecision = __t.object("CaseDecision", {
   id: __t.u64(),
   caseId: __t.u64(),
@@ -237,6 +288,57 @@ export const CaseDecision = __t.object("CaseDecision", {
   createdAt: __t.timestamp(),
 });
 export type CaseDecision = __Infer<typeof CaseDecision>;
+
+export const CaseOption = __t.object("CaseOption", {
+  id: __t.u64(),
+  caseId: __t.string(),
+  label: __t.string(),
+  outcome: __t.string(),
+  creditCents: __t.i64(),
+  revenueImpactCents: __t.i64(),
+  similarSupport: __t.u32(),
+  similarTotal: __t.u32(),
+  recommended: __t.bool(),
+});
+export type CaseOption = __Infer<typeof CaseOption>;
+
+export const CaseRule = __t.object("CaseRule", {
+  id: __t.u64(),
+  caseId: __t.string(),
+  ruleId: __t.string(),
+  policyVersion: __t.string(),
+  action: __t.string(),
+  status: __t.string(),
+  detail: __t.string(),
+});
+export type CaseRule = __Infer<typeof CaseRule>;
+
+export const CaseScore = __t.object("CaseScore", {
+  caseId: __t.string(),
+  mlFailureProb: __t.f32(),
+  confidence: __t.i64(),
+  modelVersion: __t.string(),
+  source: __t.string(),
+});
+export type CaseScore = __Infer<typeof CaseScore>;
+
+export const CaseShap = __t.object("CaseShap", {
+  id: __t.u64(),
+  caseId: __t.string(),
+  feature: __t.string(),
+  detail: __t.string(),
+  value: __t.f32(),
+});
+export type CaseShap = __Infer<typeof CaseShap>;
+
+export const CaseSimilar = __t.object("CaseSimilar", {
+  id: __t.u64(),
+  caseId: __t.string(),
+  decisionId: __t.u64(),
+  similarity: __t.f32(),
+  rank: __t.u32(),
+});
+export type CaseSimilar = __Infer<typeof CaseSimilar>;
 
 // The tagged union or sum type for the algebraic type `CaseStatus`.
 export const CaseStatus = __t.enum("CaseStatus", {
@@ -277,6 +379,51 @@ export const Claim = __t.object("Claim", {
 });
 export type Claim = __Infer<typeof Claim>;
 
+export const ClaimCase = __t.object("ClaimCase", {
+  caseId: __t.string(),
+  createdAt: __t.timestamp(),
+  passId: __t.u64(),
+  satelliteId: __t.u32(),
+  satelliteName: __t.string(),
+  stationId: __t.string(),
+  stationName: __t.string(),
+  customerId: __t.string(),
+  customerName: __t.string(),
+  claimType: __t.string(),
+  contactStart: __t.timestamp(),
+  signalLost: __t.timestamp(),
+  contactEnd: __t.timestamp(),
+  maxElevationDeg: __t.f64(),
+  lostPct: __t.i64(),
+  kp: __t.f32(),
+  flare: __t.string(),
+  dst: __t.i32(),
+  weatherBand: __t.string(),
+  maintenance: __t.string(),
+  maintenanceId: __t.option(__t.u64()),
+  noticeHours: __t.i64(),
+  integrity: __t.string(),
+  passFeeCents: __t.i64(),
+  claimedCents: __t.i64(),
+  contractCreditCents: __t.i64(),
+  msgCitesWeather: __t.bool(),
+  msgClaimsFullLoss: __t.bool(),
+  msgMentionsMaintenance: __t.bool(),
+  newAccount: __t.bool(),
+  recommended: __t.string(),
+  outcome: __t.string(),
+  creditCents: __t.i64(),
+  confidence: __t.i64(),
+  gate: __t.string(),
+  gateNote: __t.string(),
+  policyVersion: __t.string(),
+  modelVersion: __t.string(),
+  citedRule: __t.string(),
+  escalationId: __t.option(__t.u64()),
+  decisionId: __t.option(__t.u64()),
+});
+export type ClaimCase = __Infer<typeof ClaimCase>;
+
 export const ClaimDecision = __t.object("ClaimDecision", {
   claimId: __t.string(),
   creditAmountCents: __t.i64(),
@@ -307,6 +454,16 @@ export const ClaimGate = __t.enum("ClaimGate", {
   Escalated: __t.unit(),
 });
 export type ClaimGate = __Infer<typeof ClaimGate>;
+
+export const ClaimMessage = __t.object("ClaimMessage", {
+  id: __t.u64(),
+  caseId: __t.string(),
+  receivedAt: __t.timestamp(),
+  channel: __t.string(),
+  author: __t.string(),
+  body: __t.string(),
+});
+export type ClaimMessage = __Infer<typeof ClaimMessage>;
 
 export const ClaimOutcome = __t.object("ClaimOutcome", {
   claimId: __t.string(),
@@ -374,6 +531,21 @@ export const ContractTerm = __t.object("ContractTerm", {
   claimWindowDays: __t.u32(),
 });
 export type ContractTerm = __Infer<typeof ContractTerm>;
+
+export const CustomerContract = __t.object("CustomerContract", {
+  customerId: __t.string(),
+  name: __t.string(),
+  tier: __t.string(),
+  contractRef: __t.string(),
+  fullCreditLostPct: __t.i64(),
+  kpExclusion: __t.f32(),
+  maintenanceNoticeHours: __t.i64(),
+  minElevationDeg: __t.f64(),
+  filingWindowDays: __t.i64(),
+  sinceDays: __t.i64(),
+  clause: __t.string(),
+});
+export type CustomerContract = __Infer<typeof CustomerContract>;
 
 // The tagged union or sum type for the algebraic type `DataIntegrityStatus`.
 export const DataIntegrityStatus = __t.enum("DataIntegrityStatus", {
@@ -464,6 +636,12 @@ export const DecisionRoute = __t.enum("DecisionRoute", {
   Escalated: __t.unit(),
 });
 export type DecisionRoute = __Infer<typeof DecisionRoute>;
+
+export const DecisionSnapshot = __t.object("DecisionSnapshot", {
+  decisionId: __t.u64(),
+  evidenceJson: __t.string(),
+});
+export type DecisionSnapshot = __Infer<typeof DecisionSnapshot>;
 
 // The tagged union or sum type for the algebraic type `DecisionType`.
 export const DecisionType = __t.enum("DecisionType", {
@@ -675,6 +853,51 @@ export const LedgerEntryType = __t.enum("LedgerEntryType", {
 });
 export type LedgerEntryType = __Infer<typeof LedgerEntryType>;
 
+export const MaintenanceLog = __t.object("MaintenanceLog", {
+  id: __t.u64(),
+  stationId: __t.string(),
+  startTime: __t.timestamp(),
+  endTime: __t.timestamp(),
+  kind: __t.string(),
+  noticeHours: __t.i64(),
+  description: __t.string(),
+});
+export type MaintenanceLog = __Infer<typeof MaintenanceLog>;
+
+export const MinedRule = __t.object("MinedRule", {
+  ruleId: __t.string(),
+  policyVersionId: __t.string(),
+  outcome: __t.string(),
+  conditions: __t.array(__t.string()),
+  title: __t.string(),
+  rationale: __t.string(),
+  cedarText: __t.string(),
+  support: __t.u32(),
+  contradictions: __t.u32(),
+  sourceDecisionIds: __t.array(__t.u64()),
+  writer: __t.string(),
+  status: __t.string(),
+  createdAt: __t.timestamp(),
+});
+export type MinedRule = __Infer<typeof MinedRule>;
+
+export const MiningResult = __t.object("MiningResult", {
+  id: __t.u64(),
+  decisionId: __t.u64(),
+  caseId: __t.string(),
+  status: __t.string(),
+  pattern: __t.array(__t.string()),
+  outcome: __t.string(),
+  consistent: __t.u32(),
+  contradicting: __t.u32(),
+  consistentIds: __t.array(__t.u64()),
+  contradictionIds: __t.array(__t.u64()),
+  proposalVersion: __t.option(__t.string()),
+  detail: __t.string(),
+  createdAt: __t.timestamp(),
+});
+export type MiningResult = __Infer<typeof MiningResult>;
+
 // The tagged union or sum type for the algebraic type `ModelStatus`.
 export const ModelStatus = __t.enum("ModelStatus", {
   Active: __t.unit(),
@@ -771,6 +994,35 @@ export const PipelineStep = __t.object("PipelineStep", {
   createdAt: __t.timestamp(),
 });
 export type PipelineStep = __Infer<typeof PipelineStep>;
+
+export const PolicyProposal = __t.object("PolicyProposal", {
+  versionId: __t.string(),
+  baseVersionId: __t.string(),
+  origin: __t.string(),
+  triggerDecisionId: __t.option(__t.u64()),
+  triggerCaseId: __t.string(),
+  ruleIds: __t.array(__t.string()),
+  status: __t.string(),
+  blockReason: __t.string(),
+  historyCases: __t.u32(),
+  replayCases: __t.u32(),
+  escalationsBefore: __t.u32(),
+  escalationsAfter: __t.u32(),
+  resolved: __t.u32(),
+  resolvedHistory: __t.u32(),
+  autoBefore: __t.u32(),
+  autoAfter: __t.u32(),
+  correctBefore: __t.u32(),
+  correctAfter: __t.u32(),
+  precisionBefore: __t.f32(),
+  precisionAfter: __t.f32(),
+  regressions: __t.u32(),
+  dollarImpactCents: __t.i64(),
+  autoCreditCents: __t.i64(),
+  createdAt: __t.timestamp(),
+  promotedAt: __t.option(__t.timestamp()),
+});
+export type PolicyProposal = __Infer<typeof PolicyProposal>;
 
 export const PolicyReplay = __t.object("PolicyReplay", {
   id: __t.u64(),
