@@ -64,10 +64,7 @@ function VersionItem({ version, isSelected, onClick }: { version: PolicyVersion;
       <span className="version-number">v{version.version}</span>
       <span className="version-meta">
         <Icon size={11} aria-hidden />
-        <span className="version-status">
-          {version.status === PolicyStatus.Proposed ? version.author
-            : version.status === PolicyStatus.Current ? `${version.status} · ${version.author}` : version.status}
-        </span>
+        <span className="version-status">{version.status === PolicyStatus.Proposed ? version.author : version.status}</span>
         {version.status !== PolicyStatus.Proposed && <span className="version-date">{formatDate(version.createdAt)}</span>}
       </span>
     </button>
@@ -407,7 +404,7 @@ export default function Policies() {
                 <span className="version-number">History</span>
                 <span className="version-meta">
                   <History size={11} aria-hidden />
-                  <span className="version-status">{decisions.length.toLocaleString()} labeled decisions</span>
+                  <span className="version-status">{decisions.length.toLocaleString()} decisions</span>
                 </span>
               </button>
             )}
