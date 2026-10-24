@@ -150,6 +150,25 @@ def fetch_stations(sess: PacedSession):
     print(f"Saved {len(stations)} stations to {STATIONS_FILE}")
 
 
+SNAPSHOT_DIR = Path(__file__).parent.parent / "data" / "processed"
+
+
+def write_snapshot():
+    """Commit-sized copy of everything fetched so far (raw files are gitignored)."""
+    import pandas as pd
+    obs = pd.read_json(OBS_FILE, lines=True).drop_duplicates("id")
+    SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
+    obs.to_parquet(SNAPSHOT_DIR / "satnogs_observations_natural.parquet", compression="zstd", index=False)
+    used = set(obs["ground_station"].dropna().astype(int))
+    stations = [s for s in json.load(open(STATIONS_FILE)) if s["id"] in used]
+    with open(SNAPSHOT_DIR / "satnogs_stations_natural.json", "w") as f:
+        json.dump(stations, f)
+    kp = OUTPUT_DIR / "kp_3h.json"
+    if kp.exists():
+        (SNAPSHOT_DIR / "kp_3h.json").write_text(kp.read_text())
+    print(f"Snapshot: {len(obs)} observations, {len(stations)} stations -> {SNAPSHOT_DIR}")
+
+
 def load_progress():
     if PROGRESS_FILE.exists():
         return json.load(open(PROGRESS_FILE))
@@ -169,7 +188,13 @@ def main():
     p.add_argument("--anchor", type=str, default="2026-10-24", help="fixed 'now' so the window plan is reproducible")
     p.add_argument("--skip-stations", action="store_true")
     p.add_argument("--skip-kp", action="store_true")
+    p.add_argument("--snapshot-only", action="store_true",
+                   help="only write the committed parquet/json snapshot of what has been fetched")
     args = p.parse_args()
+
+    if args.snapshot_only:
+        write_snapshot()
+        return 1000
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     sess = PacedSession(args.pace, args.max_backoff)
@@ -222,6 +247,7 @@ def main():
         print(f"[{len(done):4d}] {key}: +{len(obs):4d} obs | total {prog['n_obs']} | labeled {labeled()} "
               f"| {counts} | req={sess.n_requests} 429s={sess.n_429} | {(time.time()-t0)/60:.1f} min", flush=True)
 
+    write_snapshot()
     print(f"Done. {prog['n_obs']} observations, {labeled()} labeled. Status mix: {counts}")
     return labeled()
 

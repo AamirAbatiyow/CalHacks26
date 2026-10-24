@@ -39,6 +39,7 @@ from .physical_features import (
 OUT_DIR = Path(__file__).parent / "models" / "physical"
 REPORT_DIR = Path(__file__).parent / "reports"
 PRECISION_TARGETS = (0.95, 0.98)
+ESCALATION_TARGET = 0.17
 
 PARAMS = {
     "objective": "binary",
@@ -99,6 +100,12 @@ def pick_thresholds(y: np.ndarray, p: np.ndarray, target: float) -> Tuple[float,
     return t_ok, t_fail
 
 
+def escalation_band(p: np.ndarray, share: float) -> Tuple[float, float]:
+    """Symmetric band around 0.5 holding ``share`` of the (validation) passes."""
+    d = float(np.quantile(np.abs(p - 0.5), share))
+    return 0.5 - d, 0.5 + d
+
+
 def band_metrics(y: np.ndarray, p: np.ndarray, t_ok: float, t_fail: float) -> dict:
     auto_fail = p >= t_fail
     auto_ok = p <= t_ok
@@ -123,8 +130,24 @@ def oracle_recall_at_precision(y, p, target):
     return band_metrics(y, p, t_ok, t_fail)
 
 
-def summarize(y: np.ndarray, p: np.ndarray) -> dict:
+def cluster_bootstrap_ci(y, p, groups, fn, n=500, seed=0):
+    """95% CI resampling whole sampling windows (passes in one hour are correlated)."""
+    rng = np.random.default_rng(seed)
+    uniq = np.unique(groups)
+    idx = {g: np.where(groups == g)[0] for g in uniq}
+    vals = []
+    for _ in range(n):
+        sel = np.concatenate([idx[g] for g in rng.choice(uniq, len(uniq))])
+        if len(np.unique(y[sel])) < 2:
+            continue
+        vals.append(fn(y[sel], p[sel]))
+    return [round(float(np.percentile(vals, 2.5)), 4), round(float(np.percentile(vals, 97.5)), 4)]
+
+
+def summarize(y: np.ndarray, p: np.ndarray, groups: np.ndarray) -> dict:
     return {
+        "auc_roc_ci95": cluster_bootstrap_ci(y, p, groups, roc_auc_score),
+        "accuracy_at_0.5_ci95": cluster_bootstrap_ci(y, p, groups, lambda a, b: ((b >= 0.5) == a).mean()),
         "n": int(len(y)),
         "fail_rate": float(y.mean()),
         "auc_roc": float(roc_auc_score(y, p)),
@@ -162,6 +185,7 @@ def run_fold(train: pd.DataFrame, test: pd.DataFrame, feats: List[str], inner_sp
     y_val, p_val = np.concatenate(ys), np.concatenate(ps)
     best = int(np.mean(iters))
     thresholds = {t: pick_thresholds(y_val, p_val, t) for t in PRECISION_TARGETS}
+    thresholds["escalate"] = escalation_band(p_val, ESCALATION_TARGET)
 
     tr, te = add_history_features(train, test)
     cats = _categories(tr, feats)
@@ -171,7 +195,8 @@ def run_fold(train: pd.DataFrame, test: pd.DataFrame, feats: List[str], inner_sp
 
 
 def evaluate_regime(df: pd.DataFrame, regime: str, feats: List[str]) -> dict:
-    y_all, p_all, fold_bands = [], [], {t: [] for t in PRECISION_TARGETS}
+    y_all, p_all, g_all = [], [], []
+    fold_bands = {t: [] for t in (*PRECISION_TARGETS, "escalate")}
     imp = pd.Series(0.0, index=feats)
     if regime == "group_kfold_station":
         splits = GroupKFold(n_splits=5).split(df, groups=df["ground_station"])
@@ -186,12 +211,13 @@ def evaluate_regime(df: pd.DataFrame, regime: str, feats: List[str]) -> dict:
         y = test["label_fail"].values
         y_all.append(y)
         p_all.append(p)
-        for t in PRECISION_TARGETS:
+        g_all.append(test["start_ts"].dt.floor("h").astype(str).values)
+        for t in (*PRECISION_TARGETS, "escalate"):
             fold_bands[t].append((y, p, *thr[t]))
         imp += pd.Series(model.feature_importance("gain"), index=feats)
     y, p = np.concatenate(y_all), np.concatenate(p_all)
-    out = summarize(y, p)
-    for t in PRECISION_TARGETS:
+    out = summarize(y, p, np.concatenate(g_all))
+    for t in (*PRECISION_TARGETS, "escalate"):
         yy = np.concatenate([f[0] for f in fold_bands[t]])
         auto_fail = np.concatenate([f[1] >= f[3] for f in fold_bands[t]])
         auto_ok = np.concatenate([f[1] <= f[2] for f in fold_bands[t]])
@@ -199,9 +225,12 @@ def evaluate_regime(df: pd.DataFrame, regime: str, feats: List[str]) -> dict:
         decision = np.where(auto_fail, 1.0, np.where(auto_ok, 0.0, 0.5))
         pol = band_metrics(yy, decision, 0.25, 0.75)
         del pol["t_ok"], pol["t_fail"]
-        out[f"policy_p{int(t*100)}_val_thresholds"] = pol
         pol["thresholds_per_fold"] = [
             {"t_ok": round(f[2], 4), "t_fail": round(f[3], 4)} for f in fold_bands[t]]
+        if t == "escalate":
+            out[f"policy_escalate{int(ESCALATION_TARGET*100)}_val_band"] = pol
+            continue
+        out[f"policy_p{int(t*100)}_val_thresholds"] = pol
         out[f"policy_p{int(t*100)}_oracle_on_test"] = oracle_recall_at_precision(y, p, t)
     out["gain_importance"] = (imp / imp.sum()).sort_values(ascending=False).round(4).to_dict()
     return out
@@ -247,6 +276,69 @@ def train_final(df: pd.DataFrame, feats: List[str]) -> Tuple[lgb.Booster, dict, 
     return model, meta, cats
 
 
+def _fmt(x, pct=True):
+    if x is None:
+        return "n/a (no pass cleared threshold)"
+    return f"{100 * x:.1f}%" if pct else f"{x:.3f}"
+
+
+def write_report(results: dict, final_meta: dict = None, path: Path = REPORT_DIR / "physical_v2.md"):
+    ds = results["dataset"]
+    lines = [
+        "# Pass-failure model v2: physical features, held-out evaluation",
+        "",
+        f"Generated {results['generated_at']} by `python -m ml.evaluate_physical --save-model`.",
+        "",
+        "## Dataset",
+        "",
+        f"- Raw SatNOGS observations fetched: {ds['raw_observations']} in {ds['sampling_windows_hours']} random one-hour "
+        f"windows ({ds['time_span'][0][:10]} to {ds['time_span'][1][:10]}); vetted share {_fmt(ds['vetted_share'])}.",
+        f"- Labeled passes used: **{ds['labeled_passes']}** ({ds['label_counts']}), natural failure rate "
+        f"{_fmt(ds['fail_rate'])}; {ds['stations']} stations, {ds['satellites']} satellites, "
+        f"largest station share {_fmt(ds['top_station_share'])}.",
+        "",
+        "## Held-out results",
+        "",
+        "Policy thresholds are chosen on validation data inside each training fold, then applied to the test fold. "
+        "Recall is per side: the share of real failures auto-flagged at `P(fail) >= t_fail`, and the share of real "
+        "successes auto-cleared at `P(fail) <= t_ok`. Escalated passes fall between the two thresholds. "
+        "Brackets show 95% cluster-bootstrap CIs, resampled over sampling windows.",
+        "",
+    ]
+    for fs, regimes in results["feature_sets"].items():
+        lines += [f"### {fs}", "",
+                  "| metric | GroupKFold by station | forward time split |", "|---|---|---|"]
+        g, t = regimes["group_kfold_station"], regimes["time_split"]
+        row = lambda name, f: lines.append(f"| {name} | {f(g)} | {f(t)} |")
+        row("test passes", lambda m: m["n"])
+        row("AUC-ROC", lambda m: f"{m['auc_roc']:.3f} {m['auc_roc_ci95']}")
+        row("accuracy @0.5 (majority baseline)", lambda m: f"{_fmt(m['accuracy_at_0.5'])} {m['accuracy_at_0.5_ci95']} ({_fmt(m['majority_baseline_accuracy'])})")
+        row("failure precision @0.5", lambda m: _fmt(m["precision_fail_at_0.5"]))
+        for p in ("95", "98"):
+            k = f"policy_p{p}_val_thresholds"
+            row(f"P>=0.{p} fail side: precision / recall", lambda m: f"{_fmt(m[k]['fail_precision'])} / {_fmt(m[k]['fail_recall'])}")
+            row(f"P>=0.{p} ok side: precision / recall", lambda m: f"{_fmt(m[k]['ok_precision'])} / {_fmt(m[k]['ok_recall'])}")
+            row(f"P>=0.{p} escalated to human", lambda m: _fmt(m[k]["escalate_share"]))
+            o = f"policy_p{p}_oracle_on_test"
+            row(f"P>=0.{p} oracle (thresholds fit on test): fail rec / ok rec / escalated",
+                lambda m: f"{_fmt(m[o]['fail_recall'])} / {_fmt(m[o]['ok_recall'])} / {_fmt(m[o]['escalate_share'])}")
+        e = f"policy_escalate{int(ESCALATION_TARGET * 100)}_val_band"
+        row(f"~{int(ESCALATION_TARGET * 100)}% escalation band: actual escalated / accuracy on auto-decided",
+            lambda m: f"{_fmt(m[e]['escalate_share'])} / {_fmt(m[e]['auto_accuracy'])}")
+        lines.append("")
+    imp = results["feature_sets"].get("physical+history", {})
+    if imp:
+        lines += ["## Feature importance (physical+history)", "",
+                  "| feature | gain share, GroupKFold | gain share, time split | mean abs SHAP, final model |", "|---|---|---|---|"]
+        g, t = imp["group_kfold_station"]["gain_importance"], imp["time_split"]["gain_importance"]
+        shap = (final_meta or {}).get("mean_abs_shap", {})
+        for f in sorted(g, key=lambda f: -g[f]):
+            lines.append(f"| {f} | {_fmt(g[f])} | {_fmt(t.get(f, 0))} | {shap.get(f, float('nan')):.3f} |")
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n")
+    print(f"Report written to {path}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--save-model", action="store_true")
@@ -273,11 +365,15 @@ def main():
                 print(f"   P>={t}: val-thr -> fail prec {v['fail_precision']} rec {v['fail_recall']:.3f} | "
                       f"ok prec {v['ok_precision']} rec {v['ok_recall']:.3f} | escalate {v['escalate_share']:.3f}"
                       f"   [oracle: fail rec {o['fail_recall']:.3f} ok rec {o['ok_recall']:.3f} esc {o['escalate_share']:.3f}]")
+            e = r[f"policy_escalate{int(ESCALATION_TARGET*100)}_val_band"]
+            print(f"   escalate~{ESCALATION_TARGET}: actual {e['escalate_share']:.3f}, auto-accuracy {e['auto_accuracy']:.3f} "
+                  f"| CI acc@0.5 {r['accuracy_at_0.5_ci95']} AUC {r['auc_roc_ci95']}")
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     with open(OUT_DIR / "eval_v2.0.0.json", "w") as f:
         json.dump(results, f, indent=1, default=str)
 
+    meta = None
     if args.save_model:
         feats = FEATURE_SETS["physical+history"]
         model, meta, _ = train_final(df, feats)
@@ -288,6 +384,7 @@ def main():
                        "n_train": int(len(df)), **meta}, f, indent=1)
         print("\nFinal model mean |SHAP|:", json.dumps(meta["mean_abs_shap"], indent=1))
         print("Deployment thresholds:", meta["thresholds"])
+    write_report(results, meta)
 
 
 if __name__ == "__main__":

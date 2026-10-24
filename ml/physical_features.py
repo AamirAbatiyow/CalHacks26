@@ -24,8 +24,12 @@ import pandas as pd
 from .space_weather import KpLookup, KP_FILE
 
 RAW_DIR = Path(__file__).parent.parent / "data" / "raw"
+SNAPSHOT_DIR = Path(__file__).parent.parent / "data" / "processed"
 OBS_FILE = RAW_DIR / "satnogs_observations_natural.jsonl"
+OBS_SNAPSHOT = SNAPSHOT_DIR / "satnogs_observations_natural.parquet"
 STATIONS_FILE = RAW_DIR / "satnogs_stations_full.json"
+STATIONS_SNAPSHOT = SNAPSHOT_DIR / "satnogs_stations_natural.json"
+KP_SNAPSHOT = SNAPSHOT_DIR / "kp_3h.json"
 
 LABELED_STATUSES = ("good", "bad", "failed")
 
@@ -81,9 +85,12 @@ HISTORY_FEATURES = [f"{k}_{s}" for k in HISTORY_KEYS for s in ("hist_rate", "his
 
 
 def load_raw_observations(path: Path = OBS_FILE) -> pd.DataFrame:
-    rows = [json.loads(l) for l in open(path)]
-    df = pd.DataFrame(rows).drop_duplicates("id")
-    return df
+    """Live fetch output if present, else the committed snapshot."""
+    if path.exists():
+        df = pd.DataFrame([json.loads(l) for l in open(path)])
+    else:
+        df = pd.read_parquet(OBS_SNAPSHOT)
+    return df.drop_duplicates("id")
 
 
 def _band(freq_mhz: float) -> str:
@@ -177,6 +184,10 @@ def build_dataset(obs: Optional[pd.DataFrame] = None, stations_path: Path = STAT
     """Raw SatNOGS observations -> one row per labeled pass with physical features."""
     if obs is None:
         obs = load_raw_observations()
+    if not stations_path.exists():
+        stations_path = STATIONS_SNAPSHOT
+    if not kp_path.exists():
+        kp_path = KP_SNAPSHOT
     df = obs[obs["status"].isin(LABELED_STATUSES) & obs["ground_station"].notna()].copy()
     df["ground_station"] = df["ground_station"].astype(int)
     stations = {s["id"]: s for s in json.load(open(stations_path))}
