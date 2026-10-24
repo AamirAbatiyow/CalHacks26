@@ -11,6 +11,7 @@
     "generate": "spacetime generate --lang typescript --out-dir ./src/module_bindings --module-path ../server/spacetimedb"
   },
   "dependencies": {
+    "@clockworklabs/spacetimedb-sdk": "^2.0.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "satellite.js": "^5.0.0",
