@@ -1,0 +1,41 @@
+{
+  "auc_roc": 0.8947416666666667,
+  "auc_pr": 0.8706318802646312,
+  "accuracy": 0.8214285714285714,
+  "n_train": 2800,
+  "n_test": 700,
+  "n_features": 17,
+  "best_iteration": 228,
+  "brier_score": 0.1290715496509965,
+  "log_loss": 0.40591891539849206,
+  "ece": 0.04500531628743239,
+  "confusion_matrix": [
+    [
+      341,
+      59
+    ],
+    [
+      66,
+      234
+    ]
+  ],
+  "feature_importance": {
+    "station_id": 4188.188348531723,
+    "duration_sec": 3921.6558874845505,
+    "station_lat": 3596.0107866227627,
+    "max_elevation_deg": 3315.393194437027,
+    "kp_latitude_risk": 2749.4615592360497,
+    "kp_at_time": 2616.0977832078934,
+    "station_lon": 2576.924396455288,
+    "transmitter_mode": 2239.018184632063,
+    "elevation_bin": 246.06273266673088,
+    "pass_is_short": 53.41685336828232,
+    "is_high_latitude": 0.0,
+    "is_polar_station": 0.0,
+    "wind_speed_kmh": 0.0,
+    "precip_mm": 0.0,
+    "temp_c": 0.0,
+    "humidity_pct": 0.0,
+    "cloud_cover_pct": 0.0
+  }
+}

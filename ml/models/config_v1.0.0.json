@@ -1,0 +1,33 @@
+{
+  "version": "v1.0.0",
+  "feature_names": [
+    "max_elevation_deg",
+    "duration_sec",
+    "kp_at_time",
+    "cloud_cover_pct",
+    "precip_mm",
+    "temp_c",
+    "humidity_pct",
+    "wind_speed_kmh",
+    "sat_inclination_deg",
+    "sat_period_min",
+    "sat_apogee_km",
+    "sat_perigee_km",
+    "station_lat",
+    "station_lon",
+    "station_id",
+    "transmitter_mode",
+    "is_high_latitude",
+    "is_polar_station",
+    "pass_is_short",
+    "elevation_bin",
+    "kp_latitude_risk"
+  ],
+  "shap_expected_value": -1.3712638134088107,
+  "created_at": "2026-10-24T09:07:29.268665Z",
+  "metrics_summary": {
+    "auc_roc": 0.6623376623376623,
+    "brier_score": 0.17017886516331368,
+    "ece": 0.08848701930736087
+  }
+}

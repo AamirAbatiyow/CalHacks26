@@ -11,6 +11,7 @@ pub mod confidence_gate;
 pub mod events;
 pub mod kpis;
 pub mod ledger;
+pub mod ml;
 pub mod policy;
 pub mod settlement;
 pub mod sla;

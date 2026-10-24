@@ -1,0 +1,4971 @@
+[
+  {
+    "norad_id": 7530,
+    "name": "OSCAR 7",
+    "names": [
+      "AO-7, AMSAT OSCAR 7"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 07530U 74089B   26296.87017571 -.00000026  00000-0  12870-3 0  9994",
+    "tle_line2": "2 07530 101.9895 311.4539 0011996 245.3178 237.0980 12.53700212376640",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "epmfL93RZ2Vf5WKK4X2auf",
+        "description": "Mode U TLM Beacon",
+        "downlink_low": 435100000,
+        "downlink_high": 435100000,
+        "mode": "CW",
+        "alive": true,
+        "baud": 0.0
+      },
+      {
+        "uuid": "YCcdJmZyt62cx8R8fv8mTe",
+        "description": "Mode U/V (B) TLM Beacon",
+        "downlink_low": 145977500,
+        "downlink_high": 145977500,
+        "mode": "CW",
+        "alive": true,
+        "baud": 0.0
+      },
+      {
+        "uuid": "aBrZNKzhZH4gguH8F75o86",
+        "description": "Mode V/A (A) Lin SSB",
+        "downlink_low": 29400000,
+        "downlink_high": 29500000,
+        "mode": "USB",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "Pfwywu74BnMu72ykCicETX",
+        "description": "Mode V/A (A) Lin CW",
+        "downlink_low": 29400000,
+        "downlink_high": 29500000,
+        "mode": "CW",
+        "alive": true,
+        "baud": 0.0
+      },
+      {
+        "uuid": "uLfAhJaZJUWmA9Sik8yQ2m",
+        "description": "Mode U/V (B) Lin",
+        "downlink_low": 145925000,
+        "downlink_high": 145975000,
+        "mode": "USB",
+        "alive": true,
+        "baud": 0.0
+      },
+      {
+        "uuid": "zs4j2L74uEoreuVZQWfGqX",
+        "description": "Mode V/A (A) TLM Beacon",
+        "downlink_low": 29502000,
+        "downlink_high": 29502000,
+        "mode": "CW",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "JH4TSATzvpNJ46SkgH59Vd",
+        "description": "13 cm Beacon (40mW)",
+        "downlink_low": 2304100000,
+        "downlink_high": 2304100000,
+        "mode": "CW",
+        "alive": true,
+        "baud": null
+      }
+    ],
+    "launched": "1974-11-15T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/AMSAT-OSCAR_7.jpg"
+  },
+  {
+    "norad_id": 11416,
+    "name": "NOAA 6",
+    "names": [
+      "1979-057A"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 11416U 79057A   26296.82618785  .00000204  00000-0  86287-4 0  9992",
+    "tle_line2": "2 11416  98.5532 325.3290 0009060 232.3330 127.7035 14.35553393469412",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "EutgXomtoFhJSZhZXT9ZBi",
+        "description": "Carrier Wave",
+        "downlink_low": 137500000,
+        "downlink_high": 137500000,
+        "mode": "CW",
+        "alive": true,
+        "baud": null
+      }
+    ],
+    "launched": "1979-06-27T15:51:59Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 25397,
+    "name": "TECHSAT 1B",
+    "names": [
+      "GO-32 TechSat, Gurwin-II"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 25397U 98043D   26296.95931812  .00000040  00000-0  37580-4 0  9994",
+    "tle_line2": "2 25397  99.0175 293.0363 0001220 158.9026 201.2203 14.24448917469666",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "5W3dB4ix8qxUZ362SQvVwh",
+        "description": "Mode U 9k6 FSK",
+        "downlink_low": 435225000,
+        "downlink_high": 435225000,
+        "mode": "FSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "Dr9jk4p5WxHjhJ7ETmXzbY",
+        "description": "Mode U 9k6 FSK",
+        "downlink_low": 435325000,
+        "downlink_high": 435325000,
+        "mode": "FSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "c4T33yxNiE8EAEc7V6LMQk",
+        "description": "Mode V/U APRS,BBS 9K6 FSK",
+        "downlink_low": 435225000,
+        "downlink_high": null,
+        "mode": "FSK",
+        "alive": false,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "maYGaaMWsSBeDDDMpcM9ES",
+        "description": "Mode V/U APRS 9K6 FSK",
+        "downlink_low": 435225000,
+        "downlink_high": null,
+        "mode": "FSK",
+        "alive": false,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "rnK4cgRRm9cdM2rxFkyoQG",
+        "description": "Mode V/U BBS 9k6 FSK",
+        "downlink_low": 435225000,
+        "downlink_high": null,
+        "mode": "FSK",
+        "alive": false,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "qvdNpHXGCBkBYSzGokjsYY",
+        "description": "Mode L/U 9K6 FSK",
+        "downlink_low": 435225000,
+        "downlink_high": null,
+        "mode": "FSK",
+        "alive": false,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "MRMmE3cF5JgNqE8UXcpFDA",
+        "description": "Mode L/U 9K6 FSK",
+        "downlink_low": 435225000,
+        "downlink_high": null,
+        "mode": "FSK",
+        "alive": false,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "TiQ24jMtQ728WY4tUkckff",
+        "description": "Mode L/U 9K6 FSK",
+        "downlink_low": 435225000,
+        "downlink_high": null,
+        "mode": "FSK",
+        "alive": false,
+        "baud": 9600.0
+      }
+    ],
+    "launched": "1998-07-10T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/gurwinIIb.gif"
+  },
+  {
+    "norad_id": 25544,
+    "name": "ISS",
+    "names": [
+      "ZARYA, RS0ISS, NA1SS"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 25544U 98067A   26296.69304404  .00008515  00000-0  16237-3 0  9996",
+    "tle_line2": "2 25544  51.6336  24.1765 0006871 300.7285  59.3026 15.49021515591674",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "ZJxCeQmih9zDfYNVrB4wRN",
+        "description": "Mode V APRS",
+        "downlink_low": 145825000,
+        "downlink_high": null,
+        "mode": "AFSK",
+        "alive": true,
+        "baud": 1200.0
+      },
+      {
+        "uuid": "PjfcFc4PZ8M8n3thuyA6x9",
+        "description": "Mode V/V FM (crew R2+3)",
+        "downlink_low": 145800000,
+        "downlink_high": null,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "pQRPwTWqQr7unDav5Mz4pG",
+        "description": "Mode V/V FM (crew R1)",
+        "downlink_low": 145800000,
+        "downlink_high": null,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "xHu5MSMute88ReidipFupe",
+        "description": "TEMP Off-Frequency SSTV",
+        "downlink_low": 145480000,
+        "downlink_high": 145480000,
+        "mode": "SSTV",
+        "alive": false,
+        "baud": null
+      },
+      {
+        "uuid": "EvtcWByczLm3LejfbGt8pS",
+        "description": "VHF-1 Soyuz Communication - FMN",
+        "downlink_low": 143625000,
+        "downlink_high": 143625000,
+        "mode": "FMN",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "LpxAGDsjnvSJSBWDw9ZQi5",
+        "description": "VHF-2 Soyuz Communication - FMN",
+        "downlink_low": 130167000,
+        "downlink_high": 130167000,
+        "mode": "FMN",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "4ACt6xLkArN9jyBMVmY6Bm",
+        "description": "Tomsk-TPU-120",
+        "downlink_low": 437023000,
+        "downlink_high": 437023000,
+        "mode": "FM",
+        "alive": false,
+        "baud": null
+      },
+      {
+        "uuid": "ZmxED2vRmJR3LnsgfARLsd",
+        "description": "Tanusha FM",
+        "downlink_low": 437050000,
+        "downlink_high": 437050000,
+        "mode": "FM",
+        "alive": false,
+        "baud": null
+      },
+      {
+        "uuid": "qAeYxdoo7wv6rcVKhGsPsC",
+        "description": "Soyuz / Orlan space suit",
+        "downlink_low": 121750000,
+        "downlink_high": 121750000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "e3T8v6U7hBhSTTDsGjd7ZD",
+        "description": "Mystery transmitter 137.6257MHz",
+        "downlink_low": 137625700,
+        "downlink_high": 137625700,
+        "mode": "CW",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "HcT7xq7wxKnLGdfHZhR3db",
+        "description": "ISS CCSDS Data 1",
+        "downlink_low": 2265000000,
+        "downlink_high": 2265000000,
+        "mode": "QPSK",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "4Yp5mRhdNPURqAuVn77NMk",
+        "description": "Mode V/V APRS",
+        "downlink_low": 145825000,
+        "downlink_high": null,
+        "mode": "AFSK",
+        "alive": false,
+        "baud": 1200.0
+      },
+      {
+        "uuid": "dPuSJJPpqqMuFTGNBLw77u",
+        "description": "IORS Telemetry",
+        "downlink_low": 437800000,
+        "downlink_high": 437800000,
+        "mode": "FSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "GoiXuPtD6bXcQbY9vwxEFi",
+        "description": "ICARUS Animal-Tracker Experiment",
+        "downlink_low": 468100000,
+        "downlink_high": 468100000,
+        "mode": "PSK",
+        "alive": true,
+        "baud": 656.0
+      },
+      {
+        "uuid": "UuSpaHpPZF2hwvSzXXmyjy",
+        "description": "UHF School Contact Downlink (Backup During SSTV event)",
+        "downlink_low": 437525000,
+        "downlink_high": 437525000,
+        "mode": "FM",
+        "alive": false,
+        "baud": null
+      },
+      {
+        "uuid": "T8Vq5pF9paN9x9CoJK9MT2",
+        "description": "Control Module \"Zarya\"",
+        "downlink_low": 632000000,
+        "downlink_high": 632000000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "WKYGC2vEzqYLrAPyHjLViR",
+        "description": "Service Module \"Zvezda\" (Upper side band)",
+        "downlink_low": 630128000,
+        "downlink_high": 630128000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "kGUAAw2FAT8MJ7cxCEUZJ5",
+        "description": "Mode U - Possibly Voice",
+        "downlink_low": 435400000,
+        "downlink_high": 435400000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "XZTqD4wKjCt497URjTLB7i",
+        "description": "Suit 1",
+        "downlink_low": 121100000,
+        "downlink_high": 121100000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "HLrZpCRcTvPqqndeg4xnbY",
+        "description": "Suit 2",
+        "downlink_low": 121275000,
+        "downlink_high": 121275000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "yMufCB474YJ4YRdDepfMUk",
+        "description": "Mode U/V FM Voice",
+        "downlink_low": 145800000,
+        "downlink_high": null,
+        "mode": "FM",
+        "alive": false,
+        "baud": null
+      },
+      {
+        "uuid": "yPvKr7jdJZLHsHukp8dDQF",
+        "description": "Mode U APRS Digi",
+        "downlink_low": 437550000,
+        "downlink_high": null,
+        "mode": "AFSK",
+        "alive": false,
+        "baud": 1200.0
+      },
+      {
+        "uuid": "cCw7U8jt863ktpTQeqjVq7",
+        "description": "EMU Alt",
+        "downlink_low": 417100000,
+        "downlink_high": 417100000,
+        "mode": "FSK",
+        "alive": true,
+        "baud": 695.0
+      },
+      {
+        "uuid": "T9RW3kVtzUxiyS4dBSGQh7",
+        "description": "Mode S1",
+        "downlink_low": 2425000000,
+        "downlink_high": 2425000000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "Ro4PxBCBuQ4NGwj5uBJXUq",
+        "description": "Mode S2",
+        "downlink_low": 2375000000,
+        "downlink_high": 2375000000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "oS2odPao5VikPbEqAjkTFc",
+        "description": "EVA/WVS",
+        "downlink_low": 400575000,
+        "downlink_high": 400575000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "ExmfdcGmsJPmNEQtjQqmkU",
+        "description": "Rassvet",
+        "downlink_low": 637500000,
+        "downlink_high": 637500000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "LX6y6kzNaamd2Z3XPa2GuC",
+        "description": "CUCU (SpaceX COTS UHF Communication Unit)",
+        "downlink_low": 400500000,
+        "downlink_high": 400500000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 1536.0
+      },
+      {
+        "uuid": "WW8CQ54bNyfrnuzbBBcjQV",
+        "description": "SpaceX Dragon Wideband Telemetry",
+        "downlink_low": 2205500000,
+        "downlink_high": 2205500000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "Kzcz2938Fn4wzFC8Pj2wQ3",
+        "description": "SpaceX Dragon narrowband telemetry",
+        "downlink_low": 2216000000,
+        "downlink_high": 2216000000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "fK9LAVYUMBHmfvieYQfGK3",
+        "description": "SpaceX Falcon Wideband Telemetry",
+        "downlink_low": 2213500000,
+        "downlink_high": 2213500000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "m5DvX4VxKTPW2nLD9LXnbR",
+        "description": "Suit 3",
+        "downlink_low": 139208000,
+        "downlink_high": 139208000,
+        "mode": "FMN",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "S8bCq8J44SJffrw5p4eZuz",
+        "description": "CW Soyuz-TM and Progress M1 beacon",
+        "downlink_low": 922750000,
+        "downlink_high": 922750000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "ib9K4nf4NeZrRgzoii8JbU",
+        "description": "Soyuz-TM and Progress M-1 TLM",
+        "downlink_low": 166000000,
+        "downlink_high": 166000000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "WcPXvbPj46QYmnjGuaHPh3",
+        "description": "Regul",
+        "downlink_low": 922763000,
+        "downlink_high": 922763000,
+        "mode": "CW",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "aKgUxUhTXt8w8wWuEhYWV3",
+        "description": "TORU S1",
+        "downlink_low": 2860000000,
+        "downlink_high": 2860000000,
+        "mode": "AM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "Sc8SJnjmcvgKg7XA2fZDQJ",
+        "description": "Toru S2",
+        "downlink_low": 2725000000,
+        "downlink_high": 2725000000,
+        "mode": "AM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "7e6DgnSMfAnUuUXgRFH4wR",
+        "description": "Kvant",
+        "downlink_low": 768975000,
+        "downlink_high": 768975000,
+        "mode": "FMN",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "2uE4irjovfEP9kM2EvTMfv",
+        "description": "Falcon 9 CCSDS 2272.5",
+        "downlink_low": 2272500000,
+        "downlink_high": 2272500000,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "ARgBEDYjyyZSjbFB5imVY4",
+        "description": "Falcon 9 CCSDS 2232.5",
+        "downlink_low": 2232500000,
+        "downlink_high": 2232500000,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "MSFbqmFSAJtEjE82wQTMud",
+        "description": "EMU (695000)",
+        "downlink_low": 414200000,
+        "downlink_high": 414200000,
+        "mode": "FSK",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "8qgr8X9wKAwb9BwA6uZYqX",
+        "description": "Mode U - SSTV",
+        "downlink_low": 437800000,
+        "downlink_high": 437800000,
+        "mode": "SSTV",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "iyfxHeiEWTiCatrAXcLifM",
+        "description": "Mode S - HamTV DVB-S",
+        "downlink_low": 2395000000,
+        "downlink_high": 2395000000,
+        "mode": "DVB-S2",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "UF4uKmHyfQPYUWfuCzsuUp",
+        "description": "Mode PD120 FRAM2 Ham ISS simulation",
+        "downlink_low": 437550000,
+        "downlink_high": 437550000,
+        "mode": "SSTV",
+        "alive": false,
+        "baud": null
+      },
+      {
+        "uuid": "gBKr42hu58SybTLaF98kjn",
+        "description": "Mode U - Imaging",
+        "downlink_low": 437800000,
+        "downlink_high": 437800000,
+        "mode": "SSTV",
+        "alive": false,
+        "baud": null
+      },
+      {
+        "uuid": "eozSf5mKyzNxoascs8V4bV",
+        "description": "Mode V/U FM - Voice Repeater CTCSS 67.0 Hz",
+        "downlink_low": 437800000,
+        "downlink_high": null,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "qW5N27QuSrN2JMasbNiUhR",
+        "description": "Mode V Imaging",
+        "downlink_low": 145800000,
+        "downlink_high": 145800000,
+        "mode": "SSTV",
+        "alive": true,
+        "baud": 0.0
+      },
+      {
+        "uuid": "cjQ8LkcsshNpAvTEAGkU3X",
+        "description": "Mode U APRS test",
+        "downlink_low": 437825000,
+        "downlink_high": null,
+        "mode": "AFSK",
+        "alive": true,
+        "baud": 1200.0
+      },
+      {
+        "uuid": "bSPmbvvAavnj9XHMim8yEc",
+        "description": "Mode U - SSTV - Robot-36",
+        "downlink_low": 437550000,
+        "downlink_high": 437550000,
+        "mode": "SSTV",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "BRYLkJW4wwk3JqhMzyZSYK",
+        "description": "Ku Band Digital Data Downlink",
+        "downlink_low": 15003400000,
+        "downlink_high": 15003400000,
+        "mode": "QPSK",
+        "alive": true,
+        "baud": null
+      }
+    ],
+    "launched": "1998-11-20T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/ISS.jpg"
+  },
+  {
+    "norad_id": 27607,
+    "name": "SAUDISAT 1C",
+    "names": [
+      "SO-50"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 27607U 02058C   26296.80597314  .00001114  00000-0  14853-3 0  9990",
+    "tle_line2": "2 27607  64.5513  90.9705 0069546 238.6763 120.7524 14.83280565283537",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "Y9P45XRJH8yAsbDDe4qHnE",
+        "description": "Mode V/U FM Voice CTCSS 67.0 Hz",
+        "downlink_low": 436795000,
+        "downlink_high": null,
+        "mode": "FM",
+        "alive": true,
+        "baud": 0.0
+      },
+      {
+        "uuid": "BuWqs5XctLn3wANQfhAoEd",
+        "description": "Mode V TLM",
+        "downlink_low": 149025000,
+        "downlink_high": 149025000,
+        "mode": "FM",
+        "alive": true,
+        "baud": 44000.0
+      }
+    ],
+    "launched": "2002-12-20T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/saudisat-so-50.jpg"
+  },
+  {
+    "norad_id": 27844,
+    "name": "CUTE-1",
+    "names": [
+      "CO-55"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 27844U 03031E   26296.51770158  .00000247  00000-0  12555-3 0  9995",
+    "tle_line2": "2 27844  98.6763 303.4872 0009746 166.6040 193.5400 14.24400259209949",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "fpLBtCB3kRcf5uFWvSonsC",
+        "description": "Mode U TLM",
+        "downlink_low": 437470000,
+        "downlink_high": 437470000,
+        "mode": "AFSK",
+        "alive": true,
+        "baud": 1200.0
+      },
+      {
+        "uuid": "ufVXbFsznnzKWsXqyf8gwE",
+        "description": "Mode U TLM",
+        "downlink_low": 436837500,
+        "downlink_high": 436837500,
+        "mode": "CW",
+        "alive": true,
+        "baud": 0.0
+      },
+      {
+        "uuid": "mqQF9JxmD4KB6MqTVXqQBQ",
+        "description": "PE0SAT - CW Beacon",
+        "downlink_low": 436835820,
+        "downlink_high": 436835820,
+        "mode": "CW",
+        "alive": true,
+        "baud": null
+      }
+    ],
+    "launched": "2003-06-30T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/cute-1__1.jpg"
+  },
+  {
+    "norad_id": 27848,
+    "name": "CUBESAT XI-IV",
+    "names": [
+      "CO-57"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 27848U 03031J   26296.50067846  .00000191  00000-0  10307-3 0  9992",
+    "tle_line2": "2 27848  98.6793 303.0796 0009282 185.7151 174.3923 14.23676058209631",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "gmmMUrZydhneJJZRJAYoG7",
+        "description": "Mode U CW Beacon",
+        "downlink_low": 436847500,
+        "downlink_high": 436847500,
+        "mode": "CW",
+        "alive": true,
+        "baud": 0.0
+      },
+      {
+        "uuid": "2uGo77ULzByLLyshanpctH",
+        "description": "Mode U AFSK TLM",
+        "downlink_low": 437490000,
+        "downlink_high": 437490000,
+        "mode": "AFSK",
+        "alive": true,
+        "baud": 1200.0
+      },
+      {
+        "uuid": "aBHGFxMopeCscUYRyiYdXC",
+        "description": "PE0SAT - CW Beacon",
+        "downlink_low": 436848700,
+        "downlink_high": 436848700,
+        "mode": "CW",
+        "alive": true,
+        "baud": 15.0
+      }
+    ],
+    "launched": "2003-06-30T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/xi-4__1.jpg"
+  },
+  {
+    "norad_id": 28895,
+    "name": "CUBESAT XI-V",
+    "names": [
+      "CO-58, Cubesat OSCAR 58"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 28895U 05043F   26296.87656372  .00001148  00000-0  18721-3 0  9999",
+    "tle_line2": "2 28895  98.3141  95.3628 0014500 153.2766 206.9191 14.72911303120690",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "ShK6dsshtuNqssrY4xP7LA",
+        "description": "Mode U CW BEACON",
+        "downlink_low": 437463100,
+        "downlink_high": 437463100,
+        "mode": "CW",
+        "alive": true,
+        "baud": 0.0
+      },
+      {
+        "uuid": "BykbvfhDt8p3ieh8Nr8SYm",
+        "description": "Mode U TLM",
+        "downlink_low": 437345000,
+        "downlink_high": 437345000,
+        "mode": "AFSK",
+        "alive": false,
+        "baud": 1200.0
+      }
+    ],
+    "launched": "2005-10-27T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/XI-V-Sai-Five-300x225.jpg"
+  },
+  {
+    "norad_id": 32785,
+    "name": "CUTE-1.7+APD II",
+    "names": [
+      "CO-65, JQ1YTC"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 32785U 08021C   26296.94098875  .00003887  00000-0  24010-3 0  9997",
+    "tle_line2": "2 32785  97.8420 281.2443 0007289 320.4214  39.6482 15.10487407  4635",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "ie2oBdY3zydrkWxEHvXtL7",
+        "description": "Mode U TLM 2",
+        "downlink_low": 437475000,
+        "downlink_high": 437475000,
+        "mode": "AFSK",
+        "alive": true,
+        "baud": 1200.0
+      },
+      {
+        "uuid": "qFB67RqFJauwWgZCimDUPJ",
+        "description": "Mode L/U - GMSK9k6 - Digipeater - AX.25 + SRLL",
+        "downlink_low": 437475000,
+        "downlink_high": null,
+        "mode": "GMSK",
+        "alive": false,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "w3YLCLgdTqDpqhZ24uaJzM",
+        "description": "Mode U - CW - Beacon",
+        "downlink_low": 437275000,
+        "downlink_high": 437275000,
+        "mode": "CW",
+        "alive": true,
+        "baud": 19.0
+      }
+    ],
+    "launched": "2008-04-28T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/CO-65-300x197.jpg"
+  },
+  {
+    "norad_id": 33499,
+    "name": "KKS-1",
+    "names": [
+      "KISEKI"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 33499U 09002H   26296.90266079  .00001161  00000-0  14834-3 0  9995",
+    "tle_line2": "2 33499  98.1201 221.3920 0006655 226.7629 133.3029 14.83399355955275",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "MquDcKUEW6mR3VP3M2vAdQ",
+        "description": "CW Beacon",
+        "downlink_low": 437385000,
+        "downlink_high": 437385000,
+        "mode": "CW",
+        "alive": true,
+        "baud": 15.0
+      },
+      {
+        "uuid": "ZkQJidFbx97FBARSxybeyh",
+        "description": "Mode U MSG",
+        "downlink_low": 437445000,
+        "downlink_high": 437445000,
+        "mode": "AFSK",
+        "alive": true,
+        "baud": 1200.0
+      }
+    ],
+    "launched": "2009-01-23T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/KKS-FM-4-2.JPG"
+  },
+  {
+    "norad_id": 33591,
+    "name": "NOAA 19",
+    "names": [
+      "NOAA-N Prime"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 33591U 09005A   26296.95254848  .00000018  00000-0  33323-4 0  9992",
+    "tle_line2": "2 33591  98.9398   7.8357 0014167  30.0129 330.1853 14.13490600912679",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "Bsa8dgFiYCpAuMTjZrqY5a",
+        "description": "ARGOS-3 A-DCS 465.9875MHz",
+        "downlink_low": 465987500,
+        "downlink_high": 465987500,
+        "mode": "BPSK PMT-A3",
+        "alive": true,
+        "baud": 800.0
+      },
+      {
+        "uuid": "cRCsFczwzdZSEzQtQApG8V",
+        "description": "SARSAT L-Band",
+        "downlink_low": 1544500000,
+        "downlink_high": 1544500000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 2400.0
+      },
+      {
+        "uuid": "DbcMgskpnJryLP3NGrR5Xb",
+        "description": "HRPT Downlink",
+        "downlink_low": 1698000000,
+        "downlink_high": 1698000000,
+        "mode": "HRPT",
+        "alive": true,
+        "baud": 665400.0
+      },
+      {
+        "uuid": "R9DmBVhkc4Ltzuz5NDNHto",
+        "description": "137.932",
+        "downlink_low": 137932000,
+        "downlink_high": 137932000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "6sVpSCgyPBskf5Mt6qp49N",
+        "description": "Direct Sounder Broadcast",
+        "downlink_low": 137770000,
+        "downlink_high": 137770000,
+        "mode": "DSB",
+        "alive": true,
+        "baud": 8320.0
+      },
+      {
+        "uuid": "RoH8mePWxUyXSmFyERMsqo",
+        "description": "Telemetry",
+        "downlink_low": 2247500000,
+        "downlink_high": 2247500000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 500000.0
+      },
+      {
+        "uuid": "Ei96mmj2ZnWFwp79PcUfMY",
+        "description": "GAC - LHCP (active over Norway)",
+        "downlink_low": 1702500000,
+        "downlink_high": 1702500000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "kE4VaYKpnFmzEquEjKKi8D",
+        "description": "APT Downlink",
+        "downlink_low": 137100000,
+        "downlink_high": 137100000,
+        "mode": "APT",
+        "alive": false,
+        "baud": null
+      }
+    ],
+    "launched": "2009-02-06T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/NOAA-19_5rtz25e.jpg"
+  },
+  {
+    "norad_id": 36122,
+    "name": "XIWANG-1",
+    "names": [
+      "HO-68XW-1HOPE-1"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 36122U 09072B   26296.91016182  .00000338  00000-0  10016-2 0  9999",
+    "tle_line2": "2 36122 100.4202 248.7648 0007063 304.4004  55.6440 13.16444529809948",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "T7QXLn5PryWVdjqDUfGa55",
+        "description": "CW Beacon",
+        "downlink_low": 435791000,
+        "downlink_high": 435791000,
+        "mode": "CW",
+        "alive": true,
+        "baud": 15.0
+      },
+      {
+        "uuid": "AEzrojCTbvAeZRDtPmqitc",
+        "description": "Mode V/U FM",
+        "downlink_low": 435675000,
+        "downlink_high": null,
+        "mode": "FM",
+        "alive": true,
+        "baud": 0.0
+      },
+      {
+        "uuid": "DMfzzRQEHk98K7diJ3wo27",
+        "description": "Mode V/U Linear",
+        "downlink_low": 435715000,
+        "downlink_high": 435765000,
+        "mode": "FMN",
+        "alive": false,
+        "baud": 0.0
+      },
+      {
+        "uuid": "xVq7syPGptNE56YpFTAgGh",
+        "description": "Mode V/U BBS AFSK",
+        "downlink_low": 435675000,
+        "downlink_high": null,
+        "mode": "AFSK",
+        "alive": false,
+        "baud": 1200.0
+      }
+    ],
+    "launched": "2009-12-15T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/HO-68-Preassembly.jpg"
+  },
+  {
+    "norad_id": 38761,
+    "name": "CSSWE",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 38761U 12048D   26296.92959011  .00035652  00000-0  59176-3 0  9993",
+    "tle_line2": "2 38761  64.6642  15.1560 0022848 114.6285 245.7239 15.51640259136329",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "SS8KEnn5kybpucSo4qhPdA",
+        "description": "Mode U - FSK9k6 AX25",
+        "downlink_low": 437349000,
+        "downlink_high": 437349000,
+        "mode": "FSK AX.25 G3RUH",
+        "alive": true,
+        "baud": 9600.0
+      }
+    ],
+    "launched": null,
+    "decayed": null,
+    "image_url": "satellites/CSSWE.jpg"
+  },
+  {
+    "norad_id": 39444,
+    "name": "FUNCUBE-1",
+    "names": [
+      "AO-73"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 39444U 13066AE  26296.72381882  .00005932  00000-0  35338-3 0  9998",
+    "tle_line2": "2 39444  97.8440 271.1186 0036726 123.9523 236.5206 15.11028726699060",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "QsYRjdzExRFdZyJvcEw2GC",
+        "description": "CW Beacon",
+        "downlink_low": 145815000,
+        "downlink_high": 145815000,
+        "mode": "CW",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "kjb3TFADq77qj2AFSzxHCV",
+        "description": "Mode U/V Linear",
+        "downlink_low": 145950000,
+        "downlink_high": 145970000,
+        "mode": "USB",
+        "alive": true,
+        "baud": 0.0
+      },
+      {
+        "uuid": "Pt4MFHSC8UFHu3aTQTLz9K",
+        "description": "BPSK Telemetry",
+        "downlink_low": 145935000,
+        "downlink_high": 145935000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 1200.0
+      }
+    ],
+    "launched": "2013-11-21T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/FUNCUBE-1.jpg"
+  },
+  {
+    "norad_id": 39492,
+    "name": "AIST-1",
+    "names": [
+      "RS-41"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 39492U 13078C   26296.96505932  .00001052  00000-0  90449-4 0  9998",
+    "tle_line2": "2 39492  82.4155 146.1139 0015925 201.2771 158.7790 14.96354033694500",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "jzrNsDQNgzxxZvHBWPvo74",
+        "description": "Telemetry Beacon",
+        "downlink_low": 435265000,
+        "downlink_high": 435265000,
+        "mode": "CW",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "f5ZSbAccAwz7NBPF9LWPp9",
+        "description": "PSK",
+        "downlink_low": 435265000,
+        "downlink_high": 435265000,
+        "mode": "PSK",
+        "alive": true,
+        "baud": 4800.0
+      }
+    ],
+    "launched": "2013-12-28T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/aist__1.jpg"
+  },
+  {
+    "norad_id": 40012,
+    "name": "UNISAT-6",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 40012U 14033C   26296.66249569  .00001857  00000-0  20096-3 0  9991",
+    "tle_line2": "2 40012  97.8043  87.3065 0044578   6.5576 353.6215 14.88785906665273",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "TfCk7i5Hmy2PEFd2kXvFjh",
+        "description": "9k6 FSK TLM",
+        "downlink_low": 437421500,
+        "downlink_high": 437421500,
+        "mode": "FSK",
+        "alive": true,
+        "baud": 9600.0
+      }
+    ],
+    "launched": null,
+    "decayed": null,
+    "image_url": "satellites/unisat-6__1.jpg"
+  },
+  {
+    "norad_id": 40014,
+    "name": "BUGSAT-1",
+    "names": [
+      "TITA"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 40014U 14033E   26296.92869333  .00005134  00000-0  26305-3 0  9990",
+    "tle_line2": "2 40014  98.0437  37.1130 0028572 100.0540 260.3917 15.16727885675344",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "A7dmxuqNtDNmciAFLCFktm",
+        "description": "437.445 AFSK 1200bps",
+        "downlink_low": 437445000,
+        "downlink_high": 437445000,
+        "mode": "AFSK",
+        "alive": true,
+        "baud": 1200.0
+      },
+      {
+        "uuid": "VqUvcE3MLq2sfsgvwJBuyC",
+        "description": "437.445 GMSK 9600bps",
+        "downlink_low": 437445000,
+        "downlink_high": 437445000,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "NSXo8tGxmxpTUMsmSH34FF",
+        "description": "AX.25 beacon",
+        "downlink_low": 437445000,
+        "downlink_high": 437445000,
+        "mode": "FSK",
+        "alive": true,
+        "baud": 9600.0
+      }
+    ],
+    "launched": "2014-06-19T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/bugsat-1__1.jpg"
+  },
+  {
+    "norad_id": 40024,
+    "name": "NANOSATC-BR1",
+    "names": [
+      "NCBR-1\r NCBR1"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 40024U 14033Q   26296.69964811  .00016215  00000-0  47595-3 0  9998",
+    "tle_line2": "2 40024  98.0597 340.7706 0004920  96.9863 263.1938 15.35240829673673",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "s8jpdkUffam9RxRArizMQd",
+        "description": "Mode V - BPSK1k2 - TLM",
+        "downlink_low": 145865000,
+        "downlink_high": 145865000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 1200.0
+      }
+    ],
+    "launched": null,
+    "decayed": null,
+    "image_url": "satellites/nanosat.jpg"
+  },
+  {
+    "norad_id": 40042,
+    "name": "POLYITAN-1",
+    "names": [
+      "EM0UKP"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 40042U 14033AJ  26295.92505628  .00023810  00000-0  65009-3 0  9999",
+    "tle_line2": "2 40042  98.0841 334.6222 0007511  66.4624 293.7407 15.37400054673193",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "X9Xu5Zcwr79Yu9v86PfCWX",
+        "description": "9k6 FSK TLM",
+        "downlink_low": 437675000,
+        "downlink_high": 437675000,
+        "mode": "FSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "DWCqS7EMmVoFQKAi9nvJpg",
+        "description": "PE0SAT - 9k6 FSK TLM",
+        "downlink_low": 437676000,
+        "downlink_high": 437676000,
+        "mode": "FSK",
+        "alive": false,
+        "baud": 9600.0
+      }
+    ],
+    "launched": "2014-06-19T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/polyitan.jpg"
+  },
+  {
+    "norad_id": 40908,
+    "name": "LILACSAT 2",
+    "names": [
+      "CAS-3H XW-2H"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 40908U 15049K   26296.90560442  .00020150  00000-0  29443-3 0  9998",
+    "tle_line2": "2 40908  97.4499 338.9130 0007564 131.1322 229.0586 15.55643044615738",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "xHDr7c3A7TuTPFcVvHKQuN",
+        "description": "APRS Digipeater",
+        "downlink_low": 144390000,
+        "downlink_high": null,
+        "mode": "AFSK",
+        "alive": true,
+        "baud": 1200.0
+      },
+      {
+        "uuid": "q6CVKJirfoUjNzD2A4rxsk",
+        "description": "FM Transponder",
+        "downlink_low": 437200000,
+        "downlink_high": null,
+        "mode": "FM",
+        "alive": false,
+        "baud": null
+      },
+      {
+        "uuid": "cpsxRoz8S2dndbyCX8BEDX",
+        "description": "CW Beacon",
+        "downlink_low": 437200000,
+        "downlink_high": 437200000,
+        "mode": "CW",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "jjNQUqaaSuehNx5qVGzQwY",
+        "description": "GFSK Telemetry",
+        "downlink_low": 437225000,
+        "downlink_high": 437225000,
+        "mode": "GFSK",
+        "alive": true,
+        "baud": 4800.0
+      },
+      {
+        "uuid": "Hw5GbFVZWCZyxKmvHwq8Gc",
+        "description": "BPSK Telemetry",
+        "downlink_low": 437200000,
+        "downlink_high": 437200000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 9600.0
+      }
+    ],
+    "launched": "2015-09-20T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/LILACSAT-2.jpg"
+  },
+  {
+    "norad_id": 40974,
+    "name": "BISONSAT",
+    "names": [
+      "N7SKC"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 40974U 15058L   26296.79545876  .00009710  00000-0  42311-3 0  9990",
+    "tle_line2": "2 40974  64.7540 116.9029 0090393 355.0772   4.9454 15.19022008135130",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "9KeB2ZXuBaUMjcK6TtvUdh",
+        "description": "Telemetry",
+        "downlink_low": 437375500,
+        "downlink_high": 437375500,
+        "mode": "FSK",
+        "alive": true,
+        "baud": 9600.0
+      }
+    ],
+    "launched": "2015-10-08T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/BISONSAT.jpg"
+  },
+  {
+    "norad_id": 41182,
+    "name": "Orbcomm FM110",
+    "names": [
+      "2015-081D"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 41182U 15081D   26296.78254739  .00000386  00000-0  11758-3 0  9993",
+    "tle_line2": "2 41182  46.9993 113.3333 0003043 297.7147  62.3430 14.58976821576403",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "jmmYRzNpEEEQfVVHgRBigN",
+        "description": "Telemetry",
+        "downlink_low": 137288000,
+        "downlink_high": 137288000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      }
+    ],
+    "launched": "2015-12-22T00:00:00Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 41183,
+    "name": "ORBCOMM FM118",
+    "names": [
+      "2015-081E"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 41183U 15081E   26296.88901410  .00000243  00000-0  87644-4 0  9990",
+    "tle_line2": "2 41183  47.0027 113.2278 0003857 259.7421 100.3030 14.58851904576523",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "RQmJbBSaXoKUnGY7q5oxcX",
+        "description": "Telemetry",
+        "downlink_low": 137288000,
+        "downlink_high": 137288000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      }
+    ],
+    "launched": "2015-12-22T00:00:00Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 41184,
+    "name": "Orbcomm FM112",
+    "names": [
+      "2015-081F"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 41184U 15081F   26296.61576919  .00000467  00000-0  13473-3 0  9990",
+    "tle_line2": "2 41184  46.9994  22.8906 0001769  85.6236 274.4852 14.58996184577704",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "dLxxvBRhCnh79i5ar4WkQS",
+        "description": "Telemetry",
+        "downlink_low": 137663000,
+        "downlink_high": 137663000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "TStTNHJDXVJRxwiM7WeVFQ",
+        "description": "Telemetry",
+        "downlink_low": 137800000,
+        "downlink_high": 137800000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      }
+    ],
+    "launched": "2015-12-22T00:00:00Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 41185,
+    "name": "Orbcomm FM113",
+    "names": [
+      "2015-081G"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 41185U 15081G   26296.93852315  .00000294  00000-0  98084-4 0  9993",
+    "tle_line2": "2 41185  47.0020  21.8006 0000647  95.1344 264.9616 14.58965778577737",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "VbvoBM5nQKeiFmkUqStUDh",
+        "description": "Telemetry",
+        "downlink_low": 137663000,
+        "downlink_high": 137663000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "WFNWANR9MXCjmU8XsG5W7B",
+        "description": "Telemetry",
+        "downlink_low": 137800000,
+        "downlink_high": 137800000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      }
+    ],
+    "launched": "2015-12-22T00:00:00Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 42829,
+    "name": "TECHNOSAT",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 42829U 17042E   26296.87783641  .00002196  00000-0  15598-3 0  9997",
+    "tle_line2": "2 42829  97.4444  89.8395 0017879  20.0290 340.1635 15.05601666506061",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "WfADG9G7jrpcQ4tkBtQb4P",
+        "description": "CW Beacon",
+        "downlink_low": 435950000,
+        "downlink_high": 435950000,
+        "mode": "CW",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "DAZAnJVD2KmVwpfo3c4G4W",
+        "description": "TLM GMSK",
+        "downlink_low": 435950000,
+        "downlink_high": 435950000,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": 4800.0
+      },
+      {
+        "uuid": "ddb7hGQESYQGcCan8JSLCp",
+        "description": "S-band telemetry 2263",
+        "downlink_low": 2263000000,
+        "downlink_high": 2263000000,
+        "mode": "DQPSK",
+        "alive": true,
+        "baud": 12000000.0
+      },
+      {
+        "uuid": "fGQUQFWRsrNn9AspRcEyir",
+        "description": "S-band telemetry 2263 - Network compatibility",
+        "downlink_low": 2263000000,
+        "downlink_high": 2263000000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 12000000.0
+      }
+    ],
+    "launched": null,
+    "decayed": null,
+    "image_url": "satellites/csm_TechnoSat_small_2c8798aef3.png"
+  },
+  {
+    "norad_id": 43017,
+    "name": "FOX-1B",
+    "names": [
+      "AO-91, RADFXSAT"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 43017U 17073E   26296.86053471  .00007708  00000-0  32583-3 0  9998",
+    "tle_line2": "2 43017  97.4483 161.4459 0144139 243.3827 115.2579 15.14480196484851",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "KgazZMKEa74VnquqXLwAvD",
+        "description": "DUV TLM",
+        "downlink_low": 145960000,
+        "downlink_high": 145960000,
+        "mode": "DUV",
+        "alive": true,
+        "baud": 200.0
+      },
+      {
+        "uuid": "LoK6HANoyLWRnwhJKs8gHd",
+        "description": "Mode U/V FM Voice (no CTCSS any longer)",
+        "downlink_low": 145960000,
+        "downlink_high": null,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      }
+    ],
+    "launched": "2017-11-18T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/RadFxSat_Flight-300x300.jpg"
+  },
+  {
+    "norad_id": 43441,
+    "name": "ZHUHAI-1 OHS-02",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 43441U 18040C   26296.94648050  .00005150  00000-0  19466-3 0  9990",
+    "tle_line2": "2 43441  97.0309 313.6967 0010656 125.7222 234.5011 15.27334458133926",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "c8y3r68ToWUtXpgZ2Wd89V",
+        "description": "Downlink",
+        "downlink_low": 401560000,
+        "downlink_high": 401560000,
+        "mode": "FSK",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "cUEejBWwzqX4ZH7vzTRQt5",
+        "description": "Telemetry",
+        "downlink_low": 2253500000,
+        "downlink_high": 2253500000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 128000.0
+      }
+    ],
+    "launched": null,
+    "decayed": null,
+    "image_url": "satellites/ohs-2__1.jpg"
+  },
+  {
+    "norad_id": 43679,
+    "name": "Stars-AO",
+    "names": [
+      "JJ2YSY, \u3042\u304a\u3044"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 43679U 18084J   26296.90459428  .00005761  00000-0  28479-3 0  9998",
+    "tle_line2": "2 43679  98.0303 158.8135 0003575  86.1322 274.0319 15.18269958436998",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "Zqbhz2u99f5gsuHpQGegPZ",
+        "description": "High Speed 115kbpsGMSK",
+        "downlink_low": 437200000,
+        "downlink_high": 437200000,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "b2e32bD2FQmuEa95cpcLaT",
+        "description": "CW Beacon",
+        "downlink_low": 437350000,
+        "downlink_high": 437350000,
+        "mode": "CW",
+        "alive": true,
+        "baud": 18.0
+      },
+      {
+        "uuid": "BgkipNqBJHngFE7LB2qp85",
+        "description": "Mode U - AFSK1k2 Telemetry",
+        "downlink_low": 437400000,
+        "downlink_high": 437400000,
+        "mode": "AFSK",
+        "alive": true,
+        "baud": 1200.0
+      }
+    ],
+    "launched": "2018-10-29T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/AOstarsCG.jpg"
+  },
+  {
+    "norad_id": 43689,
+    "name": "METOP-C",
+    "names": [
+      "Meteorological operational satellite - C"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 43689U 18087A   26296.94834705  .00000068  00000-0  51328-4 0  9996",
+    "tle_line2": "2 43689  98.7279 354.4736 0001040 140.0896 220.0358 14.21480716413124",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "hFDkQfVWz74gCnkXRygZq5",
+        "description": "ARGOS-3 A-DCS",
+        "downlink_low": 465987500,
+        "downlink_high": 465987500,
+        "mode": "BPSK PMT-A3",
+        "alive": true,
+        "baud": 800.0
+      },
+      {
+        "uuid": "Y5gyYUDUEWS7D2cgdXCwVe",
+        "description": "Telemetry",
+        "downlink_low": 2230000000,
+        "downlink_high": 2230000000,
+        "mode": "PSK",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "Smg4zfWMMRizDKx66yHzg2",
+        "description": "AHRPT Prime",
+        "downlink_low": 1701300000,
+        "downlink_high": 1701300000,
+        "mode": "AHRPT",
+        "alive": true,
+        "baud": 3500.0
+      },
+      {
+        "uuid": "55HVaWa3mpAtJxTUqyZfPt",
+        "description": "Mode X (active over Norway)",
+        "downlink_low": 7800000000,
+        "downlink_high": 7800000000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      }
+    ],
+    "launched": "2018-11-07T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/MetOp_Auto3F.jpeg"
+  },
+  {
+    "norad_id": 43792,
+    "name": "ESEO",
+    "names": [
+      "FunCube 4"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 43792U 18099AL  26296.81706428  .00000951  00000-0  71928-4 0  9999",
+    "tle_line2": "2 43792  97.3854 328.6380 0010082 251.0168 108.9967 15.04555901431145",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "MJ9pU2M5qNQRRKzBHHniMb",
+        "description": "GMSK4k8 AX25 ESEO TLM",
+        "downlink_low": 437000000,
+        "downlink_high": 437000000,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": 4800.0
+      },
+      {
+        "uuid": "xTVXwsEVTjzmE7zGKTmGhg",
+        "description": "BPSK4k8 AX25 FUNcube-4 Beacon",
+        "downlink_low": 145895000,
+        "downlink_high": 145895000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 4800.0
+      },
+      {
+        "uuid": "aj32dry5ZZkoA84yLYz8y8",
+        "description": "FM",
+        "downlink_low": 145895000,
+        "downlink_high": null,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "y5GTUBzux5RccNkkSvcsfJ",
+        "description": "BPSK1k2 AX25 FUNcube-4 Beacon",
+        "downlink_low": 145895000,
+        "downlink_high": 145895000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 1200.0
+      },
+      {
+        "uuid": "cmw2kqKrADT2JYGhwSfui3",
+        "description": "GMSK9k6 AX25 ESEO TLM",
+        "downlink_low": 437000000,
+        "downlink_high": 437000000,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": 9600.0
+      }
+    ],
+    "launched": "2018-12-03T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/ESEO_bottom_view_pillars.png"
+  },
+  {
+    "norad_id": 43803,
+    "name": "JY1Sat",
+    "names": [
+      "JO-97, Jordan-OSCAR 97"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 43803U 18099AX  26296.92620103  .00018546  00000-0  50459-3 0  9993",
+    "tle_line2": "2 43803  97.3989   0.4491 0005991 155.5415 204.6115 15.37560302433385",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "ocoEf6MEZtiZgvEWSWsqtY",
+        "description": "BPSK1k2 TLM",
+        "downlink_low": 145840000,
+        "downlink_high": 145840000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 1200.0
+      },
+      {
+        "uuid": "gWivxT7RmBwKK8WbVy6ucF",
+        "description": "U/V CW Transponder",
+        "downlink_low": 145855000,
+        "downlink_high": 145875000,
+        "mode": "CW",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "Epf9JK4hvNEAYuW49JiHtB",
+        "description": "U/V SSB Transponder",
+        "downlink_low": 145855000,
+        "downlink_high": 145875000,
+        "mode": "USB",
+        "alive": true,
+        "baud": null
+      }
+    ],
+    "launched": "2018-12-03T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/jy1sat-cubesat.jpg"
+  },
+  {
+    "norad_id": 43812,
+    "name": "GLOBAL-2",
+    "names": [
+      "BlackSky Global 2"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 43812U 18099BG  26296.65337772  .00002506  00000-0  16111-3 0  9996",
+    "tle_line2": "2 43812  97.3441 327.7949 0007385  77.4569 282.7486 15.09264113431287",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "ZG9w6BRpLATYpEMxB97Hph",
+        "description": "Mode U - Possibly Downlink",
+        "downlink_low": 400749000,
+        "downlink_high": 400749000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "ERg5QTh4YoFGK9eJxy2vkh",
+        "description": "Downlink Mode U",
+        "downlink_low": 401500000,
+        "downlink_high": 401500000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      }
+    ],
+    "launched": "2018-12-03T00:00:00Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 43880,
+    "name": "UWE-4",
+    "names": [
+      "DP0UWH"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 43880U 18111E   26296.80158967  .00050158  00000-0  74623-3 0  9998",
+    "tle_line2": "2 43880  97.5857 231.9094 0005138 181.5067 178.6172 15.54983792430708",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "YyRGE6ftmWay2yxNBJwmbX",
+        "description": "FSK9k6 AX.25 TLM - 16K0F2D",
+        "downlink_low": 437385000,
+        "downlink_high": 437385000,
+        "mode": "FSK",
+        "alive": false,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "84i7RcGzy3QTCzM9GaRYmP",
+        "description": "Mode U - FSK 9600 AX.25",
+        "downlink_low": 435600000,
+        "downlink_high": 435600000,
+        "mode": "FSK",
+        "alive": true,
+        "baud": 9600.0
+      }
+    ],
+    "launched": "2018-12-27T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/UWE-4_AutoF.jpeg"
+  },
+  {
+    "norad_id": 44316,
+    "name": "2019-032G - Unknown Satellite",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 44316U 19032G   26296.83134998  .00012969  00000-0  45330-3 0  9998",
+    "tle_line2": "2 44316  44.9703  77.5029 0012207 273.1071  86.8415 15.29528724406760",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "cWdWjwTQoxf7hCkMsengJC",
+        "description": "Downlink",
+        "downlink_low": 401305000,
+        "downlink_high": 401305000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      }
+    ],
+    "launched": "2019-06-05T00:00:00Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 46505,
+    "name": "NETSAT 3",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 46505U 20068V   26296.58583297  .00017537  00000-0  35083-3 0  9993",
+    "tle_line2": "2 46505  97.8634 313.6164 0003160 213.1967 146.9083 15.46847366335509",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "9E5igvXqt78XHBmxuhb9dx",
+        "description": "Telemetry",
+        "downlink_low": 435600000,
+        "downlink_high": 435600000,
+        "mode": "FSK AX.25 G3RUH",
+        "alive": true,
+        "baud": 9600.0
+      }
+    ],
+    "launched": null,
+    "decayed": null,
+    "image_url": "satellites/netsat__1_268tUmv.jpg"
+  },
+  {
+    "norad_id": 46507,
+    "name": "NETSAT 2",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 46507U 20068X   26296.62930278  .00020153  00000-0  34856-3 0  9990",
+    "tle_line2": "2 46507  97.8592 316.0544 0002510 218.9347 141.1723 15.50996412335618",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "66849Ugwm8eENQdtCDmjqD",
+        "description": "Telemetry",
+        "downlink_low": 435600000,
+        "downlink_high": 435600000,
+        "mode": "FSK AX.25 G3RUH",
+        "alive": true,
+        "baud": 9600.0
+      }
+    ],
+    "launched": null,
+    "decayed": null,
+    "image_url": "satellites/netsat__1_wb3WWyF.jpg"
+  },
+  {
+    "norad_id": 46906,
+    "name": "KSM1-C",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 46906U 20081B   26296.52258292  .00010863  00000-0  38358-3 0  9994",
+    "tle_line2": "2 46906  36.8954 345.4943 0003355 221.4452 138.6044 15.28651558328803",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "m3vgYbke9KR6esGvWhAKoK",
+        "description": "Mode U",
+        "downlink_low": 401120000,
+        "downlink_high": 401120000,
+        "mode": "FSK AX.100 Mode 5",
+        "alive": true,
+        "baud": null
+      }
+    ],
+    "launched": null,
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 49396,
+    "name": "TeikyoSat-4",
+    "names": [
+      "JS1YHH, Ooruri, TS-4"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 49396U 21102B   26296.63831723  .00001405  00000-0  90451-4 0  9998",
+    "tle_line2": "2 49396  97.3582 321.0994 0011166 203.3113 156.7612 15.09876977272102",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "HBtqoMLghydMdvqp4gj3Bw",
+        "description": "Mode U - CW Beacon",
+        "downlink_low": 437450000,
+        "downlink_high": 437450000,
+        "mode": "CW",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "jgpNrym834V7z2xggrH6wC",
+        "description": "Mode U - AFSK1k2",
+        "downlink_low": 437450000,
+        "downlink_high": 437450000,
+        "mode": "AFSK",
+        "alive": true,
+        "baud": 1200.0
+      },
+      {
+        "uuid": "8z8tqwdY5PKi9qWQ3Mb3LH",
+        "description": "Mode U - GMSK9k6",
+        "downlink_low": 437450000,
+        "downlink_high": 437450000,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "ctTMohjM4JpvxjSdNhpWbU",
+        "description": "Mode U - SSTV",
+        "downlink_low": 437450000,
+        "downlink_high": 437450000,
+        "mode": "SSTV",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "draCNhr5ZqcN2BTo7yyNko",
+        "description": "Mode S - FSK115k2",
+        "downlink_low": 5831000000,
+        "downlink_high": 5831000000,
+        "mode": "FSK",
+        "alive": true,
+        "baud": 1152000.0
+      }
+    ],
+    "launched": "2021-11-09T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/TS4_patch.jpg"
+  },
+  {
+    "norad_id": 49402,
+    "name": "KOSEN-1",
+    "names": [
+      "JR5YGJ"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 49402U 21102H   26296.65846237  .00006834  00000-0  24903-3 0  9993",
+    "tle_line2": "2 49402  97.3052 336.3599 0014861 110.2487 250.0353 15.28402117273638",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "YcezEz4dXU5uTwzYEFFrtk",
+        "description": "Mode HF/U - Onboard SDR",
+        "downlink_low": 435525000,
+        "downlink_high": 435525000,
+        "mode": "AFSK",
+        "alive": true,
+        "baud": 1200.0
+      },
+      {
+        "uuid": "BgMkdvUy8oDishD94vBFcb",
+        "description": "Mode U - AFSK1k2",
+        "downlink_low": 435525000,
+        "downlink_high": 435525000,
+        "mode": "AFSK",
+        "alive": true,
+        "baud": 1200.0
+      },
+      {
+        "uuid": "WC7uDquKD2oZRTL6GdvMyy",
+        "description": "Mode U - GMSK9k6",
+        "downlink_low": 435525000,
+        "downlink_high": 435525000,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "8qsv5m7tUfr45SJGb6LuNS",
+        "description": "Mode U - CW Beacon",
+        "downlink_low": 435525000,
+        "downlink_high": 435525000,
+        "mode": "CW",
+        "alive": true,
+        "baud": 18.0
+      }
+    ],
+    "launched": "2021-11-09T00:00:00Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 50466,
+    "name": "XW-3",
+    "names": [
+      "HO-113, CAS-9"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 50466U 21131B   26296.96161858  .00000319  00000-0  11208-3 0  9996",
+    "tle_line2": "2 50466  98.4972  28.6455 0005245  76.6406 283.5367 14.41453519253660",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "d2wKU3qETr3tLdxCGVJ8cb",
+        "description": "Mode U - Telemetry",
+        "downlink_low": 435575000,
+        "downlink_high": 435575000,
+        "mode": "CW",
+        "alive": true,
+        "baud": 22.0
+      },
+      {
+        "uuid": "SqMaeqweB8LkyaBcExhxQT",
+        "description": "Mode U - GMSK4k8 AX.25 Telemetry",
+        "downlink_low": 435725000,
+        "downlink_high": 435725000,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": 4800.0
+      },
+      {
+        "uuid": "JB4Bsj4MUAgjgNojDLB8qe",
+        "description": "Mode U Audio",
+        "downlink_low": 435180000,
+        "downlink_high": 435180000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 19200.0
+      },
+      {
+        "uuid": "cApMyLxo44XFkf6MhUCNxC",
+        "description": "Mode V/U - Transponder",
+        "downlink_low": 435165000,
+        "downlink_high": 435195000,
+        "mode": "USB",
+        "alive": false,
+        "baud": null
+      }
+    ],
+    "launched": "2021-12-26T03:11:31Z",
+    "decayed": null,
+    "image_url": "satellites/cas9.png"
+  },
+  {
+    "norad_id": 52899,
+    "name": "SNUGLITE-II",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 52899U 22065F   26296.68855761  .00000797  00000-0  15949-3 0  9993",
+    "tle_line2": "2 52899  98.2390  81.4553 0007068 349.8552  10.2506 14.64543611229809",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "gR9sApts4mDWCt7UT2xuB8",
+        "description": "Mode S - DQPSK",
+        "downlink_low": 2405000000,
+        "downlink_high": 2405000000,
+        "mode": "DQPSK",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "TtqBg6WbPQPrkWVh94mA3t",
+        "description": "Mode U -  9k6 GMSK AX25 G3RUH TLM",
+        "downlink_low": 436490000,
+        "downlink_high": 436490000,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": 9600.0
+      }
+    ],
+    "launched": "2022-06-21T07:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/\uc218\uc815\ub428__IMG2748_cut_-logo_to3Nk3A.jpg"
+  },
+  {
+    "norad_id": 57166,
+    "name": "METEOR M2-3",
+    "names": [
+      "METEOR 2 2-3, METEOR-M N2-3"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 57166U 23091A   26296.95910837 -.00000010  00000-0  14338-4 0  9992",
+    "tle_line2": "2 57166  98.5932 349.1999 0004591 143.5785 216.5707 14.24054805172842",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "PMAXsGNQyiPth4eRcwugaD",
+        "description": "SARSAT L-Band",
+        "downlink_low": 1544500000,
+        "downlink_high": 1544500000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 2400.0
+      },
+      {
+        "uuid": "9kLzrZ5JjiptnP86W4dKWy",
+        "description": "Raw X-Band",
+        "downlink_low": 8320000000,
+        "downlink_high": 8320000000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "4BJDRtMBbYyQiwMGbiapZ7",
+        "description": "S-Band TLM",
+        "downlink_low": 3405235000,
+        "downlink_high": 3405235000,
+        "mode": "FM",
+        "alive": true,
+        "baud": 32000.0
+      },
+      {
+        "uuid": "3Judk5zrzLFrxDebt3Rz5G",
+        "description": "Raw X-Band",
+        "downlink_low": 8128000000,
+        "downlink_high": 8128000000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "PTeTrUzTTR6Xzd25n5JZAy",
+        "description": "LRPT S-E RHCP D 80 kbps",
+        "downlink_low": 137912500,
+        "downlink_high": 137912500,
+        "mode": "LRPT",
+        "alive": true,
+        "baud": 80000.0
+      },
+      {
+        "uuid": "HuBvmTihdiAHcyeGkCjE8d",
+        "description": "LRPT S-E RHCP D 72 kbps",
+        "downlink_low": 137900000,
+        "downlink_high": 137900000,
+        "mode": "LRPT",
+        "alive": true,
+        "baud": 72000.0
+      },
+      {
+        "uuid": "FG2qyyEiHz9EhEFQKyi9WM",
+        "description": "LRPT S-E RHCP D 72 kbps",
+        "downlink_low": 137100000,
+        "downlink_high": 137100000,
+        "mode": "LRPT",
+        "alive": true,
+        "baud": 72000.0
+      },
+      {
+        "uuid": "fxDHKy9mbosDenbXD9hGTP",
+        "description": "LRPT S-E RHCP D 80 kbps",
+        "downlink_low": 137100000,
+        "downlink_high": 137100000,
+        "mode": "LRPT",
+        "alive": true,
+        "baud": 80000.0
+      },
+      {
+        "uuid": "EHFTpnLwnRHqFsU6PLRyBW",
+        "description": "LRPT S-E RHCP D 80 kbps",
+        "downlink_low": 137900000,
+        "downlink_high": 137900000,
+        "mode": "LRPT",
+        "alive": true,
+        "baud": 80000.0
+      },
+      {
+        "uuid": "Qc2PqaS7n9WYtne3U9EmKJ",
+        "description": "LRPT IQ recording usage",
+        "downlink_low": 137900000,
+        "downlink_high": 137900000,
+        "mode": "FSK",
+        "alive": true,
+        "baud": 40000.0
+      },
+      {
+        "uuid": "FBDizt5ERyKtZFgv7zjHLB",
+        "description": "LRPT IQ recording usage",
+        "downlink_low": 137100000,
+        "downlink_high": 137100000,
+        "mode": "FSK",
+        "alive": true,
+        "baud": 40000.0
+      },
+      {
+        "uuid": "S4jS3CcYg9DTvPdPBcmpW5",
+        "description": "HRPT",
+        "downlink_low": 1700000000,
+        "downlink_high": 1700000000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 800000.0
+      }
+    ],
+    "launched": "2023-06-27T11:34:00Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 57422,
+    "name": "Xingshidai 16",
+    "names": [
+      "2023-103B, Tai'An"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 57422U 23103B   26293.74187873  .00008981  16690-5  14720-4 0  9997",
+    "tle_line2": "2 57422  96.1125 329.0913 0008618 225.0405 135.0181 16.04078491187447",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "WoztXzMkRh9PP8sY2fdsZC",
+        "description": "Mode U STRF",
+        "downlink_low": 401549000,
+        "downlink_high": 401549000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      }
+    ],
+    "launched": "2023-07-22T00:00:00Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 58818,
+    "name": "QAEM 100 R/B",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 58818U 24015B   26296.75296485  .00000109  00000-0  62710-4 0  9993",
+    "tle_line2": "2 58818  64.5029  59.0062 0032357 241.7150 118.0670 14.44344476145475",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "GkBVZi7EHbByaRhgPiMKqs",
+        "description": "Mode U FSK",
+        "downlink_low": 435000000,
+        "downlink_high": 435000000,
+        "mode": "FSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "7Pq7Xbu4yiFFtatis6ZfSW",
+        "description": "Mode U FSK Wide",
+        "downlink_low": 437540000,
+        "downlink_high": 437540000,
+        "mode": "FSK",
+        "alive": true,
+        "baud": 45000.0
+      }
+    ],
+    "launched": null,
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 59068,
+    "name": "SITRO-AIS-27",
+    "names": [
+      "SC2315"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 59068U 24039T   26296.26815949  .00002591  00000-0  20024-3 0  9993",
+    "tle_line2": "2 59068  95.3762 323.2445 0140502 238.4042 120.3407 14.94455478143860",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "5Qh7nL3Ybv9qAmeYn4kSZP",
+        "description": "Mode U - GMSK2k4 USP",
+        "downlink_low": 401077500,
+        "downlink_high": 401077500,
+        "mode": "GMSK USP",
+        "alive": true,
+        "baud": 2400.0
+      }
+    ],
+    "launched": "2024-02-29T05:43:26Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 59071,
+    "name": "SITRO-AIS-28",
+    "names": [
+      "SC2316"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 59071U 24039U   26296.91223698  .00002861  00000-0  22074-3 0  9990",
+    "tle_line2": "2 59071  95.3767 323.7406 0140244 235.9083 122.8770 14.94498149143964",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "gSni77F3n5Tj6UMgqFmudd",
+        "description": "Mode U - GMSK2k4 USP",
+        "downlink_low": 401092500,
+        "downlink_high": 401092500,
+        "mode": "GMSK USP",
+        "alive": true,
+        "baud": 2400.0
+      }
+    ],
+    "launched": "2024-02-29T05:43:26Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 60084,
+    "name": "KINEIS-1A",
+    "names": [
+      "2024-114F"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 60084U 24114F   26297.00469225  .00000869  00000-0  11943-3 0  9998",
+    "tle_line2": "2 60084  97.8867 318.4434 0005508  86.0807 274.1035 14.80792280126450",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "UKTVQjMFzjyT3YaVZYE7wK",
+        "description": "S-band telemetry",
+        "downlink_low": 2260500000,
+        "downlink_high": 2260500000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 300000.0
+      },
+      {
+        "uuid": "M5rwswD4A2iMQHfBRWsVTe",
+        "description": "S-band telemetry",
+        "downlink_low": 2265500000,
+        "downlink_high": 2265500000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 300000.0
+      },
+      {
+        "uuid": "4QCHHurADHjerv87eNnJJM",
+        "description": "Mode U - BPSK PMT-A3 320bps - DLK",
+        "downlink_low": 400657000,
+        "downlink_high": 400657000,
+        "mode": "BPSK PMT-A3",
+        "alive": true,
+        "baud": 320.0
+      }
+    ],
+    "launched": "2024-06-20T00:00:00Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 60209,
+    "name": "MESAT-1",
+    "names": [
+      "MESAT1-OSCAR 122, MO-122"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 60209U 24125G   26296.55509223  .00191449  00000-0  76652-3 0  9994",
+    "tle_line2": "2 60209  97.2014 158.5061 0007131  91.9350 268.2737 15.85999053129738",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "bUjiWSQ4ZVRz5hiodHcEf8",
+        "description": "GlobalStar EyeStar 2M32G1D",
+        "downlink_low": 1616250000,
+        "downlink_high": 1616250000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 2320000.0
+      },
+      {
+        "uuid": "VALRwCUoXLTaomR5FWXJmy",
+        "description": "UHF TLM 1k2 BPSK",
+        "downlink_low": 435800000,
+        "downlink_high": 435800000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 1200.0
+      },
+      {
+        "uuid": "B8Mdvh9UNGpXxkXWA4dpzD",
+        "description": "Mode V/U - SSB - Transponder",
+        "downlink_low": 435810000,
+        "downlink_high": 435840000,
+        "mode": "USB",
+        "alive": false,
+        "baud": null
+      }
+    ],
+    "launched": "2024-07-04T04:04:00Z",
+    "decayed": null,
+    "image_url": "satellites/IMG_0571-317x422.jpg"
+  },
+  {
+    "norad_id": 60237,
+    "name": "GRBBeta",
+    "names": [
+      "HA2GRB"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 60237U 24128C   26296.80902212  .00003212  00000-0  22436-3 0  9992",
+    "tle_line2": "2 60237  61.9879 124.7287 0021329 163.4587 196.7207 15.07386601125650",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "UyJWovKjRxbB7frxkJEBdu",
+        "description": "Mode V - GFSK9k6 - AX.25",
+        "downlink_low": 145935000,
+        "downlink_high": 145935000,
+        "mode": "GFSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "BbUpxL9PvWSfgGnmkBPmAq",
+        "description": "Mode U - GFSK9k6 - AX.25",
+        "downlink_low": 436785000,
+        "downlink_high": 436785000,
+        "mode": "GFSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "TJuh8g9A2CtVuvDYfcwD9E",
+        "description": "Mode S -  FSK100k -  MRC-100",
+        "downlink_low": 2405000000,
+        "downlink_high": 2405000000,
+        "mode": "FSK",
+        "alive": true,
+        "baud": 100000.0
+      },
+      {
+        "uuid": "gHvA9rpALpnmTFXr2TNzFR",
+        "description": "Mode U - CW",
+        "downlink_low": 436785000,
+        "downlink_high": 436785000,
+        "mode": "CW",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "Vyh4sA2BYQSUm6Lo2yigpV",
+        "description": "Mode U/U - GFSK9k6 - Digipeater - AX.25",
+        "downlink_low": 436785000,
+        "downlink_high": null,
+        "mode": "GFSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "hpiPBMQVdd4K6ssBPe5M85",
+        "description": "Mode V/V - GFSK9k6 - Digipeater - AX.25",
+        "downlink_low": 145935000,
+        "downlink_high": null,
+        "mode": "GFSK",
+        "alive": true,
+        "baud": 9600.0
+      }
+    ],
+    "launched": "2024-07-09T19:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/grbbeta.png"
+  },
+  {
+    "norad_id": 60238,
+    "name": "ISTSAT-1",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 60238U 24128D   26296.92113995  .00005862  00000-0  34191-3 0  9992",
+    "tle_line2": "2 60238  61.9858 110.4704 0019143 154.0819 206.1240 15.12937886125936",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "fTp2tUDzeGEBW92867CdZD",
+        "description": "CW Beacon",
+        "downlink_low": 145895000,
+        "downlink_high": 145895000,
+        "mode": "CW",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "XHnnqeuv8pDg9fxhHgGzYn",
+        "description": "Mode V - AFSK1k2",
+        "downlink_low": 145895000,
+        "downlink_high": 145895000,
+        "mode": "AFSK",
+        "alive": true,
+        "baud": 1200.0
+      }
+    ],
+    "launched": "2024-07-09T19:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/nanosat_ist-sat1.jpg"
+  },
+  {
+    "norad_id": 60243,
+    "name": "ROBUSTA-3A",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 60243U 24128J   26296.79391604  .00005539  00000-0  32158-3 0  9990",
+    "tle_line2": "2 60243  61.9847 112.9206 0022578 152.9389 207.2890 15.13136312125871",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "cDtEvt9z4hhtxj8QiPTtkw",
+        "description": "Mode U - GMSK9k6 - AX.25",
+        "downlink_low": 436750000,
+        "downlink_high": 436750000,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "b87T8grefAjihKP5TovwkJ",
+        "description": "Mode U - GMSK38k4 - AX.25",
+        "downlink_low": 436750000,
+        "downlink_high": 436750000,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": 38400.0
+      },
+      {
+        "uuid": "fRJv6i4dbgRsK8iSGVrzFe",
+        "description": "Mode S - Transmitter",
+        "downlink_low": 2202000000,
+        "downlink_high": 2202000000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": null
+      }
+    ],
+    "launched": "2024-07-09T19:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/ROBUSTA-3A.png"
+  },
+  {
+    "norad_id": 61764,
+    "name": "SIT-2086",
+    "names": [
+      "SC2335"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 61764U 24199AF  26296.92398492  .00061121  00000-0  65686-3 0  9995",
+    "tle_line2": "2 61764  97.2686 176.0841 0007193 125.4216 234.7716 15.63543292154473",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "8tTQhDacA2WdGVHkNhShfC",
+        "description": "Mode U - GMSK2k4 USP",
+        "downlink_low": 401030000,
+        "downlink_high": 401030000,
+        "mode": "GMSK USP",
+        "alive": true,
+        "baud": 2400.0
+      }
+    ],
+    "launched": "2024-11-04T23:18:40Z",
+    "decayed": null,
+    "image_url": "satellites/large_X7b_L_hk_Qk5_E_5675674c3b.jpg"
+  },
+  {
+    "norad_id": 61774,
+    "name": "SITRO-AIS-46",
+    "names": [
+      "SC2334"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 61774U 24199AR  26296.92245608  .00159159  00000-0  81447-3 0  9998",
+    "tle_line2": "2 61774  97.2598 178.3030 0006322 130.2126 229.9696 15.80849530154654",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "Jx7sYYjjiCQ8cTBvyKuXBk",
+        "description": "Mode U - GMSK2k4 - USP",
+        "downlink_low": 401205000,
+        "downlink_high": 401205000,
+        "mode": "GMSK USP",
+        "alive": true,
+        "baud": 2400.0
+      }
+    ],
+    "launched": "2024-11-04T23:18:40Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 61776,
+    "name": "SITRO-AIS-40",
+    "names": [
+      "SC2328"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 61776U 24199AT  26296.91793881  .00185556  00000-0  89557-3 0  9990",
+    "tle_line2": "2 61776  97.2602 178.4857 0006318 129.0523 231.1309 15.82056295157819",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "jBocErioNzaX4mwmNC5o7K",
+        "description": "Mode U - GMSK2k4 - USP",
+        "downlink_low": 401085000,
+        "downlink_high": 401085000,
+        "mode": "GMSK USP",
+        "alive": true,
+        "baud": 2400.0
+      }
+    ],
+    "launched": "2024-11-04T23:18:40Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 61781,
+    "name": "ASRTU-1",
+    "names": [
+      "AO-123, ASRTU Friendship, Druzhba ATURK, \u0414\u0440\u0443\u0436\u0431\u0430 \u0410\u0422\u0423\u0420\u041a, BJ2CR, RS64S"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 61781U 24199AY  26296.91627489  .00008465  00000-0  23259-3 0  9996",
+    "tle_line2": "2 61781  97.2776 164.4238 0012391 198.2075 161.8728 15.37390390153696",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "4LR3o9PC3z9cberkA7pftG",
+        "description": "Image download",
+        "downlink_low": 10460000000,
+        "downlink_high": 10460000000,
+        "mode": "QPSK",
+        "alive": true,
+        "baud": 1000000.0
+      },
+      {
+        "uuid": "f7MZKobjSKakAWQsEoLmkq",
+        "description": "Mode V/U - FM Transceiver",
+        "downlink_low": 435400000,
+        "downlink_high": null,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "8d93PPUBXTaMgcyM6mbuFa",
+        "description": "Mode U - Telemetry",
+        "downlink_low": 435400000,
+        "downlink_high": 435400000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "GoQruJ8i7g5kSoHpvkxAGh",
+        "description": "Mode U - SSDV",
+        "downlink_low": 436210000,
+        "downlink_high": 436210000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 9600.0
+      }
+    ],
+    "launched": "2024-11-04T23:18:00Z",
+    "decayed": null,
+    "image_url": "satellites/300px-\u963f\u65af\u56fe\u53cb\u8c0a\u53f7_IPvWmAo.jpg"
+  },
+  {
+    "norad_id": 62929,
+    "name": "KINEIS-2C",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 62929U 25028B   26296.73112250  .00001045  00000-0  16815-3 0  9995",
+    "tle_line2": "2 62929  98.1098 351.1906 0003268 197.9955 162.1138 14.73628143 91544",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "5CTR8FPiLr3yxckAetuvr6",
+        "description": "Telemetry",
+        "downlink_low": 400645000,
+        "downlink_high": 400645000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "SrhMcxecUDUtPCjWH4gE7T",
+        "description": "S-band telemetry",
+        "downlink_low": 2260500000,
+        "downlink_high": 2260500000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "TcLDWpSrMBqY9MrvRNM9HJ",
+        "description": "S-band telemetry",
+        "downlink_low": 2264500000,
+        "downlink_high": 2264500000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      }
+    ],
+    "launched": null,
+    "decayed": null,
+    "image_url": "satellites/kineis.jpg"
+  },
+  {
+    "norad_id": 63235,
+    "name": "OTP-2",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 63235U 25052AB  26296.65823596  .00006682  00000-0  26617-3 0  9999",
+    "tle_line2": "2 63235  97.3689 187.1718 0007978  74.1171 286.0946 15.25527815 89449",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "VxMgySkd3Ya5nhNtwKjyq2",
+        "description": "Mode U - GFSK4k8 - AX.25 - Telemetry",
+        "downlink_low": 400500000,
+        "downlink_high": 400500000,
+        "mode": "GFSK",
+        "alive": true,
+        "baud": 4800.0
+      },
+      {
+        "uuid": "oYyFWefNfvSxXYA3hg9EEC",
+        "description": "Mode S  - FSK 50k - Transmitter",
+        "downlink_low": 2222500000,
+        "downlink_high": 2222500000,
+        "mode": "FSK",
+        "alive": true,
+        "baud": 50000.0
+      }
+    ],
+    "launched": "2025-03-15T06:43:00Z",
+    "decayed": null,
+    "image_url": "satellites/otp-2_angles_v001_18_copy.png"
+  },
+  {
+    "norad_id": 63251,
+    "name": "UVSQ-SAT-NG",
+    "names": [
+      "UVSQsat-NG"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 63251U 25052AT  26296.17832349  .00002900  00000-0  26439-3 0  9991",
+    "tle_line2": "2 63251  97.6668 185.0437 0003854 131.7174 228.4378 14.95874894 87764",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "CtfbAHMMPb4PZmf8qrSWhD",
+        "description": "Mode S - Transmitter",
+        "downlink_low": 2208000000,
+        "downlink_high": 2208000000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "n8iZUZCE3hDZ5d3CiNwTcH",
+        "description": "Mode U - BPSK9k6",
+        "downlink_low": 401850000,
+        "downlink_high": 401850000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 9600.0
+      }
+    ],
+    "launched": "2025-03-15T06:43:00Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 64559,
+    "name": "PADRE",
+    "names": [
+      "PADRE"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 64559U 25135AH  26296.78676683  .00001584  00000-0  15851-3 0  9992",
+    "tle_line2": "2 64559  97.7836  48.8967 0002028 156.1768 203.9545 14.92832921 73031",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "fU4N6AMAtPcywm66qY3iBa",
+        "description": "Mode S - Unknown modulation",
+        "downlink_low": 2277500000,
+        "downlink_high": 2277500000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "8hYsd2biF7ojBAHaVvtHY4",
+        "description": "Mode U - GMSK4k8",
+        "downlink_low": 401360000,
+        "downlink_high": 401360000,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": 4800.0
+      },
+      {
+        "uuid": "KjzJ8CwkWwwXuXpH88ZfDg",
+        "description": "Mode U - GMSK9k6 - Telemetry",
+        "downlink_low": 401360000,
+        "downlink_high": 401360000,
+        "mode": "GMSK",
+        "alive": false,
+        "baud": 9600.0
+      }
+    ],
+    "launched": "2025-06-23T21:25:00Z",
+    "decayed": null,
+    "image_url": "satellites/padre-logo.svg.png"
+  },
+  {
+    "norad_id": 66653,
+    "name": "INHA-RoSAT",
+    "names": [
+      "ROSAT"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 66653U 25274D   26296.76170297  .00001586  00000-0  15751-3 0  9992",
+    "tle_line2": "2 66653  97.7526 223.9032 0011049 291.5124  68.4917 14.93100594 49390",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "Mv2uuoQhfCrdfn4qZveeJU",
+        "description": "Mode U - GFSK9k6 - Transmitter",
+        "downlink_low": 437665000,
+        "downlink_high": 437665000,
+        "mode": "GFSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "VpKenkKpUiwoLKCca2i9SS",
+        "description": "Mode S - QPSK 1 Msps - Transmitter",
+        "downlink_low": 2417000000,
+        "downlink_high": 2417000000,
+        "mode": "QPSK",
+        "alive": true,
+        "baud": 1000000.0
+      }
+    ],
+    "launched": "2025-11-26T15:54:00Z",
+    "decayed": null,
+    "image_url": "satellites/news-p.v1.20251123.3fdcc0857f79442d8beeaa12fa72cb78_P1.png"
+  },
+  {
+    "norad_id": 66673,
+    "name": "PHASMA-LAMARR",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 66673U 25276H   26296.68609349  .00015690  00000-0  60824-3 0  9994",
+    "tle_line2": "2 66673  97.4052   9.1128 0004370 276.9171  83.1571 15.26215102 50022",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "2erZKhM6gDRuX5dRLPSYZV",
+        "description": "Mode S - FSK400k - Transmitter",
+        "downlink_low": 2210000000,
+        "downlink_high": null,
+        "mode": "FSK",
+        "alive": true,
+        "baud": 400000.0
+      },
+      {
+        "uuid": "9JtP2wKaptSZUDMWNnYbA2",
+        "description": "Mode U - FSK50k - Telemetry",
+        "downlink_low": 400600000,
+        "downlink_high": null,
+        "mode": "FSK",
+        "alive": true,
+        "baud": 50000.0
+      }
+    ],
+    "launched": "2025-11-28T18:44:30Z",
+    "decayed": null,
+    "image_url": "satellites/PHASMA-1.png"
+  },
+  {
+    "norad_id": 66681,
+    "name": "PHASMA-DIRAC",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 66681U 25276R   26296.94915342  .00017361  00000-0  64325-3 0  9992",
+    "tle_line2": "2 66681  97.4002   9.6520 0003283 281.7151  78.3720 15.27698294 50098",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "4WnHaC56evx3NKFiYDwb9q",
+        "description": "Mode U - FSK50k - Telemetry",
+        "downlink_low": 400550000,
+        "downlink_high": null,
+        "mode": "FSK",
+        "alive": true,
+        "baud": 50000.0
+      },
+      {
+        "uuid": "fzqJLzieHmPXekM5epjJAS",
+        "description": "Mode S - FSK400k - Transmitter",
+        "downlink_low": 2208000000,
+        "downlink_high": null,
+        "mode": "FSK",
+        "alive": true,
+        "baud": 400000.0
+      }
+    ],
+    "launched": "2025-11-28T18:44:30Z",
+    "decayed": null,
+    "image_url": "satellites/PHASMA-1_B9RaTzC.png"
+  },
+  {
+    "norad_id": 67369,
+    "name": "BlackCAT",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 67369U 26004G   26296.74397962  .00000725  00000-0  85028-4 0  9996",
+    "tle_line2": "2 67369  97.8063 293.0983 0008584  82.9529 277.2664 14.87921914 42400",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "jwEm6NwMaWV9s95DpE7Z9A",
+        "description": "BlackCAT Transmitter: 2GFSK, 2400 baud, TX power 3.01 dbW, min antenna gain -4 dbi",
+        "downlink_low": 401050000,
+        "downlink_high": 401050000,
+        "mode": "GFSK",
+        "alive": true,
+        "baud": 2400.0
+      }
+    ],
+    "launched": "2026-01-11T00:00:00Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 67370,
+    "name": "LEMUR 2 GRAMESUE",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 67370U 26004H   26296.80920865  .00004068  00000-0  43639-3 0  9994",
+    "tle_line2": "2 67370  97.8052 293.4543 0008701  83.4387 276.7820 14.89148441 42434",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "FycA8nMDchZYswzsta82cD",
+        "description": "Mode U - Transmitter",
+        "downlink_low": 401100000,
+        "downlink_high": 401100000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": null
+      }
+    ],
+    "launched": "2026-01-11T00:00:00Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 67683,
+    "name": "KNACKSAT-2",
+    "names": [
+      "HS0K"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 67683U 98067YA  26296.45966873  .00101937  00000-0  66717-3 0  9994",
+    "tle_line2": "2 67683  51.6251   3.0459 0009960 342.8744  17.1917 15.74929235 40387",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "JR28wAEjmpuDQ4FrPWAiwf",
+        "description": "Mode V/V - FSK9k6 - Digipeater - AX.25 G3RUH",
+        "downlink_low": 145825000,
+        "downlink_high": null,
+        "mode": "FSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "UatCXtfDnoBPeVBGHgj4Bc",
+        "description": "Mode U - FSK9k6 - AX.25 G3RUH -TLM",
+        "downlink_low": 400630000,
+        "downlink_high": 400630000,
+        "mode": "FSK",
+        "alive": true,
+        "baud": 9600.0
+      }
+    ],
+    "launched": "2025-10-26T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/Knacksat-2_5.jpg"
+  },
+  {
+    "norad_id": 68416,
+    "name": "PeakSat",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 68416U 26067A   26296.77605312  .00006771  00000-0  30907-3 0  9995",
+    "tle_line2": "2 68416  97.4713 253.9915 0002775 136.3713 223.7742 15.20923861 31487",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "43bAmj5TTnNE2MAB3hAtDD",
+        "description": "Mode U - CW (interval 5min) (20 wpm, Time Unit = 60 ms, Dot = 60 ms , Dash = 180 ms, Element Gap = 60ms , Gap btw Chars = 180 ms)",
+        "downlink_low": 400500000,
+        "downlink_high": 400500000,
+        "mode": "CW",
+        "alive": true,
+        "baud": 20.0
+      },
+      {
+        "uuid": "foKVv3rRP3JV5mNzePf6WA",
+        "description": "UHF Telemetry | BFSK | Mod Index 1 | Data Rate 50 kbps",
+        "downlink_low": 400500000,
+        "downlink_high": 400500000,
+        "mode": "GFSK Pkst",
+        "alive": true,
+        "baud": 50000.0
+      }
+    ],
+    "launched": "2026-03-30T11:02:00Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 68456,
+    "name": "PARUS-6U1",
+    "names": [
+      "PARUS-T3, PARUS-TX,BN0TIT"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 68456U 26067AS  26295.86311946  .00005938  00000-0  28939-3 0  9991",
+    "tle_line2": "2 68456  97.4722 252.4805 0005172   2.1118 358.0137 15.18699976 31301",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "iWbHHJFamLn97iRqjPGQVu",
+        "description": "Mode S - Transmitter - 750kbps",
+        "downlink_low": 2402000000,
+        "downlink_high": 2402000000,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "M9xKsShB5biL2srSXSxDmr",
+        "description": "V/V Digipeater 1k2",
+        "downlink_low": 145825000,
+        "downlink_high": null,
+        "mode": "AFSK",
+        "alive": false,
+        "baud": 1200.0
+      },
+      {
+        "uuid": "Qjat5CprRVQJ4RAVn3ynHu",
+        "description": "UHF TT&C",
+        "downlink_low": 437195000,
+        "downlink_high": 437195000,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": 9600.0
+      }
+    ],
+    "launched": "2026-03-30T11:02:00Z",
+    "decayed": null,
+    "image_url": "satellites/IMG_6952.jpg"
+  },
+  {
+    "norad_id": 68460,
+    "name": "COSMO",
+    "names": [
+      "Compact Spaceborne Magnetic Observatory"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 68460U 26067AW  26296.70175300  .00011505  00000-0  53140-3 0  9991",
+    "tle_line2": "2 68460  97.4642 253.3294 0005627   4.3749 355.7534 15.20343201 31448",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "9c472tbzGG5dc8ufX7uCLA",
+        "description": "Mode S - OQPSK 4m - CCSDS",
+        "downlink_low": 2222000000,
+        "downlink_high": 2222000000,
+        "mode": "OQPSK",
+        "alive": true,
+        "baud": 4000000.0
+      },
+      {
+        "uuid": "M2yrFrPhfupHrU25dahRQf",
+        "description": "SpaceQuest TRX-U",
+        "downlink_low": 401200000,
+        "downlink_high": 401200000,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": 9600.0
+      }
+    ],
+    "launched": "2026-03-30T11:02:00Z",
+    "decayed": null,
+    "image_url": "satellites/COSMO.png"
+  },
+  {
+    "norad_id": 68481,
+    "name": "TORO-3",
+    "names": [
+      "PYRAS3"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 68481U 26067BT  26296.77934249  .00000634  00000-0  67560-4 0  9999",
+    "tle_line2": "2 68481  97.7852 253.4625 0001409 229.9168 130.1928 14.92321474 30908",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "QmhNn5HJPxYSHnfZzgYvMg",
+        "description": "Mode U - GFSK4k8 - Transmitter",
+        "downlink_low": 401580000,
+        "downlink_high": 401580000,
+        "mode": "GFSK",
+        "alive": true,
+        "baud": 4800.0
+      }
+    ],
+    "launched": "2026-03-30T11:02:00Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 68506,
+    "name": "AEPEX",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 68506U 26067CU  26296.77395223  .00006853  00000-0  31504-3 0  9997",
+    "tle_line2": "2 68506  97.4672 253.7572 0003575  29.7093 330.4345 15.20672958 31352",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "nrzuKfid2H4jPrfuthHCvG",
+        "description": "Mode U - GFSK19k2 - AX.25 G3RUH",
+        "downlink_low": 437325000,
+        "downlink_high": 437325000,
+        "mode": "GFSK",
+        "alive": true,
+        "baud": 19200.0
+      },
+      {
+        "uuid": "jybvWJ3aXS2hrijWRAbkRS",
+        "description": "Mode U - GFSK9k6 - AX.25 G3RUH",
+        "downlink_low": 437325000,
+        "downlink_high": 437325000,
+        "mode": "GFSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "PDLsqZbYT95ueujmjMUVAW",
+        "description": "Mode S - OQPSK 10Mbps - CCSDS",
+        "downlink_low": 2405000000,
+        "downlink_high": 2405000000,
+        "mode": "OQPSK",
+        "alive": true,
+        "baud": 10000000.0
+      },
+      {
+        "uuid": "LLZudYz9zzEG7LKN5t5gCL",
+        "description": "Mode S - OQPSK 5Mbps - CCSDS",
+        "downlink_low": 2405000000,
+        "downlink_high": 2405000000,
+        "mode": "OQPSK",
+        "alive": true,
+        "baud": 5000000.0
+      }
+    ],
+    "launched": "2026-03-30T11:02:00Z",
+    "decayed": null,
+    "image_url": "satellites/AEPEX.png"
+  },
+  {
+    "norad_id": 68635,
+    "name": "CANVAS",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 68635U 26074J   26296.79174670  .00013166  00000-0  48286-3 0  9991",
+    "tle_line2": "2 68635  60.0232  43.0519 0034670 111.7656 248.7121 15.27783115 30426",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "GCmN6RULea8dAT7Qoat8z2",
+        "description": "AstroDev Li-2",
+        "downlink_low": 437250000,
+        "downlink_high": null,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "72jW44aKDV4PGCpXFQ7Uqu",
+        "description": "Clyde Space Pulsar HSTX",
+        "downlink_low": 2405300000,
+        "downlink_high": 2405300000,
+        "mode": "OQPSK",
+        "alive": true,
+        "baud": 5000000.0
+      },
+      {
+        "uuid": "CeS6GYyFwzkmB3t8Y7SqHe",
+        "description": "Mode U/U - AFSK1k2 - Digipeater - AX.25",
+        "downlink_low": 437250000,
+        "downlink_high": null,
+        "mode": "AFSK",
+        "alive": false,
+        "baud": 1200.0
+      }
+    ],
+    "launched": "2026-04-07T11:30:00Z",
+    "decayed": null,
+    "image_url": "satellites/CANVAS_logo.png"
+  },
+  {
+    "norad_id": 68795,
+    "name": "OrigamiSat-2",
+    "names": [
+      "JS1YRU, FO-126"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 68795U 26088D   26296.65157493  .00010369  00000-0  61663-3 0  9998",
+    "tle_line2": "2 68795  97.5217  83.5757 0014197   1.6612 358.4662 15.11363020 27680",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "HGDA4HLjfNAAzxAFeq3yzk",
+        "description": "Mode U - AFSK1k2 TLM",
+        "downlink_low": 437505000,
+        "downlink_high": 437505000,
+        "mode": "AFSK",
+        "alive": true,
+        "baud": 1200.0
+      },
+      {
+        "uuid": "S8Q5oRyWgFMXRrPmDbGiJa",
+        "description": "Mode U - CW",
+        "downlink_low": 437505000,
+        "downlink_high": 437505000,
+        "mode": "CW",
+        "alive": true,
+        "baud": 24.0
+      },
+      {
+        "uuid": "DdcPQkHH5VcT7PVXbAheYi",
+        "description": "C-Band(CW)",
+        "downlink_low": 5840000000,
+        "downlink_high": 5840000000,
+        "mode": "CW",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "XSxkkpsD8kvBsvW26FD9VV",
+        "description": "C-Band(High Speed Data)",
+        "downlink_low": 5840000000,
+        "downlink_high": 5840000000,
+        "mode": "QPSK",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "LHimmzUYHq6DLS2pmEjsqT",
+        "description": "C-Band(High Speed Data)",
+        "downlink_low": 5840000000,
+        "downlink_high": 5840000000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": null
+      }
+    ],
+    "launched": "2026-04-23T03:09:00Z",
+    "decayed": null,
+    "image_url": "satellites/04_origamisat2.png"
+  },
+  {
+    "norad_id": 69015,
+    "name": "FrontierSat",
+    "names": [
+      "CTS-SAT-1, CTS SAT1"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 69015U 26100AM  26296.67404089  .00004842  00000-0  20646-3 0  9992",
+    "tle_line2": "2 69015  97.3838 192.4388 0006723 325.3003  34.7795 15.23381332 26374",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "JqdpyL9Ft5jMvQ8VXy57wx",
+        "description": "Mode U - GFSK9k6 - Downlink",
+        "downlink_low": 436150000,
+        "downlink_high": 436150000,
+        "mode": "FSK AX.100 Mode 5",
+        "alive": true,
+        "baud": 9600.0
+      }
+    ],
+    "launched": "2026-05-03T06:59:00Z",
+    "decayed": null,
+    "image_url": "satellites/IMG_5812.jpg"
+  },
+  {
+    "norad_id": 69590,
+    "name": "Bluebird 09",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 69590U 26139B   26296.77007886  .00002554  00000-0  15987-3 0  9997",
+    "tle_line2": "2 69590  52.9944  38.7633 0003951   9.9533 350.1536 15.12981404 19447",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "n8JgaVMJszpa8nhm47jFhR",
+        "description": "Mode U - FSK 2400",
+        "downlink_low": 434100000,
+        "downlink_high": 434100000,
+        "mode": "FSK",
+        "alive": true,
+        "baud": 2400.0
+      }
+    ],
+    "launched": "2026-06-17T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/bb_zjUeMBL.png"
+  },
+  {
+    "norad_id": 69591,
+    "name": "Bluebird 10",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 69591U 26139C   26296.78302112  .00001734  00000-0  11433-3 0  9990",
+    "tle_line2": "2 69591  52.9951  38.8493 0003806   1.9327 358.1678 15.12859523 19455",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "3HdNWbDFjG2ngfbhgsgRrr",
+        "description": "Mode U - FSK 2400",
+        "downlink_low": 435900000,
+        "downlink_high": 435900000,
+        "mode": "FSK",
+        "alive": true,
+        "baud": 2400.0
+      }
+    ],
+    "launched": "2026-06-17T00:00:00Z",
+    "decayed": null,
+    "image_url": "satellites/bb.png"
+  },
+  {
+    "norad_id": 98190,
+    "name": "OSIRIS-E",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 98190U 26227CW  26296.84455807  .00004035  00000-0  20941-3 0  9993",
+    "tle_line2": "2 98190  97.4400   5.9495 0000628 150.5199 209.6070 15.16687053  3358",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "BzGBsgSiUTSLk8ECzvsGrW",
+        "description": "Mode U - GMSK50k",
+        "downlink_low": 400825000,
+        "downlink_high": 401225000,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": 50000.0
+      }
+    ],
+    "launched": "2026-10-01T18:32:00Z",
+    "decayed": null,
+    "image_url": "satellites/Image_7.jfif"
+  },
+  {
+    "norad_id": 98194,
+    "name": "CPSAT",
+    "names": [
+      "CPSAT1"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 98194U 26229B   26296.75886877  .00002265  00000-0  19958-3 0  9993",
+    "tle_line2": "2 98194  97.6993  32.6703 0010090  44.7107 315.4926 14.97421341  2503",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "gdw6vp69VvGqoYrZvFrx7t",
+        "description": "Mode U - BPSK9k6 - AX.25 G3RUH",
+        "downlink_low": 437265000,
+        "downlink_high": 437265000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "5crPjkQxJiVBFDF4qsxUd2",
+        "description": "Mode V/U - BPSK9k6 - AX.25 G3RUH - TC",
+        "downlink_low": 437265000,
+        "downlink_high": null,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "PUFMQTSpw84hG9BBZxYrRZ",
+        "description": "Mode U - CW",
+        "downlink_low": 437265000,
+        "downlink_high": 437265000,
+        "mode": "CW",
+        "alive": false,
+        "baud": null
+      }
+    ],
+    "launched": "2026-10-07T03:25:00Z",
+    "decayed": null,
+    "image_url": "satellites/cpsat_satellite.jpg"
+  },
+  {
+    "norad_id": 98197,
+    "name": "BEE-1012",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 98197U 26229F   26296.89085593  .00002680  00000-0  23430-3 0  9998",
+    "tle_line2": "2 98197  97.6996  32.8039 0010613  40.7323 319.4691 14.97573933  2520",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "npGYRezcQBVDnr4FEQy4kQ",
+        "description": "Mode S - QPSK 2Mbps",
+        "downlink_low": 2403500000,
+        "downlink_high": 2403500000,
+        "mode": "QPSK",
+        "alive": true,
+        "baud": 2000000.0
+      },
+      {
+        "uuid": "ZjsrbASKsScNpyQ2kAMpAj",
+        "description": "Mode U - FSK4k8 - AX.100",
+        "downlink_low": 436500000,
+        "downlink_high": null,
+        "mode": "FSK AX.100 Mode 5",
+        "alive": true,
+        "baud": 4800.0
+      }
+    ],
+    "launched": "2026-10-07T03:25:00Z",
+    "decayed": null,
+    "image_url": "satellites/BEE1012_SATNogs.png"
+  },
+  {
+    "norad_id": 98198,
+    "name": "UEL-Y-Sys",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 98198U 26229E   26296.89193923  .00003179  00000-0  27754-3 0  9993",
+    "tle_line2": "2 98198  97.6997  32.8025 0010274  43.1273 317.0752 14.97484774  2527",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "CiLwhQ52VLPHegPyHsc8ft",
+        "description": "Mode U - FSK4k8 - AX.100",
+        "downlink_low": 436500000,
+        "downlink_high": 436500000,
+        "mode": "FSK AX.100 Mode 5",
+        "alive": true,
+        "baud": 4800.0
+      },
+      {
+        "uuid": "KNbvvwKXiCK3Rk4H7sEyW9",
+        "description": "Mode S - QPSK 2Mbps",
+        "downlink_low": 2403500000,
+        "downlink_high": 2403500000,
+        "mode": "QPSK",
+        "alive": true,
+        "baud": 2000000.0
+      }
+    ],
+    "launched": "2026-10-07T03:25:00Z",
+    "decayed": null,
+    "image_url": "satellites/\ub204\ub9ac\ud6385\ucc28_\uc728\ub9ac\uc2dc\uc2a4_\ubbf8\uc158\ud328\uce58\ucd5c\uc885_\uc774\ubbf8\uc9c0_\ud30c\uc77c_1.png"
+  },
+  {
+    "norad_id": 98219,
+    "name": "ALTAIR-1",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 98219U 26227Q   26296.90867402  .00004151  00000-0  21183-3 0  9998",
+    "tle_line2": "2 98219  97.4428   6.0327 0002226  80.4715 279.6770 15.17269371  3362",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "Gx7JnEQPfV8bmQxD6JJD95",
+        "description": "Mode S - Transmitter 1",
+        "downlink_low": 2242000000,
+        "downlink_high": 2282250000,
+        "mode": "UNKNOWN",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "49pZ5mD7CieCUvsnidyatB",
+        "description": "Mode S - Transmitter 2",
+        "downlink_low": 2243868000,
+        "downlink_high": 2255832000,
+        "mode": "UNKNOWN",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "PnKnC9gnnx4braxkttNvdv",
+        "description": "Mode S - Transmitter 3",
+        "downlink_low": 2244868000,
+        "downlink_high": 2255832000,
+        "mode": "UNKNOWN",
+        "alive": true,
+        "baud": null
+      }
+    ],
+    "launched": "2026-10-01T18:32:00Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 98221,
+    "name": "OSSIE",
+    "names": [
+      "OSSIED"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 98221U 26227BC  26294.92631910  .00002593  00000-0  13274-3 0  9994",
+    "tle_line2": "2 98221  97.4439   4.0979 0003662  95.2410 264.9242 15.17494599  3069",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "aU2veTUUtbHWSDQ6752YmV",
+        "description": "Mode S - Transmitter",
+        "downlink_low": 2250000000,
+        "downlink_high": 2275000000,
+        "mode": "UNKNOWN",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "mgBZRaRVRi7TxRG8gT892z",
+        "description": "Mode U - Transmitter",
+        "downlink_low": 401500000,
+        "downlink_high": 401500000,
+        "mode": "GFSK",
+        "alive": true,
+        "baud": 9600.0
+      }
+    ],
+    "launched": "2026-10-01T18:32:00Z",
+    "decayed": null,
+    "image_url": "satellites/ossie_1.png"
+  },
+  {
+    "norad_id": 98229,
+    "name": "BRO-32",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 98229C 26227AP  26274.81236601 -.00011522  00000-0 -11510-2 0  9990",
+    "tle_line2": "2 98229  97.4449 344.3291 0003866 137.9349 213.8394 15.17562382    15",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "EddaMygp49dYygwptQVk5m",
+        "description": "Mode U - FSK4k8 - TLM",
+        "downlink_low": 401735000,
+        "downlink_high": 401735000,
+        "mode": "FSK AX.100 Mode 5",
+        "alive": true,
+        "baud": 4800.0
+      },
+      {
+        "uuid": "GLajsmvoCaYrRfHHNuLNRK",
+        "description": "Mode U - FSK9k6 - TLM",
+        "downlink_low": 401735000,
+        "downlink_high": 401735000,
+        "mode": "FSK AX.100 Mode 5",
+        "alive": false,
+        "baud": 9600.0
+      }
+    ],
+    "launched": "2026-10-01T18:32:00Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 98232,
+    "name": "Baby Bird",
+    "names": [
+      "BABY BIRD"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 98232U 26227L   26294.93326408  .00005016  00000-0  25714-3 0  9995",
+    "tle_line2": "2 98232  97.4455   4.0915 0001256  94.0148 266.1229 15.17008168  3063",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "jCBGX6YNfUKQGe9nw2QJC8",
+        "description": "Mode U - GFSK9k6",
+        "downlink_low": 401480000,
+        "downlink_high": 401520000,
+        "mode": "GFSK",
+        "alive": true,
+        "baud": 9600.0
+      }
+    ],
+    "launched": "2026-10-01T18:32:00Z",
+    "decayed": null,
+    "image_url": "satellites/Baby_Bird.jpg"
+  },
+  {
+    "norad_id": 98235,
+    "name": "AE4La",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 98235C 26227M   26274.81053414 -.00010085  00000-0 -99381-3 0  9992",
+    "tle_line2": "2 98235  97.4430 344.3257 0004815 137.6194 204.2261 15.18033782    19",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "eyuceRanjhweKS8V9vAVu7",
+        "description": "Mode S - Transmitter",
+        "downlink_low": 2277000000,
+        "downlink_high": 2277600000,
+        "mode": "UNKNOWN",
+        "alive": true,
+        "baud": null
+      }
+    ],
+    "launched": "2026-10-01T18:32:00Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 98239,
+    "name": "GOMX-5",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 98239C 26227X   26274.81102920 -.00010276  00000-0 -10125-2 0  9993",
+    "tle_line2": "2 98239  97.4397 344.3292 0006166 137.9204 206.5670 15.18026541    14",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "WScVroJEjnrnmNbxPbjeno",
+        "description": "Mode S - Transmitter 1",
+        "downlink_low": 2247490000,
+        "downlink_high": 2252990000,
+        "mode": "UNKNOWN",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "ckU3JpgLxCXLxoWHVTZFhE",
+        "description": "Mode S - Transmitter 2",
+        "downlink_low": 2247294000,
+        "downlink_high": 2247346000,
+        "mode": "UNKNOWN",
+        "alive": true,
+        "baud": null
+      }
+    ],
+    "launched": "2026-10-01T18:32:00Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 98241,
+    "name": "SLEDGE",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 98241U          26280.15383156  .00000000  00000-0  22504-3 0 10004",
+    "tle_line2": "2 98241  97.6615  16.3360 0011381  84.5637 100.4510 14.98183333    00",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "eTwkYnppraMkivJPTrqP32",
+        "description": "Mode U - GFSK19k2 -AX.25 Telemetry",
+        "downlink_low": 401775000,
+        "downlink_high": 401775000,
+        "mode": "GFSK",
+        "alive": true,
+        "baud": 19200.0
+      }
+    ],
+    "launched": "2026-10-07T03:25:00Z",
+    "decayed": null,
+    "image_url": "satellites/SLEDGE_1.png"
+  },
+  {
+    "norad_id": 98243,
+    "name": "GBSAT",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 98243U 26229C   26296.89234600  .00002796  00000-0  24503-3 0  9995",
+    "tle_line2": "2 98243  97.6997  32.8021 0010179  44.3172 315.8863 14.97444218  2527",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "NvRNVW6KViQLPWDM6kvzQu",
+        "description": "Mode U - GFSK9k6 - Telemetry",
+        "downlink_low": 435900000,
+        "downlink_high": 436000000,
+        "mode": "GFSK",
+        "alive": true,
+        "baud": 9600.0
+      }
+    ],
+    "launched": "2026-10-07T03:25:00Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 98247,
+    "name": "BY70-4",
+    "names": [
+      "8104, BY-04, \u516b\u4e0004\u661f, 8104 Harbin MicroSat, \u54c8\u5c14\u6ee8\u53f7"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 98247U 26195E   26296.76510843  .00004391  00000-0  27306-3 0  9990",
+    "tle_line2": "2 98247  97.5316   9.5625 0013548  71.1933 289.0764 15.10072301  9000",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "dN3DjEqsjAWRyhx2oMwUP4",
+        "description": "Mode U - BPSK9k6 TLM",
+        "downlink_low": 437443000,
+        "downlink_high": 437443000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 9600.0
+      }
+    ],
+    "launched": "2026-08-25T11:30:00Z",
+    "decayed": null,
+    "image_url": "satellites/8104Sat_by_BG7ZDQ.png"
+  },
+  {
+    "norad_id": 98248,
+    "name": "JAMX01",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 98248U 26195F   26296.95944355  .00006870  00000-0  42211-3 0  9997",
+    "tle_line2": "2 98248  97.5390   9.8166 0013390  71.9635 288.3053 15.10313031  9032",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "jpyxcaQVwEu8N8yavBfFXV",
+        "description": "Mode U - BPSK9k6 Beacon",
+        "downlink_low": 435075000,
+        "downlink_high": 435075000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "4jN5HQM6c9rjJHMHTToppE",
+        "description": "Mode V/U - Digipeater",
+        "downlink_low": 435175000,
+        "downlink_high": null,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "9wrr6yeZFwcm7MZRgL78V9",
+        "description": "Mode U - Telemetry",
+        "downlink_low": 435500000,
+        "downlink_high": 435500000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "SDQR2pBJiR7nXjdBUASukw",
+        "description": "Mode V/U - FM Transceiver",
+        "downlink_low": 435500000,
+        "downlink_high": null,
+        "mode": "FM",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "fc6fG9m4FmqJ2hYCeekiTs",
+        "description": "Mode U - SSTV",
+        "downlink_low": 435175000,
+        "downlink_high": 435175000,
+        "mode": "SSTV",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "KpdmqiRhfrCBre2cjAe4Ch",
+        "description": "Mode U - CW",
+        "downlink_low": 435175000,
+        "downlink_high": 435175000,
+        "mode": "CW",
+        "alive": true,
+        "baud": null
+      }
+    ],
+    "launched": "2026-08-25T03:30:00Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 98266,
+    "name": "SCION-X",
+    "names": [
+      "INSPIRESat 6, BN0SCX"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 69880U 26156M   26294.96959696  .00001827  00000-0  18887-3 0  9996",
+    "tle_line2": "2 69880  97.7346 193.4003 0005964 116.4537 243.7294 14.91321931 15898",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "mNMMaijghJDKPjHd5b4d3H",
+        "description": "Mode U - GFSK9k6",
+        "downlink_low": 437500000,
+        "downlink_high": 437500000,
+        "mode": "GFSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "Z3QiGhjEGUaXGzZbdV9fD3",
+        "description": "Mode V/V - AFSK1k2 - Digipeater - AX.25",
+        "downlink_low": 145825000,
+        "downlink_high": null,
+        "mode": "AFSK",
+        "alive": true,
+        "baud": 1200.0
+      }
+    ],
+    "launched": "2026-07-07T07:12:00Z",
+    "decayed": null,
+    "image_url": "satellites/57216c1a-5fcb-442d-9173-f7bf833248d4-removebg-preview.png"
+  },
+  {
+    "norad_id": 98273,
+    "name": "KOYO",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 69916U 26156AZ  26296.65542622  .00002525  00000-0  25926-3 0  9999",
+    "tle_line2": "2 69916  97.7412 195.1234 0004010 117.1091 243.0537 14.91264940 16149",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "nqzqtizPoG6xi39PwRes4Z",
+        "description": "Mode U - FSK9K6 - TLM",
+        "downlink_low": 435400000,
+        "downlink_high": 435400000,
+        "mode": "FSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "9srrjnRRsgYngn8AiSUy9P",
+        "description": "Mode V/V - AFSK1k2 - Digipeater - AX.25",
+        "downlink_low": 145825000,
+        "downlink_high": null,
+        "mode": "AFSK",
+        "alive": true,
+        "baud": 1200.0
+      }
+    ],
+    "launched": "2026-07-07T07:12:00Z",
+    "decayed": null,
+    "image_url": "satellites/Side_stright_1_Solar_panel_dark.png"
+  },
+  {
+    "norad_id": 98290,
+    "name": "PROVES - Electra",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 98290U 26002A   26183.44444444  .00002000  00000-0  10000-4 0  9997",
+    "tle_line2": "2 98290 051.6561 224.5631 0008446 154.9191 031.3137 15.47694428000018",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "iq2bZwD7mTbPfu5VEmWFLL",
+        "description": "Mode U - LoRa 125KHz",
+        "downlink_low": 437400000,
+        "downlink_high": 437400000,
+        "mode": "LoRa",
+        "alive": true,
+        "baud": 125000.0
+      }
+    ],
+    "launched": null,
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 98293,
+    "name": "Marina",
+    "names": [
+      "OM9MAR"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 69920U 26156BD  26296.71181766  .00001782  00000-0  17983-3 0  9997",
+    "tle_line2": "2 69920  97.7419 195.3645 0008058 144.7971 215.3782 14.92301808 16160",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "5ZAjuziycSLXAq2xKYRg9B",
+        "description": "Mode V/V - GFSK9k6 AX.25 G3RUH",
+        "downlink_low": 145925000,
+        "downlink_high": null,
+        "mode": "GFSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "C6iUZeAWE7EhXPrNWbZLLj",
+        "description": "Mode U - CW",
+        "downlink_low": 436680000,
+        "downlink_high": 436680000,
+        "mode": "CW",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "GqaKbFf2Cq6MZinRpdb5br",
+        "description": "Move V - GFSK9k6 - Telemetry - AX.25",
+        "downlink_low": 145925000,
+        "downlink_high": 145925000,
+        "mode": "GFSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "GbkELo27n7ST7uFYhGFZ7V",
+        "description": "Mode U - SSDV",
+        "downlink_low": 436680000,
+        "downlink_high": 436680000,
+        "mode": "SSDV",
+        "alive": false,
+        "baud": null
+      },
+      {
+        "uuid": "iVmBGoXp6CrEpZuzUUgYUh",
+        "description": "Mode U/U - GFSK9k6 AX.25 G3RUH",
+        "downlink_low": 436680000,
+        "downlink_high": null,
+        "mode": "GFSK",
+        "alive": true,
+        "baud": 9600.0
+      }
+    ],
+    "launched": "2026-07-07T07:12:00Z",
+    "decayed": null,
+    "image_url": "satellites/marina.jpeg"
+  },
+  {
+    "norad_id": 98320,
+    "name": "Gemini-Pollux",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 69000U 26100W   26296.65509030  .00002523  00000-0  25023-3 0  9994",
+    "tle_line2": "2 69000  97.7161 191.6742 0001764 115.7498 244.3904 14.92658740 25864",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "4fjsrQ5zokKgbwhrTcSckD",
+        "description": "Mode V/U - FM Transponder",
+        "downlink_low": 437200000,
+        "downlink_high": 437200000,
+        "mode": "FM",
+        "alive": false,
+        "baud": null
+      },
+      {
+        "uuid": "TUi9Ji5uppKuXvhXWDQYEM",
+        "description": "Mode U - BPSK9k6 TLM - 436.5MHz",
+        "downlink_low": 436500000,
+        "downlink_high": 436500000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "ZJH6mszaSDk39CzdaQBq6h",
+        "description": "Mode U - BPSK9k6 TLM",
+        "downlink_low": 437200000,
+        "downlink_high": 437200000,
+        "mode": "BPSK",
+        "alive": false,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "UkX44t3VpYo68a6kNy9ibf",
+        "description": "Mode U - BPSK1k2 TLM - 436.5MHz",
+        "downlink_low": 436500000,
+        "downlink_high": 436500000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 1200.0
+      }
+    ],
+    "launched": "2026-05-03T06:59:00Z",
+    "decayed": null,
+    "image_url": "satellites/PXL_20251126_100049129_1.jpg"
+  },
+  {
+    "norad_id": 98323,
+    "name": "MAGNARO-II - Piscis",
+    "names": [
+      "JJ2YXG"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 68798U 26088G   26296.84195588  .00003344  00000-0  21143-3 0  9993",
+    "tle_line2": "2 68798  97.5237  83.6395 0018778   4.3544 355.7845 15.09569956 27706",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "dVACRP7qwSnudbXQUntD7Z",
+        "description": "Mode U - CW",
+        "downlink_low": 436325000,
+        "downlink_high": 436325000,
+        "mode": "CW",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "EtfqdX3xgrv9PEDJqmC2v4",
+        "description": "Mode U - AFSK1k2",
+        "downlink_low": 436325000,
+        "downlink_high": 436325000,
+        "mode": "AFSK",
+        "alive": true,
+        "baud": 1200.0
+      },
+      {
+        "uuid": "YAvGuxdEehpQAUEmnbZM96",
+        "description": "Mode U - GMSK9k6",
+        "downlink_low": 436325000,
+        "downlink_high": 436325000,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "oXtuTu5JzRgWyrWQnbYygf",
+        "description": "Mode U - GMSK19200",
+        "downlink_low": 436325000,
+        "downlink_high": 436325000,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": 19200.0
+      }
+    ],
+    "launched": "2026-04-23T03:09:00Z",
+    "decayed": null,
+    "image_url": "satellites/04_magnaro2_SbYAbWw.png"
+  },
+  {
+    "norad_id": 98324,
+    "name": "MAGNARO-II - Tigris",
+    "names": [
+      "JJ2YXF"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 68798U 26088G   26296.84195588  .00003344  00000-0  21143-3 0  9993",
+    "tle_line2": "2 68798  97.5237  83.6395 0018778   4.3544 355.7845 15.09569956 27706",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "Wqgqvw6HytmdcFGJV7FWkt",
+        "description": "Mode U - CW",
+        "downlink_low": 145850000,
+        "downlink_high": 145850000,
+        "mode": "CW",
+        "alive": true,
+        "baud": null
+      },
+      {
+        "uuid": "DuxSqV7q3YhaLBJKmg23Lk",
+        "description": "Mode U - AFSK1k2",
+        "downlink_low": 145850000,
+        "downlink_high": 145850000,
+        "mode": "AFSK",
+        "alive": true,
+        "baud": 1200.0
+      },
+      {
+        "uuid": "mL3Cb3qEuLTPHMTG5qbkJu",
+        "description": "Mode U - GMSK9k6",
+        "downlink_low": 145850000,
+        "downlink_high": 145850000,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "Ltzc4CMTfaN4EjiNK85Tsb",
+        "description": "Mode U - GMSK19200",
+        "downlink_low": 145850000,
+        "downlink_high": 145850000,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": 19200.0
+      }
+    ],
+    "launched": "2026-04-23T03:09:00Z",
+    "decayed": null,
+    "image_url": "satellites/04_magnaro2_vTe7dt0.png"
+  },
+  {
+    "norad_id": 98329,
+    "name": "ARICA-2",
+    "names": [
+      "JS1YSD"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 68796U 26088E   26296.88215064  .00003959  00000-0  25166-3 0  9998",
+    "tle_line2": "2 68796  97.5234  83.5672 0015341   3.0145 357.1173 15.09311694 27708",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "GGSckbx3jzGCzyLs6AjBTq",
+        "description": "Mode U - CW",
+        "downlink_low": 436830000,
+        "downlink_high": 436830000,
+        "mode": "CW",
+        "alive": true,
+        "baud": 20.0
+      },
+      {
+        "uuid": "hTkJ3oYhNwwkUuCG4UrwwG",
+        "description": "Mode U - GMSK4k8 - AX.25",
+        "downlink_low": 436830000,
+        "downlink_high": 436830000,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": 4800.0
+      },
+      {
+        "uuid": "hKFwwL2VpXWYuTQ6HnHUn6",
+        "description": "Mode U/U - Message Exchange + Camera Downlink",
+        "downlink_low": 436830000,
+        "downlink_high": null,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": 4800.0
+      }
+    ],
+    "launched": "2026-04-23T03:09:00Z",
+    "decayed": null,
+    "image_url": "satellites/ARICA-2.png"
+  },
+  {
+    "norad_id": 98330,
+    "name": "PEARL-1B",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 68980U 26100A   26296.98199508  .00002112  00000-0  21909-3 0  9994",
+    "tle_line2": "2 68980  97.7200 191.6354 0008776  81.6259 278.5954 14.90994539 25871",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "DKkitSYmcbsaMq7upo6Ldg",
+        "description": "UHF 9k6",
+        "downlink_low": 401620000,
+        "downlink_high": 401620000,
+        "mode": "GFSK",
+        "alive": true,
+        "baud": 9600.0
+      }
+    ],
+    "launched": "2026-05-03T06:59:00Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 98332,
+    "name": "PEARL-1A",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 68990U 26100L   26296.67066939  .00002028  00000-0  20902-3 0  9990",
+    "tle_line2": "2 68990  97.7145 191.3184 0006862  95.4860 264.7142 14.91306298 25846",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "TedBdudsVQxTxs6FvFod9Q",
+        "description": "UHF 9k6 GFSK",
+        "downlink_low": 401540000,
+        "downlink_high": 401540000,
+        "mode": "GFSK",
+        "alive": true,
+        "baud": 9600.0
+      }
+    ],
+    "launched": "2026-05-03T06:59:00Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 98371,
+    "name": "Black Kite-2",
+    "names": [
+      "8U RIoT-2"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 68474U 26067BL  26294.63055671  .00002249  00000-0  22155-3 0  9991",
+    "tle_line2": "2 68474  97.7714 251.1858 0002344 144.1873 215.9504 14.93042659 30593",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "AVCdi535k3jhAw7StPV8aK",
+        "description": "S-band 38k4 Telemetry",
+        "downlink_low": 2286000000,
+        "downlink_high": 2286000000,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": 38400.0
+      }
+    ],
+    "launched": "2026-03-30T11:02:00Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 98406,
+    "name": "TRISAT-S",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 98406U 26203D   26296.77834125  .00001575  00000-0  11817-3 0  9991",
+    "tle_line2": "2 98406  97.4120  10.0412 0058734 113.9060 246.8334 15.02654171  7208",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "Crz6vufZMBzggMUs5fXcuG",
+        "description": "Mode S - Transmitter",
+        "downlink_low": 2280550000,
+        "downlink_high": 2280550000,
+        "mode": "UNKNOWN",
+        "alive": true,
+        "baud": 80000.0
+      }
+    ],
+    "launched": "2026-09-05T20:12:00Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 98492,
+    "name": "SPIRONE",
+    "names": [
+      "Sejong university's Promising Eyes on envIRONment"
+    ],
+    "status": "unknown",
+    "tle_line1": "1 66657U 25274H   26296.73486125  .00002070  00000-0  19946-3 0  9992",
+    "tle_line2": "2 66657  97.7520 224.2356 0010822 311.8636  48.1660 14.93978175 49414",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "L4Vysu3e83B6WTbkiweFC8",
+        "description": "Mode U - GMSK9k6 - Transmitter",
+        "downlink_low": 436650000,
+        "downlink_high": 436650000,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": 9600.0
+      },
+      {
+        "uuid": "VSvmewaBJyFQMSjnQJn9z5",
+        "description": "Mode S - BPSK - 500bps - Transmitter",
+        "downlink_low": 2425100000,
+        "downlink_high": 2425100000,
+        "mode": "BPSK",
+        "alive": true,
+        "baud": 500.0
+      }
+    ],
+    "launched": "2025-11-26T15:54:00Z",
+    "decayed": null,
+    "image_url": "satellites/SPIRONE.png"
+  },
+  {
+    "norad_id": 98886,
+    "name": "Serenity",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 60206U 24125D   26296.65703661  .00017031  00000-0  34048-3 0  9991",
+    "tle_line2": "2 60206  97.2210 147.3073 0016283 118.9553 241.3332 15.46714450128965",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "CWTLV6W2epnXAkbVzBpM9X",
+        "description": "Mode U - GFSK",
+        "downlink_low": 437000000,
+        "downlink_high": 437000000,
+        "mode": "GFSK",
+        "alive": true,
+        "baud": 4800.0
+      }
+    ],
+    "launched": "2024-07-04T04:04:00Z",
+    "decayed": null,
+    "image_url": ""
+  },
+  {
+    "norad_id": 98888,
+    "name": "KUbeSat-1",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 60203U 24125A   26296.80115756  .00455842  92612-4  85639-3 0  9999",
+    "tle_line2": "2 60203  97.1962 160.7578 0005142  94.1310 266.0557 16.00880765129915",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "igTat2GSZjT2yZybGvu5XD",
+        "description": "Mode U - GMSK9k6",
+        "downlink_low": 437085000,
+        "downlink_high": 437085000,
+        "mode": "GMSK",
+        "alive": true,
+        "baud": 9600.0
+      }
+    ],
+    "launched": "2024-07-04T04:04:00Z",
+    "decayed": null,
+    "image_url": "satellites/KUbeSat1.jpg"
+  },
+  {
+    "norad_id": 99299,
+    "name": "SPRITE",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 99299U 26227BY  26296.89310271  .00004141  00000-0  20495-3 0  9996",
+    "tle_line2": "2 99299  97.4401   6.0461 0006986  78.7451 281.4567 15.18328073  3366",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "2ZxZsmcoppNW685MgvAfth",
+        "description": "Mode S - OQPSK 1Mbps",
+        "downlink_low": 2401000000,
+        "downlink_high": 2403000000,
+        "mode": "OQPSK",
+        "alive": true,
+        "baud": 1000000.0
+      },
+      {
+        "uuid": "iXidNnARHKoCkapF9YEJ3G",
+        "description": "Mode U - GFSK9k6",
+        "downlink_low": 437310000,
+        "downlink_high": 437340000,
+        "mode": "GFSK",
+        "alive": true,
+        "baud": 9600.0
+      }
+    ],
+    "launched": "2026-10-01T18:32:00Z",
+    "decayed": null,
+    "image_url": "satellites/LASP-SPRITE.jpg"
+  },
+  {
+    "norad_id": 99511,
+    "name": "CuPID",
+    "names": null,
+    "status": "unknown",
+    "tle_line1": "1 49264U 21088E   26296.71350829  .00007130  00000-0  26673-3 0  9992",
+    "tle_line2": "2 49264  97.3718 356.4362 0010756 337.4085  22.6680 15.27573172279798",
+    "tle_epoch": null,
+    "inclination_deg": null,
+    "period_min": null,
+    "apogee_km": null,
+    "perigee_km": null,
+    "eccentricity": null,
+    "transmitters": [
+      {
+        "uuid": "W245eMtup8MjQzkpKLvDqf",
+        "description": "Mode U - GFSK38k4 (Only over Ground Station)",
+        "downlink_low": 400500000,
+        "downlink_high": 400500000,
+        "mode": "GFSK",
+        "alive": true,
+        "baud": 38400.0
+      }
+    ],
+    "launched": null,
+    "decayed": null,
+    "image_url": ""
+  }
+]
