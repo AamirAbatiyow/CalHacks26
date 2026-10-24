@@ -248,4 +248,31 @@ def test_featurize_matches_training_features(synth, monkeypatch):
     prev = context[context["ground_station"] == row["ground_station"]].iloc[-1]
     X2 = fm.featurize(new, context, lag_hours=24.0, human_known={int(prev["id"]): prev["end"]})
     X3 = fm.featurize(new, context, lag_hours=24.0)
-    assert X2.iloc[0]["st_unknown_frac"] <= X3.iloc[0]["st_unknown_frac"]
+    assert X2.iloc[0]["st_n"] >= X3.iloc[0]["st_n"]
+
+
+def test_features_ignore_unresolved_rows(synth):
+    raw, hours, stations, df = synth
+    no_unknown = raw[raw["status"] != "unknown"]
+    df2 = cf.build_dataset(no_unknown, stations, cf.KpSeries({}), hours, lag_hours=1.0,
+                           lookback_hours=fm.LOOKBACK_H, long_lookback_hours=fm.LONG_LOOKBACK_H)
+    cols = cf.HISTORY_FEATURES
+    pd.testing.assert_frame_equal(df[cols].reset_index(drop=True), df2[cols].reset_index(drop=True))
+
+
+def test_fetch_hour_by_status(tmp_path, monkeypatch):
+    monkeypatch.setattr(sf, "STORE", tmp_path)
+    monkeypatch.setattr(sf, "HOURS", tmp_path / "hours")
+    monkeypatch.setattr(sf, "STATE_FILE", tmp_path / "state.json")
+    monkeypatch.setattr(sf, "LOG_FILE", tmp_path / "log")
+    sess = sf.RateLimitedSession(sf.load_state(), sleep=lambda s: None)
+    calls = []
+
+    def fake_get(url, params=None, timeout=None):
+        calls.append(params["status"])
+        return FakeResp(200, [{"id": len(calls), "start": "2026-10-01T00:10:00Z", "status": params["status"]}])
+    monkeypatch.setattr(sess.s, "get", fake_get)
+    assert sf.fetch_hour(sess, T0, statuses=sf.LABELED) == 3
+    assert calls == list(sf.LABELED)
+    assert json.load(open(sf.hour_path(T0)))["statuses"] == list(sf.LABELED)
+    assert not list((tmp_path / "hours").glob("*.part"))

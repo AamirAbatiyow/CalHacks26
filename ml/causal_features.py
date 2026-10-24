@@ -75,7 +75,7 @@ HISTORY_KEYS = {
     "stband": ("ground_station", "band"),
     "stsat": ("ground_station", "norad_cat_id"),
 }
-STATION_STATE = ["n", "failed_frac", "good_frac", "unknown_frac", "last_failed", "last_good",
+STATION_STATE = ["n", "failed_frac", "good_frac", "last_failed", "last_good",
                  "fail_streak", "h_since_known", "h_since_good", "h_since_failed", "bad_known"]
 OTHER_STATE = ["n", "failed_frac", "good_frac"]
 
@@ -364,10 +364,12 @@ def _group_index(df: pd.DataFrame, cols: Sequence[str]) -> np.ndarray:
 def history_features(df: pd.DataFrame, known_at: np.ndarray, query_idx: Optional[np.ndarray] = None,
                      lookback_hours: float = 12.0, long_lookback_hours: float = 24.0,
                      query_time_ns: Optional[np.ndarray] = None) -> pd.DataFrame:
-    """Past-only outcome history for rows `query_idx` of `df` (all statuses).
+    """Past-only outcome history for rows `query_idx` of `df`.
 
-    A past pass counts as scheduled if it ended before T (the decision time,
-    default: this pass's start) and its outcome counts only if `known_at <= T`.
+    Only past passes that ended before T (the decision time, default: this
+    pass's start) *and* whose outcome was known by T (`known_at <= T`) count.
+    Unresolved passes (`unknown`, `bad` not yet vetted) are invisible, so a
+    store with or without `unknown` rows yields the same features.
     """
     n_all = len(df)
     q = np.arange(n_all) if query_idx is None else np.asarray(query_idx)
@@ -401,43 +403,35 @@ def history_features(df: pd.DataFrame, known_at: np.ndarray, query_idx: Optional
                     out[f"{key}_n"][j] = 0
                 continue
             idx = order[lo:hi]
-            idx = idx[idx != qi]
-            known = known_at[idx] <= t
+            idx = idx[(idx != qi) & (known_at[idx] <= t)]
             if key == "st":
                 out["st_n_long"][j] = len(idx)
-                out["st_failed_frac_long"][j] = (is_failed[idx] & known).mean() if len(idx) else np.nan
-                recent = end[idx] >= t - W
-                idx, known = idx[recent], known[recent]
+                out["st_failed_frac_long"][j] = is_failed[idx].mean() if len(idx) else np.nan
+                idx = idx[end[idx] >= t - W]
             n = len(idx)
             out[f"{key}_n"][j] = n
             if n == 0:
                 continue
-            kf = is_failed[idx] & known
-            kg = is_good[idx] & known
-            out[f"{key}_failed_frac"][j] = kf.mean()
-            out[f"{key}_good_frac"][j] = kg.mean()
+            out[f"{key}_failed_frac"][j] = is_failed[idx].mean()
+            out[f"{key}_good_frac"][j] = is_good[idx].mean()
             if key != "st":
                 continue
-            out["st_unknown_frac"][j] = 1 - known.mean()
-            out["st_bad_known"][j] = float((is_bad[idx] & known).sum())
-            kidx = idx[known]
-            if len(kidx):
-                kidx = kidx[np.argsort(end[kidx])]
-                last = kidx[-1]
-                out["st_last_failed"][j] = float(is_failed[last])
-                out["st_last_good"][j] = float(is_good[last])
-                out["st_h_since_known"][j] = (t - end[last]) / NS_PER_H
-                streak = 0
-                for k in kidx[::-1]:
-                    if is_failed[k]:
-                        streak += 1
-                    else:
-                        break
-                out["st_fail_streak"][j] = streak
-                gk = kidx[is_good[kidx]]
-                fk = kidx[is_failed[kidx]]
-                out["st_h_since_good"][j] = (t - end[gk[-1]]) / NS_PER_H if len(gk) else lookback_hours * 2
-                out["st_h_since_failed"][j] = (t - end[fk[-1]]) / NS_PER_H if len(fk) else lookback_hours * 2
+            out["st_bad_known"][j] = float(is_bad[idx].sum())
+            kidx = idx[np.argsort(end[idx], kind="stable")]
+            last = kidx[-1]
+            out["st_last_failed"][j] = float(is_failed[last])
+            out["st_last_good"][j] = float(is_good[last])
+            out["st_h_since_known"][j] = (t - end[last]) / NS_PER_H
+            streak = 0
+            for k in kidx[::-1]:
+                if not is_failed[k]:
+                    break
+                streak += 1
+            out["st_fail_streak"][j] = streak
+            gk = kidx[is_good[kidx]]
+            fk = kidx[is_failed[kidx]]
+            out["st_h_since_good"][j] = (t - end[gk[-1]]) / NS_PER_H if len(gk) else lookback_hours * 2
+            out["st_h_since_failed"][j] = (t - end[fk[-1]]) / NS_PER_H if len(fk) else lookback_hours * 2
     return pd.DataFrame(out, index=df.index[q])
 
 

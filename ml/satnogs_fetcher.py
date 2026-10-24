@@ -52,7 +52,7 @@ import time
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Sequence
 
 import requests
 
@@ -245,19 +245,8 @@ def done_hours() -> list[datetime]:
     return sorted(_parse_hour(p.stem) for p in HOURS.glob("*.json") if not p.name.endswith(".tmp"))
 
 
-def fetch_hour(sess: RateLimitedSession, t: datetime, refresh: bool = False,
-               stop_after: Optional[float] = None) -> Optional[int]:
-    """Fetch every observation with start in [t, t+1h). Returns count, or None if interrupted.
-
-    Each page is checkpointed, so a stop (budget, signal, crash) resumes at the
-    next cursor rather than the start of the hour.
-    """
-    HOURS.mkdir(parents=True, exist_ok=True)
-    path, partial = hour_path(t), HOURS / f"{_hour_key(t)}.partial"
-    if path.exists() and not refresh:
-        return len(json.load(open(path))["observations"])
-    params = {"start": t.strftime("%Y-%m-%dT%H:%M:%SZ"),
-              "end": (t + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ"), "format": "json"}
+def _fetch_pages(sess: RateLimitedSession, params: dict, partial: Path,
+                 stop_after: Optional[float]) -> Optional[list]:
     url, rows, first = f"{NETWORK_API}/observations/", [], True
     if partial.exists():
         st = json.load(open(partial))
@@ -276,9 +265,49 @@ def fetch_hour(sess: RateLimitedSession, t: datetime, refresh: bool = False,
         if url:
             _atomic_write(partial, {"next_url": url, "observations": rows})
         save_state(sess.state)
-    _atomic_write(path, {"hour": t.isoformat(), "fetched_at": _utcnow().isoformat(),
-                         "observations": rows})
     partial.unlink(missing_ok=True)
+    return rows
+
+
+def fetch_hour(sess: RateLimitedSession, t: datetime, refresh: bool = False,
+               stop_after: Optional[float] = None,
+               statuses: Optional[Sequence[str]] = None) -> Optional[int]:
+    """Fetch observations with start in [t, t+1h). Returns count, or None if interrupted.
+
+    `statuses=None` fetches every status in one listing. `statuses=("good",
+    "bad", "failed")` issues one listing per status and skips `unknown`
+    (unvetted, ~45% of passes 3 days after the pass), which saves ~40% of the
+    request budget; the causal features only ever use resolved outcomes, so both
+    layouts produce identical features. Each page is checkpointed, so a stop
+    resumes at the next cursor rather than the start of the hour.
+    """
+    HOURS.mkdir(parents=True, exist_ok=True)
+    key = _hour_key(t)
+    path = hour_path(t)
+    if path.exists() and not refresh:
+        return len(json.load(open(path))["observations"])
+    if (HOURS / f"{key}.partial").exists():
+        statuses = None  # finish an all-status listing that was already started
+    base = {"start": t.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "end": (t + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ"), "format": "json"}
+    rows: list = []
+    for st in ([None] if statuses is None else list(statuses)):
+        tag = "" if st is None else f".{st}"
+        done_part = HOURS / f"{key}{tag}.part"
+        if st is not None and done_part.exists() and not refresh:
+            rows += json.load(open(done_part))
+            continue
+        got = _fetch_pages(sess, {**base, **({"status": st} if st else {})}, HOURS / f"{key}{tag}.partial",
+                           stop_after)
+        if got is None:
+            return None
+        if st is not None:
+            _atomic_write(done_part, got)
+        rows += got
+    _atomic_write(path, {"hour": t.isoformat(), "fetched_at": _utcnow().isoformat(),
+                         "statuses": "all" if statuses is None else list(statuses), "observations": rows})
+    for p in HOURS.glob(f"{key}.*.part"):
+        p.unlink(missing_ok=True)
     return len(rows)
 
 
@@ -288,7 +317,8 @@ def next_hour_to_fetch(now: datetime, settle_hours: float, anchor: datetime,
     newest_allowed = (now - timedelta(hours=settle_hours)).replace(minute=0, second=0, microsecond=0) \
         - timedelta(hours=1)
     have = set(done_hours())
-    partials = sorted(_parse_hour(p.stem) for p in HOURS.glob("*.partial")) if HOURS.exists() else []
+    partials = sorted({_parse_hour(p.name[:11]) for pat in ("*.partial", "*.part")
+                       for p in HOURS.glob(pat)}) if HOURS.exists() else []
     for p in partials:
         if p not in have:
             return p, False
@@ -477,7 +507,8 @@ def store_status() -> dict:
         "oldest_hour": hours[0].isoformat() if hours else None,
         "newest_hour": hours[-1].isoformat() if hours else None,
         "contiguous_hours_from_newest": contiguous,
-        "partial_hours": len(list(HOURS.glob("*.partial"))) if HOURS.exists() else 0,
+        "partial_hours": len({p.name[:11] for pat in ("*.partial", "*.part") for p in HOURS.glob(pat)})
+        if HOURS.exists() else 0,
         "observations": n,
         "labeled": sum(counts[s] for s in LABELED),
         "status_counts": dict(counts),
@@ -580,7 +611,7 @@ def maybe_retrain(state: dict, every_hours: float, min_growth: float, min_labele
 
 def daemon(settle_hours: float, anchor: datetime, max_requests: Optional[int], max_hours: Optional[float],
            relabel_after_days: Optional[float], retrain_every_hours: float, retrain_min_growth: float,
-           idle_sleep_s: float = 600) -> int:
+           idle_sleep_s: float = 600, statuses: Optional[Sequence[str]] = LABELED) -> int:
     if not STATIONS_FILE.exists():
         seed_stations()
     state = load_state()
@@ -621,7 +652,7 @@ def daemon(settle_hours: float, anchor: datetime, max_requests: Optional[int], m
         hour, refresh = nxt
         t0 = time.time()
         try:
-            n = fetch_hour(sess, hour, refresh=refresh, stop_after=deadline)
+            n = fetch_hour(sess, hour, refresh=refresh, stop_after=deadline, statuses=statuses)
         except Exception as e:
             log(f"hour {_hour_key(hour)} failed: {e!r}; backing off 120s")
             save_state(state)
@@ -658,6 +689,8 @@ def main(argv=None) -> int:
     d.add_argument("--relabel-after-days", type=float, default=10.0)
     d.add_argument("--retrain-every-hours", type=float, default=6.0)
     d.add_argument("--retrain-min-growth", type=float, default=0.10)
+    d.add_argument("--all-statuses", action="store_true",
+                   help="also store unvetted `unknown` passes (~1.7x the requests per hour)")
     w = sub.add_parser("window", help="fetch every hour in [START, END)")
     w.add_argument("start")
     w.add_argument("end")
@@ -689,7 +722,8 @@ def main(argv=None) -> int:
     if args.cmd == "daemon":
         anchor = datetime.strptime(args.anchor, "%Y-%m-%dT%H").replace(tzinfo=timezone.utc)
         return daemon(args.settle_hours, anchor, args.max_requests, args.max_hours,
-                      args.relabel_after_days, args.retrain_every_hours, args.retrain_min_growth)
+                      args.relabel_after_days, args.retrain_every_hours, args.retrain_min_growth,
+                      statuses=None if args.all_statuses else LABELED)
     if args.cmd == "window":
         s, e = (datetime.strptime(x, "%Y-%m-%dT%H").replace(tzinfo=timezone.utc) for x in (args.start, args.end))
         h = s
