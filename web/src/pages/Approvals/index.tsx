@@ -5,11 +5,13 @@ import { usePendingApprovals, useApprovalActions } from '../../hooks/useApproval
 import { useDecisionData, CLAIM_TYPE_LABELS } from '../../hooks/useDecisions';
 import { tag, useConnected } from '../../hooks/useTable';
 import { CaseReview, escalationChip } from './CaseReview';
+import { useTechMode } from '../../hooks/useTechMode';
+import { plainEscalation } from '../../utils/plainReason';
+import { DataTable, type Column } from '../../ui/DataTable';
 import { openReplay } from '../../replay/useDecisionTrace';
 import { FlowGraph, type GraphNode, type GraphEdge } from '../../ui/FlowGraph';
 import { Drawer, Fact } from '../../ui/Drawer';
 import { Chip } from '../../ui/Chip';
-import { Meter } from '../../ui/charts';
 import { EmptyState } from '../../ui/EmptyState';
 import { SkeletonRows } from '../../ui/Skeleton';
 import { usd } from '../../ui/CountUp';
@@ -19,36 +21,39 @@ import './Approvals.css';
 const AUTO_APPROVE_CONFIDENCE = 95;
 const LOW_CONFIDENCE = 80;
 
-interface RowProps {
-  selected: boolean;
-  onClick: () => void;
-  eyebrow?: string;
+interface QueueItem {
+  key: string;
+  kind: 'case' | 'claim';
+  id: bigint;
   customer: string;
-  cents: bigint;
+  sub: string;
+  cents: number;
   confidence: number | null;
-  chip: { label: string; tone: 'warn' | 'pass' | 'accent'; title?: string };
+  open: boolean;
+  reason: string;
 }
 
-function QueueRow({ selected, onClick, eyebrow, customer, cents, confidence, chip }: RowProps) {
-  return (
-    <button className={`claim-row ${selected ? 'selected' : ''}`} onClick={onClick}>
-      {selected && <motion.span layoutId="approvals-selected" className="claim-row-bg" transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }} />}
-      {eyebrow && <span className="claim-source">{eyebrow}</span>}
-      <span className="claim-row-line">
-        <span className="claim-customer">{customer}</span>
-        <span className="claim-amount">{usd(cents)}</span>
-      </span>
-      <span className="claim-row-line">
-        {confidence !== null ? (
-          <span className="claim-confidence">
-            <Meter value={confidence} threshold={AUTO_APPROVE_CONFIDENCE} label={`Confidence ${confidence.toFixed(1)}% against the ${AUTO_APPROVE_CONFIDENCE}% threshold`} />
-            {confidence.toFixed(confidence % 1 === 0 ? 0 : 1)}%
-          </span>
-        ) : <span />}
-        <Chip tone={chip.tone} title={chip.title}>{chip.label}</Chip>
-      </span>
-    </button>
-  );
+function queueColumns(tech: boolean): Column<QueueItem>[] {
+  const cols: Column<QueueItem>[] = [
+    {
+      key: 'customer', label: 'Customer', width: 'minmax(0, 1fr)', sort: q => q.customer,
+      render: q => <><span className="queue-customer">{q.customer}</span><span className="ui-table-sub">{q.sub}</span></>,
+    },
+    {
+      key: 'status', label: 'Status', width: '124px', sort: q => (q.open ? 0 : 1),
+      render: q => q.open
+        ? <Chip tone="warn" title={tech ? q.reason : undefined}>{tech ? escalationChip(q.reason) : plainEscalation(q.reason)}</Chip>
+        : <Chip tone="pass">Decided</Chip>,
+    },
+    { key: 'amount', label: 'Amount', width: '72px', align: 'right', sort: q => q.cents, render: q => <b className="queue-amount">{usd(q.cents)}</b> },
+  ];
+  if (tech) {
+    cols.splice(2, 0, {
+      key: 'confidence', label: 'Conf.', width: '44px', align: 'right', sort: q => q.confidence ?? -1,
+      render: q => <span className="ui-table-muted">{q.confidence === null ? '—' : `${q.confidence.toFixed(0)}%`}</span>,
+    });
+  }
+  return cols;
 }
 
 function ClaimDetail({ claim, onApprove, onDeny, onEdit }: {
@@ -58,6 +63,7 @@ function ClaimDetail({ claim, onApprove, onDeny, onEdit }: {
   onEdit: (cents: bigint) => void;
 }) {
   const [openNode, setOpenNode] = useState<string | null>(null);
+  const tech = useTechMode();
   const [editMode, setEditMode] = useState(false);
   const [editAmount, setEditAmount] = useState('');
   useEffect(() => { setOpenNode(null); setEditMode(false); }, [claim.id]);
@@ -91,9 +97,11 @@ function ClaimDetail({ claim, onApprove, onDeny, onEdit }: {
             <span className="cr-title-amount">{usd(claim.amountClaimedCents)}</span>
           </div>
           <div className="ui-chips">
-            <Chip tone="warn" title={claim.escalationReason}>{low ? 'Low confidence' : `Below ${AUTO_APPROVE_CONFIDENCE}%`}</Chip>
-            <Chip>Policy {claim.policyVersion}</Chip>
-            <Chip>{claim.modelVersion}</Chip>
+            {tech ? (<>
+              <Chip tone="warn" title={claim.escalationReason}>{low ? 'Low confidence' : `Below ${AUTO_APPROVE_CONFIDENCE}%`}</Chip>
+              <Chip>Policy {claim.policyVersion}</Chip>
+              <Chip>{claim.modelVersion}</Chip>
+            </>) : <Chip tone="warn">Needs review</Chip>}
           </div>
         </div>
         <button className="ui-link-btn" onClick={() => openReplay(`approval:${claim.id}`)}>
@@ -101,11 +109,19 @@ function ClaimDetail({ claim, onApprove, onDeny, onEdit }: {
         </button>
       </div>
 
-      <div className="cr-graph">
-        <div className="ui-section-title">Decision path <span className="cr-hint">click a node for detail</span></div>
-        <FlowGraph key={String(claim.id)} nodes={nodes} edges={edges} height={150} selectedId={openNode} onSelect={setOpenNode} rankSep={56}
-          label={`${claim.passIds.length} passes into System 1 at ${claim.confidencePct}%, below the gate, to human review`} />
-      </div>
+      {tech ? (
+        <div className="cr-graph">
+          <div className="ui-section-title">Decision path <span className="cr-hint">click a node for detail</span></div>
+          <FlowGraph key={String(claim.id)} nodes={nodes} edges={edges} height={150} selectedId={openNode} onSelect={setOpenNode} rankSep={56}
+            label={`${claim.passIds.length} passes into System 1 at ${claim.confidencePct}%, below the gate, to human review`} />
+        </div>
+      ) : (
+        <div className="ui-tiles cr-tiles">
+          <div className="ui-tile"><span className="ui-stat-label">Claimed</span><span className="ui-stat-value">{usd(claim.amountClaimedCents)}</span></div>
+          <div className="ui-tile"><span className="ui-stat-label">Proposed credit</span><span className="ui-stat-value">{usd(claim.proposedAmountCents)}</span></div>
+          <div className="ui-tile"><span className="ui-stat-label">Passes covered</span><span className="ui-stat-value">{claim.passIds.length}</span></div>
+        </div>
+      )}
 
       {editMode ? (
         <div className="cr-form">
@@ -176,6 +192,24 @@ export default function ApprovalsPage() {
     pendingClaims.find(c => c.id === selectedClaimId) || pendingClaims[0] || null,
     [pendingClaims, selectedClaimId]
   );
+  const tech = useTechMode();
+  const columns = useMemo(() => queueColumns(tech), [tech]);
+  const queue = useMemo<QueueItem[]>(() => [
+    ...caseRows.map(c => {
+      const s1 = [...(decisionData.stepsByCase.get(c.id) ?? [])].reverse().find(d => tag(d.system) === 'System1');
+      return {
+        key: `case-${c.id}`, kind: 'case' as const, id: c.id, customer: c.customer,
+        sub: `${c.claimRef} · ${CLAIM_TYPE_LABELS[tag(c.claimType)] ?? ''}`, cents: Number(c.amountClaimedCents),
+        confidence: s1 ? s1.confidencePct : null, open: tag(c.status) === 'Escalated', reason: c.escalationReason,
+      };
+    }),
+    ...pendingClaims.map(claim => ({
+      key: `claim-${claim.id}`, kind: 'claim' as const, id: claim.id, customer: claim.customerName,
+      sub: `${claim.passIds.length} pass${claim.passIds.length === 1 ? '' : 'es'}`, cents: Number(claim.amountClaimedCents),
+      confidence: claim.confidencePct, open: true, reason: claim.escalationReason,
+    })),
+  ], [caseRows, pendingClaims, decisionData.stepsByCase]);
+  const selectedKey = selectedCase ? `case-${selectedCase.id}` : selectedClaim ? `claim-${selectedClaim.id}` : null;
 
   if (!connected) {
     return (
@@ -203,35 +237,18 @@ export default function ApprovalsPage() {
           <span className="ui-eyebrow">Queue</span>
           <span className="approvals-count">{caseRows.filter(c => tag(c.status) === 'Escalated').length + pendingClaims.length}</span>
         </div>
-        {caseRows.map(c => {
-          const s1 = [...(decisionData.stepsByCase.get(c.id) ?? [])].reverse().find(d => tag(d.system) === 'System1');
-          const open = tag(c.status) === 'Escalated';
-          return (
-            <QueueRow
-              key={`case-${c.id}`}
-              selected={selectedCase?.id === c.id}
-              onClick={() => { setSelectedCaseId(c.id); setSelectedClaimId(null); }}
-              eyebrow={`${c.claimRef} · ${CLAIM_TYPE_LABELS[tag(c.claimType)] ?? ''}`}
-              customer={c.customer}
-              cents={c.amountClaimedCents}
-              confidence={s1 ? s1.confidencePct : null}
-              chip={open ? { label: escalationChip(c.escalationReason), tone: 'warn', title: c.escalationReason } : { label: 'Decided', tone: 'pass' }}
-            />
-          );
-        })}
-        {pendingClaims.map(claim => (
-          <QueueRow
-            key={String(claim.id)}
-            selected={!selectedCase && selectedClaim?.id === claim.id}
-            onClick={() => { setSelectedClaimId(claim.id); setSelectedCaseId(null); }}
-            customer={claim.customerName}
-            cents={claim.amountClaimedCents}
-            confidence={claim.confidencePct}
-            chip={claim.confidencePct < LOW_CONFIDENCE
-              ? { label: 'Low confidence', tone: 'warn', title: claim.escalationReason }
-              : { label: `Below ${AUTO_APPROVE_CONFIDENCE}%`, tone: 'accent', title: claim.escalationReason }}
-          />
-        ))}
+        <DataTable
+          rows={queue}
+          columns={columns}
+          rowKey={q => q.key}
+          selectedKey={selectedKey}
+          onRowClick={q => {
+            if (q.kind === 'case') { setSelectedCaseId(q.id); setSelectedClaimId(null); }
+            else { setSelectedClaimId(q.id); setSelectedCaseId(null); }
+          }}
+          label="Approvals queue"
+          className="queue-table"
+        />
       </div>
 
       <motion.div
