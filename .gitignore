@@ -29,3 +29,6 @@ npm-debug.log*
 
 # Generated bindings
 web/src/module_bindings/
+
+# Generated bindings for the attacker script
+server/scripts/module_bindings/
