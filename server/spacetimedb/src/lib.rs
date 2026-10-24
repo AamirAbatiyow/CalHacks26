@@ -10,6 +10,7 @@ pub mod claim;
 pub mod confidence_gate;
 pub mod decision;
 pub mod decision_logic;
+pub mod pipeline;
 pub mod events;
 pub mod kpis;
 pub mod ledger;

@@ -30,6 +30,7 @@ const OVERVIEW_PADDING = 0.12;
 
 const ROUTE_LABELS: Record<DecidedBy, string> = {
   system1: 'Auto-decided',
+  rule: 'Learned rule decided',
   system2: 'System 2 decided',
   human: 'Human decided · retrained',
   pending: 'Escalated · awaiting human',
@@ -207,9 +208,13 @@ function ReplayPanel({ trace, onClose }: { trace: DecisionTrace; onClose: () => 
         </div>
         <div className="replay-header-right">
           <span className={`replay-route tone-${routeTone}`}>{ROUTE_LABELS[trace.decidedBy]}</span>
-          {trace.source === 'seeded' && (
-            <span className="replay-source" title="Example path seeded from this decision's row until the pipeline's audit path is available">
+          {trace.source === 'seeded' ? (
+            <span className="replay-source" title="This historical decision has no recorded pipeline steps; the path is an example seeded from its row">
               seeded path
+            </span>
+          ) : (
+            <span className="replay-source recorded" title="Read from the pipeline_step rows the decision pipeline wrote for this decision">
+              recorded path
             </span>
           )}
           <button className="replay-close" onClick={onClose} title="Close (Esc)" aria-label="Close replay">✕</button>

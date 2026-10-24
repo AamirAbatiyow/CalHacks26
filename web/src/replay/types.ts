@@ -48,7 +48,7 @@ export interface TraceStage {
   href?: string;
 }
 
-export type DecidedBy = 'system1' | 'system2' | 'human' | 'pending';
+export type DecidedBy = 'system1' | 'rule' | 'system2' | 'human' | 'pending';
 
 export interface DecisionTrace {
   /** Stable key used in the `?replay=` hash param, e.g. `audit:12`, `claim:CLM-10021`. */
@@ -80,12 +80,15 @@ export interface DecisionRow {
   modelVersion: string;
   /** Strongest SHAP feature behind System 1's confidence, when known. */
   topFeature?: string;
+  /** Key of the pipeline path this row's decision belongs to, when it differs from `key`. */
+  pipelineKey?: string;
 }
 
 /**
  * One row of the decision pipeline's audit path: which system decided at which
- * stage, at which version, with what verdict. Mirrors the per-step audit log the
- * pipeline records; `traceFromPipeline` is the only place that reads it.
+ * stage, at which version, with what verdict. Mirrors the module's `pipeline_step`
+ * table (`server/spacetimedb/src/pipeline.rs`); `traceFromPipeline` is the only
+ * place that reads it.
  */
 export interface PipelineStepRow {
   decisionKey: string;
@@ -97,4 +100,7 @@ export interface PipelineStepRow {
   confidencePct: number | null;
   amountCents: number | null;
   note: string;
+  /** Quoted text: System 2's rationale, an escalation reason, a rule description. */
+  detail?: string;
+  checks?: ReverifyCheck[];
 }
