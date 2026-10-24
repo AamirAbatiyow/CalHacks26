@@ -362,11 +362,11 @@ The four governing rules (auto-decide at 95%, escalate below 95%, AI cannot edit
 
 | Version | Escalations | Precision | Regressions | Settled automatically | Drift from human credits | Result |
 |---------|-------------|-----------|-------------|-----------------------|--------------------------|--------|
-| v5 (threshold 90%) | 2,788 → 2,291 | 98.89% → 98.92% | 3 | $54,868 | +$548 | Blocked by the 95% floor |
-| v6 (7 rules mined from history) | 2,788 → 1,368 | 98.89% → 99.07% | 0 | $129,833 | $0 | Promoted |
-| v7 (learned from CLM-20003) | 1,370 → 1,367 | 99.07% → 99.07% | 0 | $652 | $0 | Promoted |
+| v5 (threshold 90%) | 2,772 → 2,278 | 98.89% → 98.91% | 4 | $54,700 | +$736 | Blocked by the 95% floor |
+| v6 (7 rules mined from history) | 2,772 → 1,362 | 98.89% → 99.07% | 0 | $129,519 | $0 | Promoted |
+| v7 (learned from CLM-20003) | 1,364 → 1,361 | 99.07% → 99.07% | 0 | $673 | $0 | Promoted |
 
-Live: one decision on CLM-20002 (approve: storm below the exclusion, total loss, integrity passed) produced no rule: 2 of 3 consistent decisions. The same decision on CLM-20003 made 3 with none contradicting, so v7 was proposed. After promotion, a similar new claim (CLM-20009, Kp 5.0, 95% lost) auto-approved at 99% for $175, citing `v7-learned-1` under policy v7.
+Live: one decision on CLM-20002 (approve $300: storm below the exclusion, total loss, integrity passed) produced no rule: 2 of 3 consistent decisions. The same decision on CLM-20003 made 3 with none contradicting, so v7 was proposed. After promotion, a similar new claim (CLM-20009, TrollSat, Kp 5.0, 95% lost) auto-approved at 99% for $325, citing `v7-learned-1` under policy v7. Exact figures move slightly with the seed time.
 
 ### Relation to the decision pipeline
 
