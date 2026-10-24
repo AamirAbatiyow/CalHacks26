@@ -292,7 +292,7 @@ spacetime logs ground-truth --server local -f
 
 The `/ml` directory contains a gradient-boosted model (LightGBM) for predicting satellite pass failures. The model uses real SatNOGS observation outcomes combined with space weather and local conditions to estimate failure probability per pass.
 
-### v3.0.0: final high-precision gate (current)
+### v3.1.0: final high-precision gate (current)
 
 `ml/final_model.py` + `ml/causal_features.py` + `ml/hitl.py` + `ml/satnogs_fetcher.py` combine the three earlier ML
 branches (PR #12 outage streaks, PR #17 past-only station health / co-observation, PR #18 physics features and
@@ -300,11 +300,12 @@ random-window sampling) into one strictly causal model whose only job is to auto
 is very sure and escalate everything else to a human.
 
 **Data.** One continuously running collector (`python -m ml.satnogs_fetcher daemon`, see below) stores whole UTC
-hours of SatNOGS observations, so class mix is natural and every station's pass history is complete. Snapshot used
-for v3.0.0: 18 contiguous hours (2026-10-20 21:00 to 2026-10-21 15:00 UTC, fetched 72h+ after the passes so `failed`/
-`good` have settled), 3,188 observations, 2,406 labeled. After dropping passes whose 1h+6h history window is not
-fully inside the store, **1,467 labeled passes, 304 stations** (806 good, 364 bad, 297 failed; failure = bad or failed,
-base rate 0.45). A commit-sized copy is in `data/processed/satnogs_store_snapshot.parquet`.
+hours of SatNOGS observations, so class mix is natural and every station's pass history is complete. Hours are
+fetched 72h+ after the passes so `failed`/`good` have settled. Snapshot used for v3.1.0 (collector stopped at
+18:00 UTC on 2026-10-24): 35 contiguous hours (2026-10-20 06:00 to 2026-10-21 17:00 UTC), 5,365 observations,
+4,583 labeled, 356 stations. After dropping passes whose 1h+6h history window is not fully inside the store,
+**3,604 labeled passes, 350 stations** (1,973 good, 1,020 bad, 611 failed; failure = bad or failed, base rate 0.45).
+A commit-sized copy is in `data/processed/satnogs_store_snapshot.parquet`.
 
 **Features (all known at pass start).**
 - Physics (PR #18): elevation and margin over the station's mask/culmination limit, duration, azimuth span, antenna
@@ -317,60 +318,70 @@ base rate 0.45). A commit-sized copy is in `data/processed/satnogs_store_snapsho
   transmitter, station×band, station×satellite failed/good shares over the last 6h (PR #17 co-observation,
   PR #18 rates). Satellite target encoding over the same window is **not** used (non-causal, PR #17).
 
-**Model and gate.** LightGBM with monotone constraints on the station outage features, isotonic calibration. The
+**Model and gate.** LightGBM (`full_causal`: physics + causal history), isotonic calibration. The
 auto-"failed" threshold is picked *inside each training fold* on station-grouped out-of-fold scores: the lowest
-threshold whose Wilson lower bound (z = 1.28) of inner precision is ≥ 0.95. Everything below it escalates.
+threshold whose Wilson lower bound (z = 1.28) of inner precision is ≥ 0.95. Everything below it escalates. The
+shipped v3.1.0 fit on all 3,604 passes uses raw score ≥ 0.951 (calibrated probability ≥ 0.904); no OK-side threshold
+met the rule, so v3.1.0 only auto-decides failures and escalation rate = 1 − coverage.
 
 **Held-out results (lag 1h, `ml/reports/final_v3.md`).**
 
-| Split | Auto "failed" calls | Precision | 95% CI (Wilson) | 95% CI (station bootstrap) | Recall (all failures) | Recall `failed` / `bad` | Coverage (share of passes) | AUC |
-|---|---|---|---|---|---|---|---|---|
-| Held-out stations (5 folds) | 70 | **1.000** | 0.948–1.000 | 1.000–1.000 | 10.6% | 19.9% / 3.0% | 4.8% | 0.881 |
-| Future time (last 30%, 3h embargo) | 52 | **0.962** | 0.870–0.989 | 0.896–1.000 | 25.0% | 45.7% / 10.9% | 11.8% | 0.819 |
-| Future time, stations unseen in training | 2 | 0.500 | 0.095–0.905 | – | 3.4% | – | – | – |
+| Split | Auto "failed" calls | Precision | 95% CI (Wilson) | 95% CI (station bootstrap) | Recall (all failures) | Recall `failed` / `bad` | Coverage | Escalated | AUC |
+|---|---|---|---|---|---|---|---|---|---|
+| Held-out stations (5 folds, 3,604 passes) | 380 | **0.979** | 0.959–0.989 | 0.960–0.997 | 22.8% | 39.0% / 13.1% | 10.5% | 87.4% | 0.873 |
+| Future time (last 30%, 3h embargo; train 2,145, test 1,081) | 157 | **0.981** | 0.945–0.993 | 0.950–1.000 | 32.4% | 46.3% / 20.5% | 14.5% | 85.5% | 0.902 |
+| Future time, stations unseen in training (33 passes) | 2 | 1.000 | 0.342–1.000 | – | 12.5% | – | – | – | – |
 
-Accuracy on auto-decided passes equals the precision above (the OK side found no in-fold threshold meeting the rule
-in the time split; on held-out stations it auto-cleared 3.7% of passes at 0.891 precision, so two-sided accuracy is
-0.952). Per-fold precision on held-out stations: 1.000 (n=25), 1.000 (n=28), no calls, 1.000 (n=16), 1.000 (n=1).
+Per-fold precision on held-out stations: 0.979 (n=96), 1.000 (n=54), 0.985 (n=67), 1.000 (n=28), 0.963 (n=135);
+in-fold thresholds 0.926–0.969. In the held-out-station evaluation the OK side also auto-cleared 74 passes at
+0.959, so two-sided coverage is 12.6% and auto-decided accuracy 0.976 (87.4% escalated).
 
 Comparison (same folds and rule; full table incl. other threshold rules in the report):
 
 | Variant | Held-out stations: calls / precision / recall | Future time: calls / precision / recall |
 |---|---|---|
-| physics only | 0 / – / 0% | 0 / – / 0% |
-| PR #12 station state + physics | 41 / 0.927 / 5.7% | 0 / – / 0% |
-| full causal | 40 / 1.000 / 6.1% | 48 / 0.938 / 22.5% |
-| **full causal + monotone (v3.0.0)** | **70 / 1.000 / 10.6%** | **52 / 0.962 / 25.0%** |
-| full causal + monotone, outage-evidence only | 77 / 0.883 / 10.3% | 44 / 0.955 / 21.0% |
-| transparent streak rule | 85 / 0.953 / 12.3% | 0 / – / 0% |
+| physics only | 15 / 1.000 / 0.9% | 81 / 0.926 / 15.8% |
+| PR #12 station state + physics | 213 / 0.972 / 12.7% | 194 / 0.923 / 37.6% |
+| **full causal (v3.1.0)** | **380 / 0.979 / 22.8%** | **157 / 0.981 / 32.4%** |
+| full causal + monotone (v3.0.0 recipe) | 336 / 0.976 / 20.1% | 203 / 0.951 / 40.5% |
+| full causal + monotone, outage-evidence only | 336 / 0.938 / 19.3% | 148 / 0.986 / 30.7% |
+| transparent streak rule | 171 / 0.965 / 10.1% | 47 / 1.000 / 9.9% |
 
-With 3h label latency, history is thinner and the gate becomes very conservative (v3.0.0 recipe: 17 calls at 0.941
-on held-out stations, none in the time split). Honest caveats: 18 hours of one day is a small sample, the CIs are
-wide, the threshold rule (`wilson80`) and variant were chosen by looking at these same folds after an earlier
-smaller run, and recall is lower than PR #12's 0.35 because this gate is stricter (Wilson bound rather than point
-precision) and evaluated on a natural, settled sample. PR curves (the outage-evidence curve coincides with v3.0.0 because it shares its calibrated score): `ml/reports/final_v3_pr_station.png`,
+With 3h label latency history is thinner: v3.1.0's recipe makes 94 calls at 0.904 (0.828–0.949) on held-out stations
+and none in the time split, while the monotone recipe holds up better (121 at 0.967 / 144 at 0.910). v3.1.0 is fit
+for the 1h latency the System 1 worker sees; if outcomes arrive later, retrain with `--lag 3 --variant full_causal_mono`.
+
+**v3.0.0 vs v3.1.0.** v3.0.0 (first push, 18 hours, 1,467 passes) used the monotone variant: 70 calls at 1.000
+(0.948–1.000) on held-out stations, 52 at 0.962 (0.870–0.989) in the time split, 4.8% / 11.8% coverage. With 2.5x
+the data the plain variant has the highest precision in both splits and twice the recall, so v3.1.0 switched.
+v3.0.0 reports are kept as `ml/reports/final_v3_0_0.*` and `hitl_v3_0_0.*`, and its artifact stays in the registry.
+
+Honest caveats: 35 hours over two days is still a small, single-season sample; the rule (`wilson80`) and variant
+were chosen by comparing variants on these same folds, so the chosen model's numbers are slightly optimistic;
+unseen-station precision in the time split rests on 2 calls. PR curves (the outage-evidence curve coincides with
+the monotone one because it shares its calibrated score): `ml/reports/final_v3_pr_station.png`,
 `ml/reports/final_v3_pr_time.png`.
 
 **Human-in-the-loop (`ml/hitl.py`, `ml/reports/hitl_v3.md`).** Each human ruling on an escalated pass becomes a
 labeled example *and* makes that pass's outcome known immediately to later passes' history features. The System 1
 worker calls `ml.hitl.ingest_labeled_decision(features, label, pass_id=..., reviewer=...)`; it appends the ruling to
-`ml/models/final/human_labels.jsonl`, refits, bumps the version (v3.0.0 -> v3.0.1 ...) and registers it in
+`ml/models/final/human_labels.jsonl`, refits, bumps the version (v3.1.0 -> v3.1.1 ...) and registers it in
 `ml/models/final/registry.json`. Refits are warm (continued boosting on the new rulings plus a replay sample,
-0.12s) with a full nested refit (inner OOF -> isotonic + threshold, 1.3s) every 25 rulings. Replay of the last 60%
-of the snapshot in time order (587 initial passes, 880 replayed, rulings arrive 1h after pass end, refit every 2h):
+0.19s) with a full nested refit (inner OOF -> isotonic + threshold, 1.3s) every 25 rulings. Replay of the last 60%
+of the snapshot in time order (1,442 initial passes, 2,162 replayed, rulings arrive 1h after pass end, refit every 2h):
 
-| Mode | Auto "failed" calls | Precision (Wilson CI) | Failures auto-decided, bucket 1 -> 4 | Overall |
-|---|---|---|---|---|
-| frozen | 93 | 0.925 | 18.5% -> 19.8% -> 21.4% -> 28.9% | 22.2% |
-| rulings feed history only | 90 | 0.944 (0.876–0.976) | 18.5% -> 20.8% -> 19.4% -> 28.9% | 22.0% |
-| **warm refit** | 103 | 0.932 (0.866–0.967) | 18.5% -> 23.6% -> 24.3% -> **32.0%** | 24.8% |
-| full refit every 2h | 36 | 0.917 (0.782–0.971) | 18.5% -> 15.1% -> 0.0% -> 2.1% | 8.5% |
+| Mode | Auto "failed" calls | Precision (Wilson CI) | Failures auto-decided, bucket 1 -> 4 | Overall | Escalated |
+|---|---|---|---|---|---|
+| frozen | 215 | 0.981 (0.953–0.993) | 16.8% -> 20.2% -> 26.7% -> 24.0% | 22.0% | 90.1% |
+| rulings feed history only | 210 | 0.976 (0.945–0.990) | 16.0% -> 21.5% -> 25.5% -> 22.3% | 21.3% | 90.3% |
+| **warm refit** | 220 | **0.995 (0.975–0.999)** | 17.2% -> 22.3% -> 21.8% -> **30.0%** | 22.8% | 89.8% |
+| full refit every 2h | 222 | 0.968 (0.936–0.985) | 13.0% -> 22.7% -> 22.2% -> 31.8% | 22.4% | 88.6% |
 
-Warm refits add about 3 points of failure coverage over the frozen model in each later bucket at similar precision.
-Full refits on escalated-only rulings collapse coverage: escalations are the hard cases, so adding only them makes
-the in-fold Wilson bound fail and the gate stops auto-deciding. That is why production uses warm steps plus full
-refits on the whole store (scheduled retrain below), not full refits on rulings alone. The replay precision (0.93)
-is below the 0.95 target; the gate is not yet proven at 0.95 on a small initial training set.
+On the larger snapshot, warm refits keep precision above 0.95 in every bucket (0.98–1.00) and end 6 points above the
+frozen model in the last bucket; full refits on rulings reach similar final coverage at lower precision. On the
+first 18-hour snapshot (v3.0.0) the replay was below target (warm 0.932) and full refits collapsed coverage
+because escalations are the hard cases, which is why production uses warm steps plus scheduled full refits on the
+whole store rather than full refits on rulings alone.
 
 **Serving.**
 
@@ -383,7 +394,7 @@ ingest_labeled_decision(out[0]["features"], "failed", pass_id=out[0]["pass_id"],
 ```
 
 `confidence_percent` feeds `confidence_gate::process_claim_decision`: auto calls carry the measured held-out
-precision (≥ 95), escalations are capped at 94 (clears the 0.90 operating point) or 79.
+precision (97 for v3.1.0), escalations are capped at 94 (clears the 0.90 operating point) or 79.
 
 **Continuous collection and scheduled retrain.** `ml/satnogs_fetcher.py` replaces the three earlier fetchers
 (`fetch_labeled.py` is now a thin shim). It keeps a rolling-hour request budget (70/h, spread evenly, persisted

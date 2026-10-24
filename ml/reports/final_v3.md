@@ -1,142 +1,142 @@
 # Final pass-failure classifier (v3): held-out evaluation
 
-Generated 2026-10-24T15:38:39.728345+00:00 by `python -m ml.final_model evaluate`. Main tables use in-fold threshold rule `wilson80` (Wilson lower bound (z=1.2816) of inner OOF precision >= 0.95); the gate threshold is always picked on station-grouped out-of-fold scores *inside the training fold* and then applied once to the test fold. Failure = SatNOGS status `failed` or `bad`. Precision CIs: Wilson (binomial) and station-cluster bootstrap (resampling stations, 1,000 reps). Coverage = share of all test passes auto-decided as failed.
+Generated 2026-10-24T18:06:55.342554+00:00 by `python -m ml.final_model evaluate`. Main tables use in-fold threshold rule `wilson80` (Wilson lower bound (z=1.2816) of inner OOF precision >= 0.95); the gate threshold is always picked on station-grouped out-of-fold scores *inside the training fold* and then applied once to the test fold. Failure = SatNOGS status `failed` or `bad`. Precision CIs: Wilson (binomial) and station-cluster bootstrap (resampling stations, 1,000 reps). Coverage = share of all test passes auto-decided as failed.
 
 ## Label latency 1h
 
-1467 labeled passes with full 1h+6h history coverage (of 3188 stored observations), 304 stations, span 2026-10-21T04:00 to 2026-10-21T14:56 UTC. Status mix: {'good': 806, 'bad': 364, 'failed': 297}.
+3604 labeled passes with full 1h+6h history coverage (of 5365 stored observations), 350 stations, span 2026-10-20T13:01 to 2026-10-21T16:54 UTC. Status mix: {'good': 1973, 'bad': 1020, 'failed': 611}.
 
 ### Held-out stations (5 station-grouped folds)
 
 | variant | AUC | auto 'failed' calls | precision | 95% CI (Wilson) | 95% CI (station bootstrap) | recall (all failures) | recall failed / bad | coverage | OK side: precision / coverage | accuracy on auto-decided (both sides) |
 |---|---|---|---|---|---|---|---|---|---|---|
-| physics | 0.775 | 0 | – | – | – | 0.0% | 0.0% / 0.0% | 0.0% | – / 0.0% | – |
-| pr12_state | 0.873 | 41 | 0.927 | 0.806–0.975 | 0.812–1.000 | 5.7% | 10.1% / 2.2% | 2.8% | 0.880 / 1.7% | 0.909 |
-| full_causal | 0.878 | 40 | 1.000 | 0.912–1.000 | 1.000–1.000 | 6.1% | 12.5% / 0.8% | 2.7% | 0.919 / 2.5% | 0.961 |
-| full_causal_mono | 0.881 | 70 | 1.000 | 0.948–1.000 | 1.000–1.000 | 10.6% | 19.9% / 3.0% | 4.8% | 0.891 / 3.7% | 0.952 |
-| full_causal_mono_ev | 0.881 | 77 | 0.883 | 0.793–0.937 | 0.766–1.000 | 10.3% | 20.2% / 2.2% | 5.2% | 0.891 / 3.7% | 0.886 |
-| rule_streak | 0.685 | 85 | 0.953 | 0.885–0.982 | 0.843–1.000 | 12.3% | 25.9% / 1.1% | 5.8% | – / 0.0% | 0.953 |
+| physics | 0.726 | 15 | 1.000 | 0.796–1.000 | 1.000–1.000 | 0.9% | 0.5% / 1.2% | 0.4% | – / 0.0% | 1.000 |
+| pr12_state | 0.843 | 213 | 0.972 | 0.940–0.987 | 0.936–0.993 | 12.7% | 22.7% / 6.7% | 5.9% | – / 0.0% | 0.972 |
+| full_causal | 0.873 | 380 | 0.979 | 0.959–0.989 | 0.960–0.997 | 22.8% | 39.0% / 13.1% | 10.5% | 0.959 / 2.1% | 0.976 |
+| full_causal_mono | 0.869 | 336 | 0.976 | 0.954–0.988 | 0.953–0.996 | 20.1% | 35.4% / 11.0% | 9.3% | 0.957 / 3.2% | 0.971 |
+| full_causal_mono_ev | 0.869 | 336 | 0.938 | 0.906–0.959 | 0.880–0.995 | 19.3% | 40.9% / 6.4% | 9.3% | 0.957 / 3.2% | 0.942 |
+| rule_streak | 0.664 | 171 | 0.965 | 0.926–0.984 | 0.892–1.000 | 10.1% | 23.9% / 1.9% | 4.7% | – / 0.0% | 0.965 |
 
 ### Future time (train first 70%, 3h embargo)
 
 | variant | AUC | auto 'failed' calls | precision | 95% CI (Wilson) | 95% CI (station bootstrap) | recall (all failures) | recall failed / bad | coverage | OK side: precision / coverage | accuracy on auto-decided (both sides) |
 |---|---|---|---|---|---|---|---|---|---|---|
-| physics | 0.774 | 0 | – | – | – | 0.0% | 0.0% / 0.0% | 0.0% | – / 0.0% | – |
-| pr12_state | 0.814 | 0 | – | – | – | 0.0% | 0.0% / 0.0% | 0.0% | – / 0.0% | – |
-| full_causal | 0.827 | 48 | 0.938 | 0.832–0.979 | 0.848–1.000 | 22.5% | 40.7% / 10.1% | 10.9% | – / 0.0% | 0.938 |
-| full_causal_mono | 0.819 | 52 | 0.962 | 0.870–0.989 | 0.896–1.000 | 25.0% | 45.7% / 10.9% | 11.8% | – / 0.0% | 0.962 |
-| full_causal_mono_ev | 0.819 | 44 | 0.955 | 0.849–0.987 | 0.884–1.000 | 21.0% | 44.4% / 5.0% | 10.0% | – / 0.0% | 0.955 |
-| rule_streak | 0.680 | 0 | – | – | – | 0.0% | 0.0% / 0.0% | 0.0% | – / 0.0% | – |
+| physics | 0.870 | 81 | 0.926 | 0.848–0.966 | 0.854–0.978 | 15.8% | 14.7% / 16.7% | 7.5% | – / 0.0% | 0.926 |
+| pr12_state | 0.895 | 194 | 0.923 | 0.876–0.953 | 0.868–0.964 | 37.6% | 52.3% / 25.2% | 17.9% | 1.000 / 1.9% | 0.930 |
+| full_causal | 0.902 | 157 | 0.981 | 0.945–0.993 | 0.950–1.000 | 32.4% | 46.3% / 20.5% | 14.5% | – / 0.0% | 0.981 |
+| full_causal_mono | 0.904 | 203 | 0.951 | 0.912–0.973 | 0.905–0.982 | 40.5% | 56.0% / 27.5% | 18.8% | – / 0.0% | 0.951 |
+| full_causal_mono_ev | 0.904 | 148 | 0.986 | 0.952–0.996 | 0.965–1.000 | 30.7% | 60.1% / 5.8% | 13.7% | – / 0.0% | 0.986 |
+| rule_streak | 0.743 | 47 | 1.000 | 0.924–1.000 | 1.000–1.000 | 9.9% | 21.6% / 0.0% | 4.3% | – / 0.0% | 1.000 |
 
 Future time, test stations never seen in training:
 
 | variant | n | auto 'failed' calls | precision | 95% CI (Wilson) | recall |
 |---|---|---|---|---|---|
-| physics | 89 | 0 | – | – | 0.0% |
-| pr12_state | 89 | 0 | – | – | 0.0% |
-| full_causal | 89 | 2 | 0.500 | 0.095–0.905 | 3.4% |
-| full_causal_mono | 89 | 2 | 0.500 | 0.095–0.905 | 3.4% |
-| full_causal_mono_ev | 89 | 2 | 0.500 | 0.095–0.905 | 3.4% |
-| rule_streak | 89 | 0 | – | – | 0.0% |
+| physics | 33 | 0 | – | – | 0.0% |
+| pr12_state | 33 | 4 | 1.000 | 0.510–1.000 | 25.0% |
+| full_causal | 33 | 2 | 1.000 | 0.342–1.000 | 12.5% |
+| full_causal_mono | 33 | 4 | 1.000 | 0.510–1.000 | 25.0% |
+| full_causal_mono_ev | 33 | 3 | 1.000 | 0.438–1.000 | 18.8% |
+| rule_streak | 33 | 0 | – | – | 0.0% |
 
 ### In-fold threshold rule comparison (failed side)
 
 | variant | rule | held-out stations: calls / precision (Wilson CI) / recall | future time: calls / precision (Wilson CI) / recall |
 |---|---|---|---|
 | physics | wilson95 | 0 / – (–) / 0.0% | 0 / – (–) / 0.0% |
-| physics | wilson80 | 0 / – (–) / 0.0% | 0 / – (–) / 0.0% |
-| physics | point97 | 20 / 1.000 (0.839–1.000) / 3.0% | 0 / – (–) / 0.0% |
-| physics | point95 | 22 / 0.955 (0.782–0.992) / 3.2% | 0 / – (–) / 0.0% |
-| pr12_state | wilson95 | 0 / – (–) / 0.0% | 0 / – (–) / 0.0% |
-| pr12_state | wilson80 | 41 / 0.927 (0.806–0.975) / 5.7% | 0 / – (–) / 0.0% |
-| pr12_state | point97 | 89 / 0.921 (0.846–0.961) / 12.4% | 29 / 0.966 (0.828–0.994) / 14.0% |
-| pr12_state | point95 | 128 / 0.922 (0.862–0.957) / 17.9% | 34 / 0.971 (0.851–0.995) / 16.5% |
-| full_causal | wilson95 | 12 / 1.000 (0.757–1.000) / 1.8% | 0 / – (–) / 0.0% |
-| full_causal | wilson80 | 40 / 1.000 (0.912–1.000) / 6.1% | 48 / 0.938 (0.832–0.979) / 22.5% |
-| full_causal | point97 | 91 / 0.956 (0.892–0.983) / 13.2% | 63 / 0.952 (0.869–0.984) / 30.0% |
-| full_causal | point95 | 131 / 0.924 (0.865–0.958) / 18.3% | 64 / 0.953 (0.871–0.984) / 30.5% |
-| full_causal_mono | wilson95 | 12 / 1.000 (0.757–1.000) / 1.8% | 0 / – (–) / 0.0% |
-| full_causal_mono | wilson80 | 70 / 1.000 (0.948–1.000) / 10.6% | 52 / 0.962 (0.870–0.989) / 25.0% |
-| full_causal_mono | point97 | 101 / 0.980 (0.931–0.995) / 15.0% | 54 / 0.963 (0.875–0.990) / 26.0% |
-| full_causal_mono | point95 | 139 / 0.914 (0.855–0.950) / 19.2% | 58 / 0.966 (0.883–0.990) / 28.0% |
-| full_causal_mono_ev | wilson95 | 47 / 0.979 (0.889–0.996) / 7.0% | 0 / – (–) / 0.0% |
-| full_causal_mono_ev | wilson80 | 77 / 0.883 (0.793–0.937) / 10.3% | 44 / 0.955 (0.849–0.987) / 21.0% |
-| full_causal_mono_ev | point97 | 107 / 0.916 (0.848–0.955) / 14.8% | 58 / 0.897 (0.792–0.952) / 26.0% |
-| full_causal_mono_ev | point95 | 145 / 0.890 (0.828–0.931) / 19.5% | 72 / 0.861 (0.763–0.923) / 31.0% |
-| rule_streak | wilson95 | 0 / – (–) / 0.0% | 0 / – (–) / 0.0% |
-| rule_streak | wilson80 | 85 / 0.953 (0.885–0.982) / 12.3% | 0 / – (–) / 0.0% |
-| rule_streak | point97 | 85 / 0.953 (0.885–0.982) / 12.3% | 44 / 0.909 (0.788–0.964) / 20.0% |
-| rule_streak | point95 | 102 / 0.941 (0.878–0.973) / 14.5% | 44 / 0.909 (0.788–0.964) / 20.0% |
+| physics | wilson80 | 15 / 1.000 (0.796–1.000) / 0.9% | 81 / 0.926 (0.848–0.966) / 15.8% |
+| physics | point97 | 26 / 1.000 (0.871–1.000) / 1.6% | 92 / 0.935 (0.865–0.970) / 18.1% |
+| physics | point95 | 73 / 0.973 (0.905–0.992) / 4.4% | 123 / 0.927 (0.867–0.961) / 23.9% |
+| pr12_state | wilson95 | 164 / 0.982 (0.948–0.994) / 9.9% | 0 / – (–) / 0.0% |
+| pr12_state | wilson80 | 213 / 0.972 (0.940–0.987) / 12.7% | 194 / 0.923 (0.876–0.953) / 37.6% |
+| pr12_state | point97 | 215 / 0.972 (0.940–0.987) / 12.8% | 194 / 0.923 (0.876–0.953) / 37.6% |
+| pr12_state | point95 | 360 / 0.972 (0.950–0.985) / 21.5% | 244 / 0.906 (0.863–0.936) / 46.4% |
+| full_causal | wilson95 | 168 / 0.976 (0.940–0.991) / 10.1% | 115 / 1.000 (0.968–1.000) / 24.2% |
+| full_causal | wilson80 | 380 / 0.979 (0.959–0.989) / 22.8% | 157 / 0.981 (0.945–0.993) / 32.4% |
+| full_causal | point97 | 366 / 0.984 (0.965–0.992) / 22.1% | 157 / 0.981 (0.945–0.993) / 32.4% |
+| full_causal | point95 | 498 / 0.954 (0.932–0.969) / 29.1% | 266 / 0.906 (0.865–0.936) / 50.6% |
+| full_causal_mono | wilson95 | 268 / 0.981 (0.957–0.992) / 16.1% | 154 / 0.974 (0.935–0.990) / 31.5% |
+| full_causal_mono | wilson80 | 336 / 0.976 (0.954–0.988) / 20.1% | 203 / 0.951 (0.912–0.973) / 40.5% |
+| full_causal_mono | point97 | 296 / 0.976 (0.952–0.988) / 17.7% | 190 / 0.958 (0.919–0.979) / 38.2% |
+| full_causal_mono | point95 | 459 / 0.965 (0.944–0.978) / 27.2% | 244 / 0.922 (0.882–0.950) / 47.3% |
+| full_causal_mono_ev | wilson95 | 266 / 0.966 (0.937–0.982) / 15.8% | 0 / – (–) / 0.0% |
+| full_causal_mono_ev | wilson80 | 336 / 0.938 (0.906–0.959) / 19.3% | 148 / 0.986 (0.952–0.996) / 30.7% |
+| full_causal_mono_ev | point97 | 334 / 0.937 (0.906–0.959) / 19.2% | 150 / 0.980 (0.943–0.993) / 30.9% |
+| full_causal_mono_ev | point95 | 391 / 0.941 (0.913–0.960) / 22.6% | 152 / 0.974 (0.934–0.990) / 31.1% |
+| rule_streak | wilson95 | 66 / 1.000 (0.945–1.000) / 4.0% | 0 / – (–) / 0.0% |
+| rule_streak | wilson80 | 171 / 0.965 (0.926–0.984) / 10.1% | 47 / 1.000 (0.924–1.000) / 9.9% |
+| rule_streak | point97 | 201 / 0.930 (0.886–0.958) / 11.5% | 66 / 1.000 (0.945–1.000) / 13.9% |
+| rule_streak | point95 | 287 / 0.892 (0.851–0.923) / 15.7% | 66 / 1.000 (0.945–1.000) / 13.9% |
 
-Per-fold precision of `full_causal_mono` on held-out stations (wilson80): 1.000 (n=25), 1.000 (n=28), – (n=0), 1.000 (n=16), 1.000 (n=1)
+Per-fold precision of `full_causal` on held-out stations (wilson80): 0.979 (n=96), 1.000 (n=54), 0.985 (n=67), 1.000 (n=28), 0.963 (n=135)
 
 ## Label latency 3h
 
-1216 labeled passes with full 3h+6h history coverage (of 3188 stored observations), 288 stations, span 2026-10-21T06:01 to 2026-10-21T14:56 UTC. Status mix: {'good': 675, 'bad': 293, 'failed': 248}.
+3390 labeled passes with full 3h+6h history coverage (of 5365 stored observations), 348 stations, span 2026-10-20T15:00 to 2026-10-21T16:54 UTC. Status mix: {'good': 1858, 'bad': 947, 'failed': 585}.
 
 ### Held-out stations (5 station-grouped folds)
 
 | variant | AUC | auto 'failed' calls | precision | 95% CI (Wilson) | 95% CI (station bootstrap) | recall (all failures) | recall failed / bad | coverage | OK side: precision / coverage | accuracy on auto-decided (both sides) |
 |---|---|---|---|---|---|---|---|---|---|---|
-| physics | 0.777 | 0 | – | – | – | 0.0% | 0.0% / 0.0% | 0.0% | – / 0.0% | – |
-| pr12_state | 0.846 | 10 | 1.000 | 0.722–1.000 | 1.000–1.000 | 1.8% | 2.4% / 1.4% | 0.8% | 1.000 / 0.1% | 1.000 |
-| full_causal | 0.853 | 8 | 0.875 | 0.529–0.978 | 0.500–1.000 | 1.3% | 0.4% / 2.0% | 0.7% | 0.939 / 2.7% | 0.927 |
-| full_causal_mono | 0.855 | 17 | 0.941 | 0.730–0.990 | 0.714–1.000 | 3.0% | 3.2% / 2.7% | 1.4% | 1.000 / 0.2% | 0.947 |
-| full_causal_mono_ev | 0.855 | 36 | 0.917 | 0.782–0.971 | 0.812–1.000 | 6.1% | 11.3% / 1.7% | 3.0% | 1.000 / 0.2% | 0.921 |
-| rule_streak | 0.645 | 28 | 0.750 | 0.566–0.873 | 0.650–1.000 | 3.9% | 5.6% / 2.4% | 2.3% | – / 0.0% | 0.750 |
+| physics | 0.781 | 11 | 1.000 | 0.741–1.000 | 1.000–1.000 | 0.7% | 0.2% / 1.1% | 0.3% | – / 0.0% | 1.000 |
+| pr12_state | 0.835 | 70 | 0.943 | 0.862–0.978 | 0.841–1.000 | 4.3% | 5.0% / 3.9% | 2.1% | – / 0.0% | 0.943 |
+| full_causal | 0.868 | 94 | 0.904 | 0.828–0.949 | 0.806–1.000 | 5.5% | 8.5% / 3.7% | 2.8% | – / 0.0% | 0.904 |
+| full_causal_mono | 0.866 | 121 | 0.967 | 0.918–0.987 | 0.920–1.000 | 7.6% | 12.5% / 4.6% | 3.6% | 0.909 / 0.6% | 0.958 |
+| full_causal_mono_ev | 0.866 | 108 | 0.917 | 0.849–0.956 | 0.842–1.000 | 6.5% | 12.8% / 2.5% | 3.2% | 0.909 / 0.6% | 0.915 |
+| rule_streak | 0.632 | 161 | 0.907 | 0.852–0.943 | 0.818–1.000 | 9.5% | 19.1% / 3.6% | 4.7% | – / 0.0% | 0.907 |
 
 ### Future time (train first 70%, 3h embargo)
 
 | variant | AUC | auto 'failed' calls | precision | 95% CI (Wilson) | 95% CI (station bootstrap) | recall (all failures) | recall failed / bad | coverage | OK side: precision / coverage | accuracy on auto-decided (both sides) |
 |---|---|---|---|---|---|---|---|---|---|---|
-| physics | 0.739 | 0 | – | – | – | 0.0% | 0.0% / 0.0% | 0.0% | – / 0.0% | – |
-| pr12_state | 0.763 | 0 | – | – | – | 0.0% | 0.0% / 0.0% | 0.0% | – / 0.0% | – |
-| full_causal | 0.804 | 0 | – | – | – | 0.0% | 0.0% / 0.0% | 0.0% | – / 0.0% | – |
-| full_causal_mono | 0.800 | 0 | – | – | – | 0.0% | 0.0% / 0.0% | 0.0% | – / 0.0% | – |
-| full_causal_mono_ev | 0.800 | 0 | – | – | – | 0.0% | 0.0% / 0.0% | 0.0% | – / 0.0% | – |
-| rule_streak | 0.644 | 0 | – | – | – | 0.0% | 0.0% / 0.0% | 0.0% | – / 0.0% | – |
+| physics | 0.871 | 0 | – | – | – | 0.0% | 0.0% / 0.0% | 0.0% | 0.955 / 2.2% | 0.955 |
+| pr12_state | 0.893 | 0 | – | – | – | 0.0% | 0.0% / 0.0% | 0.0% | – / 0.0% | – |
+| full_causal | 0.887 | 0 | – | – | – | 0.0% | 0.0% / 0.0% | 0.0% | – / 0.0% | – |
+| full_causal_mono | 0.887 | 144 | 0.910 | 0.852–0.946 | 0.835–0.963 | 28.8% | 39.4% / 20.6% | 14.2% | 0.985 / 6.4% | 0.933 |
+| full_causal_mono_ev | 0.887 | 0 | – | – | – | 0.0% | 0.0% / 0.0% | 0.0% | 0.985 / 6.4% | 0.985 |
+| rule_streak | 0.734 | 29 | 1.000 | 0.883–1.000 | 1.000–1.000 | 6.4% | 13.6% / 0.8% | 2.9% | – / 0.0% | 1.000 |
 
 Future time, test stations never seen in training:
 
 | variant | n | auto 'failed' calls | precision | 95% CI (Wilson) | recall |
 |---|---|---|---|---|---|
-| physics | 108 | 0 | – | – | 0.0% |
-| pr12_state | 108 | 0 | – | – | 0.0% |
-| full_causal | 108 | 0 | – | – | 0.0% |
-| full_causal_mono | 108 | 0 | – | – | 0.0% |
-| full_causal_mono_ev | 108 | 0 | – | – | 0.0% |
-| rule_streak | 108 | 0 | – | – | 0.0% |
+| physics | 36 | 0 | – | – | 0.0% |
+| pr12_state | 36 | 0 | – | – | 0.0% |
+| full_causal | 36 | 0 | – | – | 0.0% |
+| full_causal_mono | 36 | 1 | 1.000 | 0.207–1.000 | 5.9% |
+| full_causal_mono_ev | 36 | 0 | – | – | 0.0% |
+| rule_streak | 36 | 0 | – | – | 0.0% |
 
 ### In-fold threshold rule comparison (failed side)
 
 | variant | rule | held-out stations: calls / precision (Wilson CI) / recall | future time: calls / precision (Wilson CI) / recall |
 |---|---|---|---|
 | physics | wilson95 | 0 / – (–) / 0.0% | 0 / – (–) / 0.0% |
-| physics | wilson80 | 0 / – (–) / 0.0% | 0 / – (–) / 0.0% |
-| physics | point97 | 5 / 1.000 (0.566–1.000) / 0.9% | 7 / 0.714 (0.359–0.918) / 3.0% |
-| physics | point95 | 5 / 1.000 (0.566–1.000) / 0.9% | 7 / 0.714 (0.359–0.918) / 3.0% |
+| physics | wilson80 | 11 / 1.000 (0.741–1.000) / 0.7% | 0 / – (–) / 0.0% |
+| physics | point97 | 56 / 1.000 (0.936–1.000) / 3.7% | 6 / 1.000 (0.610–1.000) / 1.3% |
+| physics | point95 | 79 / 0.975 (0.912–0.993) / 5.0% | 166 / 0.886 (0.828–0.925) / 32.3% |
 | pr12_state | wilson95 | 0 / – (–) / 0.0% | 0 / – (–) / 0.0% |
-| pr12_state | wilson80 | 10 / 1.000 (0.722–1.000) / 1.8% | 0 / – (–) / 0.0% |
-| pr12_state | point97 | 52 / 0.981 (0.899–0.997) / 9.4% | 19 / 0.842 (0.624–0.945) / 9.6% |
-| pr12_state | point95 | 82 / 0.963 (0.898–0.987) / 14.6% | 51 / 0.863 (0.743–0.932) / 26.3% |
+| pr12_state | wilson80 | 70 / 0.943 (0.862–0.978) / 4.3% | 0 / – (–) / 0.0% |
+| pr12_state | point97 | 140 / 0.964 (0.919–0.985) / 8.8% | 4 / 1.000 (0.510–1.000) / 0.9% |
+| pr12_state | point95 | 188 / 0.957 (0.918–0.978) / 11.7% | 217 / 0.899 (0.851–0.932) / 42.9% |
 | full_causal | wilson95 | 0 / – (–) / 0.0% | 0 / – (–) / 0.0% |
-| full_causal | wilson80 | 8 / 0.875 (0.529–0.978) / 1.3% | 0 / – (–) / 0.0% |
-| full_causal | point97 | 31 / 0.903 (0.751–0.967) / 5.2% | 22 / 0.909 (0.722–0.975) / 12.0% |
-| full_causal | point95 | 49 / 0.918 (0.808–0.968) / 8.3% | 36 / 0.889 (0.747–0.956) / 19.2% |
-| full_causal_mono | wilson95 | 0 / – (–) / 0.0% | 0 / – (–) / 0.0% |
-| full_causal_mono | wilson80 | 17 / 0.941 (0.730–0.990) / 3.0% | 0 / – (–) / 0.0% |
-| full_causal_mono | point97 | 28 / 0.964 (0.823–0.994) / 5.0% | 16 / 0.938 (0.717–0.989) / 9.0% |
-| full_causal_mono | point95 | 53 / 0.962 (0.872–0.990) / 9.4% | 70 / 0.843 (0.740–0.910) / 35.3% |
+| full_causal | wilson80 | 94 / 0.904 (0.828–0.949) / 5.5% | 0 / – (–) / 0.0% |
+| full_causal | point97 | 166 / 0.946 (0.900–0.971) / 10.2% | 119 / 0.924 (0.862–0.960) / 24.2% |
+| full_causal | point95 | 331 / 0.949 (0.919–0.968) / 20.5% | 184 / 0.897 (0.844–0.933) / 36.3% |
+| full_causal_mono | wilson95 | 16 / 0.938 (0.717–0.989) / 1.0% | 0 / – (–) / 0.0% |
+| full_causal_mono | wilson80 | 121 / 0.967 (0.918–0.987) / 7.6% | 144 / 0.910 (0.852–0.946) / 28.8% |
+| full_causal_mono | point97 | 127 / 0.976 (0.933–0.992) / 8.1% | 144 / 0.910 (0.852–0.946) / 28.8% |
+| full_causal_mono | point95 | 254 / 0.961 (0.929–0.978) / 15.9% | 192 / 0.911 (0.863–0.944) / 38.5% |
 | full_causal_mono_ev | wilson95 | 0 / – (–) / 0.0% | 0 / – (–) / 0.0% |
-| full_causal_mono_ev | wilson80 | 36 / 0.917 (0.782–0.971) / 6.1% | 0 / – (–) / 0.0% |
-| full_causal_mono_ev | point97 | 72 / 0.903 (0.813–0.952) / 12.0% | 8 / 1.000 (0.676–1.000) / 4.8% |
-| full_causal_mono_ev | point95 | 100 / 0.890 (0.814–0.937) / 16.5% | 8 / 1.000 (0.676–1.000) / 4.8% |
-| rule_streak | wilson95 | 0 / – (–) / 0.0% | 0 / – (–) / 0.0% |
-| rule_streak | wilson80 | 28 / 0.750 (0.566–0.873) / 3.9% | 0 / – (–) / 0.0% |
-| rule_streak | point97 | 50 / 0.860 (0.738–0.930) / 7.9% | 24 / 0.792 (0.595–0.908) / 11.4% |
-| rule_streak | point95 | 75 / 0.907 (0.820–0.954) / 12.6% | 32 / 0.844 (0.682–0.931) / 16.2% |
+| full_causal_mono_ev | wilson80 | 108 / 0.917 (0.849–0.956) / 6.5% | 0 / – (–) / 0.0% |
+| full_causal_mono_ev | point97 | 174 / 0.948 (0.905–0.973) / 10.8% | 81 / 0.988 (0.933–0.998) / 17.6% |
+| full_causal_mono_ev | point95 | 249 / 0.936 (0.898–0.960) / 15.2% | 97 / 0.979 (0.928–0.994) / 20.9% |
+| rule_streak | wilson95 | 134 / 0.888 (0.824–0.931) / 7.8% | 0 / – (–) / 0.0% |
+| rule_streak | wilson80 | 161 / 0.907 (0.852–0.943) / 9.5% | 29 / 1.000 (0.883–1.000) / 6.4% |
+| rule_streak | point97 | 166 / 0.910 (0.856–0.944) / 9.9% | 40 / 0.975 (0.871–0.996) / 8.6% |
+| rule_streak | point95 | 173 / 0.913 (0.862–0.947) / 10.3% | 40 / 0.975 (0.871–0.996) / 8.6% |
 
-Per-fold precision of `full_causal_mono` on held-out stations (wilson80): 1.000 (n=9), – (n=0), – (n=0), – (n=0), 0.875 (n=8)
+Per-fold precision of `full_causal` on held-out stations (wilson80): – (n=0), 0.946 (n=37), 0.877 (n=57), – (n=0), – (n=0)
 
 ![held-out stations PR](final_v3_pr_station.png)
 

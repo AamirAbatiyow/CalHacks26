@@ -73,7 +73,7 @@ VARIANTS: Dict[str, dict] = {
     "full_causal_mono_ev": {"numeric": cf.FEATURES_NUMERIC, "monotone": True, "evidence": True},
     "rule_streak": {"rule": True},
 }
-FINAL_VARIANT = "full_causal_mono"
+FINAL_VARIANT = "full_causal"
 
 
 # --------------------------------------------------------------------------- data
