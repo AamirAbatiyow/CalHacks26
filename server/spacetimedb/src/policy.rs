@@ -341,23 +341,13 @@ pub fn seed_initial_policies(ctx: &ReducerContext) {
     });
 
     let rules = [
-        ("Auto-approve under $500", "Automatically approve credits under $500 for verified customers", 
+        ("AI confidence threshold", "Auto-approve when AI confidence is at or above 95%; anything lower escalates",
          r#"permit(
-  principal,
-  action == Action::"approve_credit",
-  resource
-) when {
-  resource.amount_cents < 50000 &&
-  principal.verified == true
-};"#),
-        ("Block high-value during storms", "Require manual review for high-value passes during geomagnetic storms",
-         r#"forbid(
   principal,
   action == Action::"auto_approve",
   resource
 ) when {
-  context.kp_index >= 7 &&
-  resource.amount_cents > 100000
+  context.ai_confidence >= 0.95
 };"#),
         ("Escalate repeated disputes", "Escalate if customer has 3+ disputes in 30 days",
          r#"permit(
@@ -367,24 +357,10 @@ pub fn seed_initial_policies(ctx: &ReducerContext) {
 ) when {
   principal.dispute_count_30d >= 3
 };"#),
-        ("AI confidence threshold", "Auto-approve when AI confidence exceeds 95%",
-         r#"permit(
-  principal,
-  action == Action::"auto_approve",
-  resource
-) when {
-  context.ai_confidence >= 0.95
-};"#),
     ];
 
     for version_id in ["v1", "v2", "v3", "v4", "v5"] {
-        let rule_count = match version_id {
-            "v1" => 1,
-            "v2" => 2,
-            "v3" => 3,
-            "v4" | "v5" => 4,
-            _ => 4,
-        };
+        let rule_count = if version_id == "v1" { 1 } else { 2 };
 
         for (i, (name, desc, code)) in rules.iter().enumerate().take(rule_count) {
             ctx.db.cedar_rule().insert(CedarRule {
@@ -400,7 +376,7 @@ pub fn seed_initial_policies(ctx: &ReducerContext) {
     }
 
     ctx.db.cedar_rule().insert(CedarRule {
-        id: "v5-r5".to_string(),
+        id: "v5-r3".to_string(),
         policy_version_id: "v5".to_string(),
         name: "Lower AI threshold".to_string(),
         description: "Auto-approve when AI confidence exceeds 90% (proposed change)".to_string(),
@@ -412,7 +388,7 @@ pub fn seed_initial_policies(ctx: &ReducerContext) {
   context.ai_confidence >= 0.90
 };"#.to_string(),
         enabled: true,
-        order_index: 4,
+        order_index: 2,
     });
 
     ctx.db.policy_replay().insert(PolicyReplay {
