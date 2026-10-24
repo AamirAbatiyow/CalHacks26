@@ -12,6 +12,7 @@ pub enum AttackType {
     MessyData,
     ModelStress,
     Recovery,
+    PromptInjection,
 }
 
 #[derive(SpacetimeType, Clone, Copy, PartialEq, Eq, Debug)]
@@ -122,6 +123,7 @@ fn attack_type_name(attack_type: AttackType) -> &'static str {
         AttackType::MessyData => "Messy data",
         AttackType::ModelStress => "Model stress",
         AttackType::Recovery => "Recovery",
+        AttackType::PromptInjection => "Prompt injection",
     }
 }
 
@@ -396,6 +398,7 @@ pub fn targeted_checks(attack_type: AttackType) -> &'static [Check] {
         SpaceWeatherExcuse => &[Check::WeatherExcuse],
         ContractOutsideSla => &[Check::InvalidPass],
         MessyData => &[Check::MessyData],
+        PromptInjection => &[],
         Recovery => &[
             Check::Inflated,
             Check::Duplicate,
