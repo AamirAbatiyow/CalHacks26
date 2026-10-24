@@ -44,6 +44,8 @@ export interface HistoryRow {
 
 export const REVIEWERS = ['a.okafor', 'm.lindqvist', 'r.sato', 'j.alvarez', 'p.nair', 'k.brandt', 'e.moreau', 's.haddad'];
 const DAY = 86_400_000_000;
+/** Contacts are billed per minute at the AWS Ground Station narrowband or wideband rate (fixtures/contracts.json). */
+const PASS_MINUTES = 12;
 
 function rng(seed: number) {
   let a = seed >>> 0;
@@ -77,9 +79,9 @@ function snapshotFor(s: Spec, ref: string): Snapshot {
   const kp = s.storm ? 5.2 + ((s.lossPct * 7) % 25) / 10 : 1.5 + ((s.lossPct * 3) % 28) / 10;
   const ml = mlFailureProxy(kp, s.elevation, s.dropRate, s.maintenance, s.storm && kp > 6.5);
   const entitled = entitledCreditCents(s.revenue, s.contract.credit_pct, s.claimType, s.lossPct, s.contract.max_credit_cents);
-  const amount = Math.max(1000, Math.round((entitled || s.revenue * 0.2) * s.amountFactor));
+  const amount = Math.max(100, Math.round((entitled || s.revenue * 0.2) * s.amountFactor));
   const passId = passSeq++;
-  const duration = 12;
+  const duration = PASS_MINUTES;
   const start = s.at - 3 * DAY;
   const days = s.withinWindow ? 2 : s.contract.claim_window_days + 9;
   return {
@@ -194,7 +196,7 @@ export function generateHistory(opts: HistoryOptions = {}): HistoryRow[] {
       amountFactor: rand() < 0.06 ? 2.5 + rand() * 1.5 : 0.8 + rand() * 0.5,
       dropRate: rand() * 0.3,
       elevation: 15 + rand() * 70,
-      revenue: 300_000 + Math.floor(rand() * 600_000),
+      revenue: PASS_MINUTES * (rand() < 0.5 ? 1500 : 2500),
       at: now - Math.floor((180 * (count - i)) / count * DAY) - Math.floor(rand() * DAY),
     };
     const draft = snapshotFor(spec, 'probe');
@@ -207,7 +209,7 @@ export function generateHistory(opts: HistoryOptions = {}): HistoryRow[] {
   const niche = (contract: string, lossPct: number, approve: boolean, reason: string, decisive: string[], reviewer: string, daysAgo: number) => {
     const spec: Spec = {
       claimType: 'degraded_link', contract: CONTRACTS.find(c => c.customer === contract)!, storm: true, lossPct, passOk: true,
-      maintenance: false, withinWindow: true, amountFactor: 1, dropRate: 0.08, elevation: 38, revenue: 520_000, at: now - daysAgo * DAY,
+      maintenance: false, withinWindow: true, amountFactor: 1, dropRate: 0.08, elevation: 38, revenue: PASS_MINUTES * 2500, at: now - daysAgo * DAY,
     };
     rows.push(row(spec, rows.length, approve, reason, decisive, reviewer));
   };
