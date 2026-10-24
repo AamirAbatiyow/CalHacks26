@@ -4,6 +4,7 @@ import { PassStatus, FlareClass } from '../types';
 import { SPACETIMEDB_HOST, SPACETIMEDB_MODULE } from '../config';
 import { DbConnection, tables, type SubscriptionHandle } from '../module_bindings';
 import { Timestamp } from 'spacetimedb';
+import { tag } from './useTable';
 
 function extractMicros(timestamp: unknown): bigint {
   if (timestamp instanceof Timestamp) {
@@ -28,37 +29,21 @@ function extractMicros(timestamp: unknown): bigint {
 export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'error';
 
 function mapPassStatus(status: unknown): PassStatus {
-  if (typeof status === 'string') {
-    switch (status) {
-      case 'Active': return PassStatus.Active;
-      case 'Ok': return PassStatus.Ok;
-      case 'Dropped': return PassStatus.Dropped;
-      default: return PassStatus.Scheduled;
-    }
+  switch (tag(status)) {
+    case 'Active': return PassStatus.Active;
+    case 'Ok': return PassStatus.Ok;
+    case 'Dropped': return PassStatus.Dropped;
+    default: return PassStatus.Scheduled;
   }
-  if (typeof status === 'object' && status !== null) {
-    if ('Active' in status) return PassStatus.Active;
-    if ('Ok' in status) return PassStatus.Ok;
-    if ('Dropped' in status) return PassStatus.Dropped;
-  }
-  return PassStatus.Scheduled;
 }
 
 function mapFlareClass(flare: unknown): FlareClass {
-  if (typeof flare === 'string') {
-    switch (flare) {
-      case 'C': return FlareClass.C;
-      case 'M': return FlareClass.M;
-      case 'X': return FlareClass.X;
-      default: return FlareClass.None;
-    }
+  switch (tag(flare)) {
+    case 'C': return FlareClass.C;
+    case 'M': return FlareClass.M;
+    case 'X': return FlareClass.X;
+    default: return FlareClass.None;
   }
-  if (typeof flare === 'object' && flare !== null) {
-    if ('C' in flare) return FlareClass.C;
-    if ('M' in flare) return FlareClass.M;
-    if ('X' in flare) return FlareClass.X;
-  }
-  return FlareClass.None;
 }
 
 export function useSpacetimeDB() {
