@@ -7,6 +7,7 @@ import { PlaybackBar } from './components/PlaybackBar';
 import { useSpacetimeDB } from './hooks/useSpacetimeDB';
 import { useHashPage } from './hooks/useHashPage';
 import ClaimPage from './pages/Claim';
+import ApprovalsPage from './pages/Approvals';
 import FinancePage from './pages/Finance';
 import PoliciesPage from './pages/Policies';
 import BreakItPage from './pages/BreakIt';
@@ -87,6 +88,8 @@ function App() {
     switch (page) {
       case 'claims':
         return <ClaimPage />;
+      case 'approvals':
+        return <ApprovalsPage />;
       case 'finance':
         return <FinancePage key="summary" initialTab="summary" />;
       case 'ledger':

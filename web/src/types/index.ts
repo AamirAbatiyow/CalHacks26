@@ -32,6 +32,14 @@ export const DecisionOutcome = {
 } as const;
 export type DecisionOutcome = (typeof DecisionOutcome)[keyof typeof DecisionOutcome];
 
+export const EscalatedClaimStatus = {
+  Pending: 'Pending',
+  Approved: 'Approved',
+  Denied: 'Denied',
+  Edited: 'Edited',
+} as const;
+export type EscalatedClaimStatus = (typeof EscalatedClaimStatus)[keyof typeof EscalatedClaimStatus];
+
 export interface Station {
   id: string;
   name: string;
@@ -95,6 +103,19 @@ export interface DecisionRecord {
   reason: string;
   policyVersion: string;
   modelVersion: string;
+}
+
+export interface EscalatedClaim {
+  id: bigint;
+  customerName: string;
+  amountClaimedCents: bigint;
+  proposedAmountCents: bigint;
+  confidencePct: number;
+  escalationReason: string;
+  status: EscalatedClaimStatus;
+  policyVersion: string;
+  modelVersion: string;
+  createdAt: bigint;
 }
 
 export interface LayerState {

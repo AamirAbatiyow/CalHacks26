@@ -1,4 +1,5 @@
 import type { PageId } from '../hooks/useHashPage';
+import { usePendingApprovals } from '../hooks/useApprovals';
 import './Sidebar.css';
 
 export type { PageId };
@@ -13,7 +14,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: 'overview', label: 'Overview', icon: '⌂', enabled: true },
   { id: 'claims', label: 'Claims', icon: '⚡', enabled: true },
-  { id: 'approvals', label: 'Approvals', icon: '☐', enabled: false },
+  { id: 'approvals', label: 'Approvals', icon: '☐', enabled: true },
   { id: 'customers', label: 'Customers', icon: '⚇', enabled: false },
   { id: 'finance', label: 'Finance', icon: '$', enabled: true },
   { id: 'ledger', label: 'Ledger', icon: '≡', enabled: true },
@@ -28,6 +29,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({ activePage, onNavigate }: SidebarProps) {
+  const pendingApprovalsCount = usePendingApprovals().length;
+
   return (
     <nav className="sidebar">
       <div className="sidebar-logo">
@@ -42,7 +45,12 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
             disabled={!item.enabled}
             title={item.label}
           >
-            <span className="sidebar-icon">{item.icon}</span>
+            <span className="sidebar-icon-wrapper">
+              <span className="sidebar-icon">{item.icon}</span>
+              {item.id === 'approvals' && pendingApprovalsCount > 0 && (
+                <span className="sidebar-badge">{pendingApprovalsCount > 99 ? '99+' : pendingApprovalsCount}</span>
+              )}
+            </span>
             <span className="sidebar-label">{item.label}</span>
           </button>
         ))}

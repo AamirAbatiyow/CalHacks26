@@ -87,6 +87,19 @@ else
   "$SPACETIME" call "$MODULE" seed_demo_claim --server "$SERVER" || true
 fi
 
+# Approvals: claims the confidence gate escalated for human review
+echo "Seeding escalated claims..."
+jq -c '.[]' "$FIXTURES_DIR/claims.json" | while read -r claim; do
+  "$SPACETIME" call "$MODULE" seed_escalated_claim --server "$SERVER" -- \
+    "$(echo "$claim" | jq '.customer_name')" \
+    "$(echo "$claim" | jq '.amount_claimed_cents')" \
+    "$(echo "$claim" | jq '.proposed_amount_cents')" \
+    "$(echo "$claim" | jq '.confidence_pct')" \
+    "$(echo "$claim" | jq '.escalation_reason')" \
+    "$(echo "$claim" | jq '.policy_version')" \
+    "$(echo "$claim" | jq '.model_version')" || true
+done
+
 # Break It: answer-key fixtures plus one completed run
 echo "Seeding attack fixtures..."
 "$SPACETIME" call "$MODULE" seed_attack_fixtures --server "$SERVER" || true
