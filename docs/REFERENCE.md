@@ -1,4 +1,6 @@
-# Ground Truth
+# Ground Truth: full reference
+
+The complete technical reference: architecture detail, every measured result, tables, reducers, KPI formulas and seed inputs. The [README](../README.md) is the short version.
 
 **An AI dispute and billing analyst for satellite ground-station operators.** It decides SLA credit claims from orbital, telemetry, space-weather and contract evidence; it decides on its own only when it is at least 95% confident and Cedar policy permits; and it learns new, versioned policy from every human ruling without ever relaxing that gate.
 
@@ -338,8 +340,8 @@ Annualized from main's run: dispute cost ~$65M (12 x credits plus revenue at ris
 
 | Suite | Result on `main` |
 |---|---|
-| `cargo +stable test` in `server/spacetimedb` | 88 passed |
-| `npm test` in `worker` | 34 passed |
+| `cargo +stable test` in `server/spacetimedb` | 91 passed |
+| `npm test` in `worker` | 36 passed |
 | `npm run build` in `web` | passes |
 | `pytest ml/tests` (PR #23 branch) | 45 passed |
 
