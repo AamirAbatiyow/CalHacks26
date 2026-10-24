@@ -1,172 +1,163 @@
+import { useRef, useEffect, useMemo } from 'react';
+import * as THREE from 'three';
 import { usePlayback } from './hooks/usePlayback';
 import { useLayers } from './hooks/useLayers';
-import { mockKPIs } from './data';
+import {
+  mockKPIs,
+  mockStations,
+  mockSatellites,
+  mockPasses,
+  getKpIndexAtTime,
+  getActivePassesAtTime,
+} from './data';
+import { Sidebar, KPIStrip } from './components';
+import { Globe } from './components/Globe';
+import type { GlobeRef } from './components/Globe';
+import { LayerPanel } from './components/LayerPanel';
+import { PlaybackBar } from './components/PlaybackBar';
+import {
+  createGroundStationGroup,
+  createSatelliteGroup,
+  createPassTrafficGroup,
+  createSpaceWeatherGroup,
+} from './components/layers';
+import type { TimelineEvent } from './types';
 import './App.css';
 
-// Components will be added by parallel agents
-// Lane A: Sidebar, KPIStrip
-// Lane B: Globe
-// Lane C: LayerPanel, layer overlays
-// Lane D: PlaybackBar
+const GLOBE_RADIUS = 1.0;
 
 function App() {
   const { layers, toggleLayer } = useLayers();
   const playbackControls = usePlayback();
+  const globeRef = useRef<GlobeRef>(null);
+  const layerGroupsRef = useRef<{
+    groundStations: THREE.Group | null;
+    satellites: THREE.Group | null;
+    passTraffic: THREE.Group | null;
+    spaceWeather: THREE.Group | null;
+  }>({
+    groundStations: null,
+    satellites: null,
+    passTraffic: null,
+    spaceWeather: null,
+  });
+
+  const currentTime = playbackControls.playback.currentTime;
+  const kpIndex = getKpIndexAtTime(currentTime);
+  const activePasses = getActivePassesAtTime(currentTime);
+
+  // Generate timeline events from dropped passes
+  const timelineEvents: TimelineEvent[] = useMemo(() => {
+    return mockPasses
+      .filter((pass) => pass.status === 'dropped')
+      .map((pass) => ({
+        time: pass.start,
+        type: 'dispute' as const,
+        description: `Dropped pass: ${pass.id}`,
+      }));
+  }, []);
+
+  // Update layer groups when time or visibility changes
+  useEffect(() => {
+    const globe = globeRef.current;
+    if (!globe) return;
+
+    const earthGroup = globe.getEarthGroup();
+    if (!earthGroup) return;
+
+    // Remove old groups
+    if (layerGroupsRef.current.groundStations) {
+      earthGroup.remove(layerGroupsRef.current.groundStations);
+      layerGroupsRef.current.groundStations = null;
+    }
+    if (layerGroupsRef.current.satellites) {
+      earthGroup.remove(layerGroupsRef.current.satellites);
+      layerGroupsRef.current.satellites = null;
+    }
+    if (layerGroupsRef.current.passTraffic) {
+      earthGroup.remove(layerGroupsRef.current.passTraffic);
+      layerGroupsRef.current.passTraffic = null;
+    }
+    if (layerGroupsRef.current.spaceWeather) {
+      earthGroup.remove(layerGroupsRef.current.spaceWeather);
+      layerGroupsRef.current.spaceWeather = null;
+    }
+
+    // Add new groups based on visibility
+    if (layers.groundStations) {
+      const group = createGroundStationGroup(mockStations, GLOBE_RADIUS);
+      earthGroup.add(group);
+      layerGroupsRef.current.groundStations = group;
+    }
+
+    if (layers.satellitesAndRoutes) {
+      const group = createSatelliteGroup(mockSatellites, currentTime, GLOBE_RADIUS);
+      earthGroup.add(group);
+      layerGroupsRef.current.satellites = group;
+    }
+
+    if (layers.passTraffic) {
+      const group = createPassTrafficGroup(
+        activePasses,
+        mockStations,
+        mockSatellites,
+        currentTime,
+        GLOBE_RADIUS
+      );
+      earthGroup.add(group);
+      layerGroupsRef.current.passTraffic = group;
+    }
+
+    if (layers.spaceWeather) {
+      const group = createSpaceWeatherGroup(kpIndex, mockStations, GLOBE_RADIUS);
+      earthGroup.add(group);
+      layerGroupsRef.current.spaceWeather = group;
+    }
+  }, [layers, currentTime, kpIndex, activePasses]);
 
   return (
     <div className="app">
-      {/* Sidebar - Lane A */}
-      <aside className="sidebar">
-        <div className="sidebar-logo">⬡</div>
-        <nav className="sidebar-nav">
-          <NavItem icon="◉" label="Overview" active />
-          <NavItem icon="◎" label="Disputes" />
-          <NavItem icon="☐" label="Approvals" />
-          <NavItem icon="◇" label="Customers" />
-          <NavItem icon="◆" label="Finance" />
-          <NavItem icon="▤" label="Ledger" />
-          <NavItem icon="▣" label="Audit" />
-          <NavItem icon="◈" label="Policies" />
-          <NavItem icon="⊕" label="Break It" />
-        </nav>
-      </aside>
+      <Sidebar activeItem="overview" />
 
-      {/* Main content area */}
       <div className="main">
-        {/* Top bar with KPIs - Lane A */}
         <header className="topbar">
           <h1 className="topbar-title">Ground Truth</h1>
-          <div className="kpi-strip">
-            <KPICard label="Billed this month" value={mockKPIs.billedThisMonth} />
-            <KPICard label="Revenue at risk" value={mockKPIs.revenueAtRisk} highlight />
-            <KPICard label="Credits paid" value={mockKPIs.creditsPaid} />
-            <KPICard label="Recovered" value={mockKPIs.recovered} />
-          </div>
+          <KPIStrip kpis={mockKPIs} />
         </header>
 
-        {/* Globe viewport - Lane B */}
         <div className="viewport">
-          {/* Layer panel - Lane C */}
-          <div className="layer-panel">
-            <LayerToggle 
-              label="Ground stations" 
-              checked={layers.groundStations}
-              onChange={() => toggleLayer('groundStations')}
-            />
-            <LayerToggle 
-              label="Satellites and routes" 
-              checked={layers.satellitesAndRoutes}
-              onChange={() => toggleLayer('satellitesAndRoutes')}
-            />
-            <LayerToggle 
-              label="Pass traffic" 
-              checked={layers.passTraffic}
-              onChange={() => toggleLayer('passTraffic')}
-            />
-            <LayerToggle 
-              label="Space weather" 
-              checked={layers.spaceWeather}
-              onChange={() => toggleLayer('spaceWeather')}
-            />
-          </div>
+          <LayerPanel layers={layers} onToggle={toggleLayer} />
 
-          {/* Globe placeholder */}
-          <div className="globe-placeholder">
-            <span className="globe-placeholder-text">Globe renderer loading...</span>
-          </div>
+          <Globe
+            ref={globeRef}
+            currentTime={currentTime}
+            layers={layers}
+          />
+
+          {layers.spaceWeather && kpIndex >= 5 && (
+            <div className="kp-storm-chip">
+              Kp {kpIndex} storm
+            </div>
+          )}
         </div>
 
-        {/* Playback bar - Lane D */}
-        <footer className="playback-bar">
-          <div className="playback-controls">
-            <button className="playback-btn" onClick={playbackControls.stepBackward}>⏮</button>
-            <button className="playback-btn" onClick={playbackControls.togglePlay}>
-              {playbackControls.playback.isPlaying ? '⏸' : '▶'}
-            </button>
-            <button className="playback-btn" onClick={playbackControls.stepForward}>⏭</button>
-            <button className="playback-btn speed-btn" onClick={playbackControls.cycleSpeed}>
-              {playbackControls.playback.speed}x
-            </button>
-          </div>
-          
-          <div className="playback-timeline">
-            <div className="timeline-track">
-              <div 
-                className="timeline-progress"
-                style={{ width: `${playbackControls.progress * 100}%` }}
-              />
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.001"
-                value={playbackControls.progress}
-                onChange={(e) => playbackControls.seekToProgress(parseFloat(e.target.value))}
-                className="timeline-scrubber"
-              />
-            </div>
-            <span className="timeline-label">last 24 hours</span>
-          </div>
-
-          <div className="playback-time">
-            <span className="time-display">
-              {playbackControls.playback.currentTime.toLocaleString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false,
-                timeZone: 'America/Los_Angeles',
-              })} PT
-            </span>
-            <button 
-              className={`live-btn ${playbackControls.playback.isLive ? 'active' : ''}`}
-              onClick={playbackControls.goLive}
-            >
-              Live
-            </button>
-          </div>
-        </footer>
+        <PlaybackBar
+          playback={playbackControls.playback}
+          progress={playbackControls.progress}
+          timeRangeStart={playbackControls.timeRangeStart}
+          timeRangeEnd={playbackControls.timeRangeEnd}
+          onPlay={playbackControls.play}
+          onPause={playbackControls.pause}
+          onTogglePlay={playbackControls.togglePlay}
+          onCycleSpeed={playbackControls.cycleSpeed}
+          onSeekToProgress={playbackControls.seekToProgress}
+          onStepForward={playbackControls.stepForward}
+          onStepBackward={playbackControls.stepBackward}
+          onGoLive={playbackControls.goLive}
+          events={timelineEvents}
+        />
       </div>
     </div>
-  );
-}
-
-// Temporary inline components - will be extracted by agents
-function NavItem({ icon, label, active = false }: { icon: string; label: string; active?: boolean }) {
-  return (
-    <button className={`nav-item ${active ? 'active' : ''}`} title={label}>
-      <span className="nav-icon">{icon}</span>
-      <span className="nav-label">{label}</span>
-    </button>
-  );
-}
-
-function KPICard({ label, value, highlight = false }: { label: string; value: number; highlight?: boolean }) {
-  const formatted = value >= 1_000_000 
-    ? `$${(value / 1_000_000).toFixed(1)}M`
-    : `$${(value / 1_000).toFixed(0)}K`;
-    
-  return (
-    <div className={`kpi-card ${highlight ? 'highlight' : ''}`}>
-      <span className="kpi-label">{label}</span>
-      <span className="kpi-value">{formatted}</span>
-    </div>
-  );
-}
-
-function LayerToggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: () => void }) {
-  return (
-    <label className="layer-toggle">
-      <input 
-        type="checkbox" 
-        checked={checked} 
-        onChange={onChange}
-        className="layer-checkbox"
-      />
-      <span className="layer-switch" />
-      <span className="layer-label">{label}</span>
-    </label>
   );
 }
 
