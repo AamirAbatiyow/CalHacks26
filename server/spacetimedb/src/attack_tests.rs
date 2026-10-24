@@ -112,12 +112,8 @@ fn catalog_has_hard_cases_the_detector_misses() {
             caught += 1;
         }
     }
-    println!("claim attacks on seed data: {} caught, {} missed", caught, missed.len());
-    for m in &missed {
-        println!("  missed: {}", m);
-    }
     assert!(caught > 0);
-    assert!(!missed.is_empty());
+    assert!(!missed.is_empty(), "every claim attack was caught; the catalog has no hard cases");
 }
 
 fn claim<'a>(pass: &'a PassFacts, amount_cents: i64, reason: &'a str, filed_micros: i64) -> ClaimInput<'a> {
