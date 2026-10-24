@@ -90,6 +90,8 @@ export interface Kpi {
   revenueAtRiskCents: bigint;
   creditsPaidCents: bigint;
   recoveredCents: bigint;
+  leakageAvoidedCents: bigint;
+  reviewCostSavedCents: bigint;
 }
 
 export interface DecisionRecord {

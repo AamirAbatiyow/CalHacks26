@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTable, micros, tag } from '../../hooks/useTable';
+import { useKpi } from '../../hooks/useKpi';
+import { formatDollars } from '../../utils/money';
 import type { DecisionOutcome, DecisionRecord, DecisionType, LedgerEntry, LedgerEntryType } from '../../types';
 import { SummaryTab } from './SummaryTab';
 import { LedgerTab } from './LedgerTab';
@@ -9,19 +11,7 @@ import './Finance.css';
 export type FinanceTabId = 'summary' | 'ledger' | 'audit';
 type TabId = FinanceTabId;
 
-function formatDollars(cents: bigint): string {
-  const dollars = Number(cents) / 100;
-  if (dollars >= 1000000) {
-    return `$${(dollars / 1000000).toFixed(1)}M / yr`;
-  }
-  if (dollars >= 1000) {
-    return `$${Math.round(dollars / 1000)}K`;
-  }
-  return `$${dollars.toFixed(0)}`;
-}
-
 function useFinanceData() {
-  const kpiRows = useTable('kpi');
   const decisionRows = useTable('decisionRecord');
   const ledgerRows = useTable('ledgerEntry');
 
@@ -47,16 +37,17 @@ function useFinanceData() {
     amountCents: row.amountCents,
   })), [ledgerRows]);
 
-  return { kpi: kpiRows[0] ?? null, decisionRecords, ledgerEntries };
+  return { decisionRecords, ledgerEntries };
 }
 
 export default function Finance({ initialTab = 'summary' }: { initialTab?: FinanceTabId }) {
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
-  const { kpi, decisionRecords, ledgerEntries } = useFinanceData();
+  const { decisionRecords, ledgerEntries } = useFinanceData();
+  const kpi = useKpi();
 
-  const leakageAvoided = '$1.0M / yr';
-  const reviewCostSaved = '$8.6M / yr';
-  const creditsIssued = kpi ? formatDollars(kpi.creditsPaidCents) : '$86K';
+  const leakageAvoided = kpi ? formatDollars(kpi.leakageAvoidedCents) : '—';
+  const reviewCostSaved = kpi ? formatDollars(kpi.reviewCostSavedCents) : '—';
+  const creditsIssued = kpi ? formatDollars(kpi.creditsPaidCents) : '—';
 
   const tabs: { id: TabId; label: string }[] = [
     { id: 'summary', label: 'Summary' },

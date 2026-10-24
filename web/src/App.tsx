@@ -6,6 +6,7 @@ import { LayerPanel } from './components/LayerPanel';
 import { PlaybackBar } from './components/PlaybackBar';
 import { useSpacetimeDB } from './hooks/useSpacetimeDB';
 import { useHashPage } from './hooks/useHashPage';
+import { useKpi } from './hooks/useKpi';
 import ClaimPage from './pages/Claim';
 import ApprovalsPage from './pages/Approvals';
 import FinancePage from './pages/Finance';
@@ -35,12 +36,12 @@ function App() {
     passes,
     spaceWeather,
     simClock,
-    kpi,
     setPlaybackPlaying,
     setPlaybackSpeedDb,
     seekToTime,
     goLive,
   } = useSpacetimeDB();
+  const kpi = useKpi();
 
   useEffect(() => {
     if (simClock) {
