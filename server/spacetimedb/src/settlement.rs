@@ -75,7 +75,7 @@ pub fn settle_contract_passes(ctx: &ReducerContext, a: &SettlementAssumptions) {
 
     let at = |pass: &Pass, salt: u64| {
         let after_hours = 1 + (draw(pass.id, salt) % 48) as i64;
-        Timestamp::from_micros_since_unix_epoch(pass.end_time.to_micros_since_unix_epoch() + after_hours * hour)
+        Timestamp::from_micros_since_unix_epoch((pass.end_time.to_micros_since_unix_epoch() + after_hours * hour).min(now))
     };
     let decide = |pass: &Pass, when: Timestamp, decision_type, outcome, amount_cents: i64, reason: String| {
         ctx.db.decision_record().insert(DecisionRecord {

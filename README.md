@@ -248,11 +248,11 @@ The seed models an operator the size of KSAT, priced at AWS Ground Station on-de
 |--------|-------|
 | Passes | 48,954 (about 47,000 billed in the trailing 30 days, roughly a quarter of KSAT's monthly contacts) |
 | Billed this month | $8.05M (about $97M a year, in line with KSAT's ~$220M total revenue) |
-| Revenue at risk | $85.7K |
-| Credits paid | $98.3K |
-| Recovered | $27.2K |
-| Leakage avoided | $99.3K |
-| Review cost saved | $168.7K (592 auto-approved decisions x $285) |
+| Revenue at risk | $85.3K |
+| Credits paid | $100.9K |
+| Recovered | $28.7K |
+| Leakage avoided | $96.3K |
+| Review cost saved | $180.1K (632 auto-approved decisions x $285) |
 
 The annual figures are 12 times the trailing-30-day KPIs:
 
@@ -260,7 +260,7 @@ The annual figures are 12 times the trailing-30-day KPIs:
 |---------------|---------|-------|
 | Dispute cost | 12 x (Credits paid + Revenue at risk) | ~$2.2M |
 | Leakage avoided | 12 x Leakage avoided | ~$1.2M |
-| Review cost saved | 12 x Review cost saved | ~$2.0M |
+| Review cost saved | 12 x Review cost saved | ~$2.2M |
 
 Exact figures move slightly with the seed time, because pass geometry and the trailing 30-day window depend on `now`.
 
