@@ -12,6 +12,7 @@ import ApprovalsPage from './pages/Approvals';
 import FinancePage from './pages/Finance';
 import PoliciesPage from './pages/Policies';
 import BreakItPage from './pages/BreakIt';
+import { DecisionReplayHost } from './replay/DecisionReplay';
 import type { LayerState, PlaybackSpeed } from './types';
 import './App.css';
 
@@ -112,7 +113,10 @@ function App() {
       <main className="main">
         <KpiStrip kpi={kpi} connectionState={connectionState} />
         {activePage !== 'overview' ? (
-          <div className="page-content">{renderPage(activePage)}</div>
+          <div className="page-content">
+            {renderPage(activePage)}
+            <DecisionReplayHost />
+          </div>
         ) : (<>
         <div className="globe-container">
           <Globe
