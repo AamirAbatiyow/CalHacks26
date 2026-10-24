@@ -1,0 +1,15 @@
+[Unit]
+Description=Ground Truth SatNOGS collector + scheduled retrain
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/ground-truth
+ExecStart=/usr/bin/python3 -m ml.satnogs_fetcher daemon --retrain-every-hours 6
+Restart=always
+RestartSec=60
+Nice=10
+
+[Install]
+WantedBy=multi-user.target
