@@ -60,13 +60,11 @@ export function LedgerTab({ entries }: LedgerTabProps) {
     }
     const daily = dailyBuckets(entries, e => e.createdAt, ['Credit', 'Recovery'] as const, e =>
       e.entryType === 'Credit' || e.entryType === 'Recovery' ? { key: e.entryType, amount: Math.abs(Number(e.amountCents)) } : null);
-    let credit = 0;
-    let recovery = 0;
-    const cumulative = daily.map(d => {
-      credit += d.Credit;
-      recovery += d.Recovery;
-      return { x: d.x, Credit: credit, Recovery: recovery };
-    });
+    const cumulative: { x: string; Credit: number; Recovery: number }[] = [];
+    for (const d of daily) {
+      const prev = cumulative[cumulative.length - 1];
+      cumulative.push({ x: d.x, Credit: (prev?.Credit ?? 0) + d.Credit, Recovery: (prev?.Recovery ?? 0) + d.Recovery });
+    }
     return { totals, cumulative };
   }, [entries]);
 
