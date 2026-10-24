@@ -2,18 +2,19 @@
   "name": "ground-truth-attack-scripts",
   "version": "1.0.0",
   "description": "Adversarial attack scripts for Ground Truth Break It",
-  "main": "run-attacks.ts",
+  "private": true,
+  "type": "module",
   "scripts": {
-    "attacks": "npx ts-node run-attacks.ts",
-    "attacks:direct": "npx ts-node run-attacks.ts --direct"
+    "generate": "spacetime generate --lang typescript --out-dir ./module_bindings --module-path ../spacetimedb",
+    "attacks": "tsx run-attacks.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "ws": "^8.16.0"
+    "spacetimedb": "^2.13.0"
   },
   "devDependencies": {
-    "@types/node": "^20.11.0",
-    "@types/ws": "^8.5.10",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
   }
 }

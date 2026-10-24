@@ -1,6 +1,6 @@
 use spacetimedb::{ReducerContext, SpacetimeType, Table, Timestamp};
 
-use crate::{kpi, Kpi};
+use crate::kpis::sync_kpis;
 
 #[derive(SpacetimeType, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum LedgerEntryType {
@@ -36,6 +36,33 @@ fn entry_type_from_u8(entry_type: u8) -> LedgerEntryType {
     }
 }
 
+/// Posts a credit paid out to a customer. Every approved or auto-approved
+/// decision that moves money goes through here, so the credits-paid KPI and the
+/// Ledger page always agree with the audit trail.
+pub fn post_credit(
+    ctx: &ReducerContext,
+    pass_id: Option<u64>,
+    station_id: Option<String>,
+    reference_id: String,
+    description: String,
+    amount_cents: i64,
+) {
+    if amount_cents <= 0 {
+        return;
+    }
+    ctx.db.ledger_entry().insert(LedgerEntry {
+        id: 0,
+        created_at: ctx.timestamp,
+        entry_type: LedgerEntryType::Credit,
+        description,
+        reference_id: Some(reference_id),
+        amount_cents: -amount_cents,
+        dispute_id: None,
+        pass_id,
+        station_id,
+    });
+}
+
 /// Total credits (as a positive number of cents) paid out against a station.
 pub fn station_credits_cents(ctx: &ReducerContext, station_id: &str) -> i64 {
     ctx.db
@@ -44,26 +71,6 @@ pub fn station_credits_cents(ctx: &ReducerContext, station_id: &str) -> i64 {
         .filter(|e| e.entry_type == LedgerEntryType::Credit && e.station_id.as_deref() == Some(station_id))
         .map(|e| -e.amount_cents)
         .sum()
-}
-
-/// Keeps the credits-paid and recovered KPIs equal to the ledger totals.
-/// Call after every ledger insert.
-pub fn sync_ledger_kpis(ctx: &ReducerContext) {
-    let (mut credits, mut recovered) = (0i64, 0i64);
-    for entry in ctx.db.ledger_entry().iter() {
-        match entry.entry_type {
-            LedgerEntryType::Credit => credits -= entry.amount_cents,
-            LedgerEntryType::Recovery => recovered += entry.amount_cents,
-            LedgerEntryType::Invoice => {}
-        }
-    }
-    if let Some(kpi) = ctx.db.kpi().id().find("main".to_string()) {
-        ctx.db.kpi().id().update(Kpi {
-            credits_paid_cents: credits,
-            recovered_cents: recovered,
-            ..kpi
-        });
-    }
 }
 
 #[spacetimedb::reducer]
@@ -85,7 +92,7 @@ pub fn record_ledger_entry(
         pass_id: None,
         station_id: None,
     });
-    sync_ledger_kpis(ctx);
+    sync_kpis(ctx);
 }
 
 #[spacetimedb::reducer]
@@ -108,5 +115,5 @@ pub fn seed_ledger_entry(
         pass_id: None,
         station_id: None,
     });
-    sync_ledger_kpis(ctx);
+    sync_kpis(ctx);
 }

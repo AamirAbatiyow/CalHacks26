@@ -1,31 +1,24 @@
 //! Confidence Gate module for Ground Truth.
 //!
-//! Implements tiered decision routing based on AI confidence levels:
-//! - >= 95% confidence AND amount <= $300: automatic approval (if authorized)
-//! - 80-95% confidence OR amount > $300: requires human approval
-//! - < 80% confidence: escalates to human review
-//!
-//! Only escalated claims (confidence < 80% OR amount > $300 with confidence < 95%) 
-//! appear in the Approvals queue.
+//! Routes every decision on AI confidence alone; the claim amount never gates:
+//! - >= 95% confidence: automatic approval (if authorized by Cedar)
+//! - < 95% confidence: escalates to a human in the Approvals queue
 
 use spacetimedb::{ReducerContext, SpacetimeType, Table, Timestamp};
 
 use crate::authority::{check_authorization, AuthzDecision};
+use crate::kpis::sync_kpis;
+use crate::ledger::post_credit;
 use crate::{decision_record, DecisionOutcome, DecisionRecord, DecisionType};
 
-/// Confidence thresholds for decision routing
 pub const CONFIDENCE_AUTO_APPROVE_THRESHOLD: i64 = 95;
-pub const CONFIDENCE_HUMAN_APPROVE_THRESHOLD: i64 = 80;
-pub const COST_FLOOR_AUTO_REVIEW_CENTS: i64 = 30000; // $300
 
 /// Decision route determined by confidence gate
 #[derive(SpacetimeType, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum DecisionRoute {
-    /// Confidence >= 95% and amount <= $300: can be auto-approved
+    /// Confidence >= 95%: can be auto-approved
     AutoApprove,
-    /// Confidence 80-95% or amount > $300 with high confidence: needs human approval
-    HumanApproval,
-    /// Confidence < 80%: escalated to human review
+    /// Confidence < 95%: escalated to human review
     Escalated,
 }
 
@@ -76,29 +69,15 @@ pub struct ConfidenceConfig {
     #[primary_key]
     pub id: u32,
     pub auto_approve_threshold: i64,
-    pub human_approve_threshold: i64,
-    pub cost_floor_cents: i64,
     pub updated_at: Timestamp,
 }
 
-/// Determines the decision route based on confidence and amount
-pub fn determine_route(confidence_percent: i64, amount_cents: i64) -> DecisionRoute {
-    if confidence_percent < CONFIDENCE_HUMAN_APPROVE_THRESHOLD {
-        return DecisionRoute::Escalated;
-    }
-
-    if amount_cents > COST_FLOOR_AUTO_REVIEW_CENTS {
-        if confidence_percent >= CONFIDENCE_AUTO_APPROVE_THRESHOLD {
-            return DecisionRoute::HumanApproval;
-        } else {
-            return DecisionRoute::Escalated;
-        }
-    }
-
+/// Determines the decision route from confidence alone
+pub fn determine_route(confidence_percent: i64) -> DecisionRoute {
     if confidence_percent >= CONFIDENCE_AUTO_APPROVE_THRESHOLD {
         DecisionRoute::AutoApprove
     } else {
-        DecisionRoute::HumanApproval
+        DecisionRoute::Escalated
     }
 }
 
@@ -123,8 +102,6 @@ pub fn init_confidence_config(ctx: &ReducerContext) {
     ctx.db.confidence_config().insert(ConfidenceConfig {
         id: 0,
         auto_approve_threshold: CONFIDENCE_AUTO_APPROVE_THRESHOLD,
-        human_approve_threshold: CONFIDENCE_HUMAN_APPROVE_THRESHOLD,
-        cost_floor_cents: COST_FLOOR_AUTO_REVIEW_CENTS,
         updated_at: ctx.timestamp,
     });
 
@@ -145,7 +122,7 @@ pub fn process_claim_decision(
     ai_recommendation: String,
     model_version: String,
 ) {
-    let route = determine_route(confidence_percent, amount_cents);
+    let route = determine_route(confidence_percent);
 
     let (outcome, policy_version) = match route {
         DecisionRoute::AutoApprove => {
@@ -170,7 +147,7 @@ pub fn process_claim_decision(
                 (DecisionOutcome::AutoApproved, authz.policy_version)
             } else {
                 log::info!(
-                    "Claim {} requires human approval - auto-approve denied: {}",
+                    "Claim {} escalated - auto-approve denied: {}",
                     claim_id,
                     authz.reason
                 );
@@ -182,7 +159,7 @@ pub fn process_claim_decision(
                     station_id: station_id.clone(),
                     amount_cents,
                     confidence_percent,
-                    route: DecisionRoute::HumanApproval,
+                    route: DecisionRoute::Escalated,
                     priority,
                     ai_recommendation: ai_recommendation.clone(),
                     model_version: model_version.clone(),
@@ -191,10 +168,10 @@ pub fn process_claim_decision(
                     assigned_to: None,
                     status: ApprovalQueueStatus::Pending,
                 });
-                (DecisionOutcome::Pending, authz.policy_version)
+                (DecisionOutcome::Escalated, authz.policy_version)
             }
         }
-        DecisionRoute::HumanApproval | DecisionRoute::Escalated => {
+        DecisionRoute::Escalated => {
             let authz = check_authorization(
                 ctx,
                 &actor_id,
@@ -223,28 +200,26 @@ pub fn process_claim_decision(
                 status: ApprovalQueueStatus::Pending,
             });
 
-            let outcome = match route {
-                DecisionRoute::Escalated => {
-                    log::info!(
-                        "Claim {} escalated (confidence: {}%)",
-                        claim_id,
-                        confidence_percent
-                    );
-                    DecisionOutcome::Escalated
-                }
-                _ => {
-                    log::info!(
-                        "Claim {} pending human approval (amount: ${})",
-                        claim_id,
-                        amount_cents / 100
-                    );
-                    DecisionOutcome::Pending
-                }
-            };
+            log::info!(
+                "Claim {} escalated (confidence: {}%)",
+                claim_id,
+                confidence_percent
+            );
 
-            (outcome, authz.policy_version)
+            (DecisionOutcome::Escalated, authz.policy_version)
         }
     };
+
+    if outcome == DecisionOutcome::AutoApproved {
+        post_credit(
+            ctx,
+            pass_id,
+            station_id.clone(),
+            format!("CR-AUTO-{}", claim_id),
+            format!("Credit auto-approved for claim {} at {}% confidence", claim_id, confidence_percent),
+            amount_cents,
+        );
+    }
 
     ctx.db.decision_record().insert(DecisionRecord {
         id: 0,
@@ -258,6 +233,7 @@ pub fn process_claim_decision(
         policy_version,
         model_version,
     });
+    sync_kpis(ctx);
 }
 
 /// Human approver processes a queued claim
@@ -317,6 +293,17 @@ pub fn human_approve_claim(
         ..queue_item.clone()
     });
 
+    if approved {
+        post_credit(
+            ctx,
+            queue_item.pass_id,
+            queue_item.station_id.clone(),
+            format!("CR-REV-{}", queue_item.claim_id),
+            format!("Credit approved for claim {} by {}", queue_item.claim_id, approver_id),
+            queue_item.amount_cents,
+        );
+    }
+
     ctx.db.decision_record().insert(DecisionRecord {
         id: 0,
         created_at: ctx.timestamp,
@@ -329,6 +316,7 @@ pub fn human_approve_claim(
         policy_version: authz.policy_version,
         model_version: queue_item.model_version.clone(),
     });
+    sync_kpis(ctx);
 
     log::info!(
         "Claim {} {} by human approver {}",
@@ -417,7 +405,7 @@ pub fn issue_credit(
     reason: String,
     model_version: String,
 ) {
-    let route = determine_route(confidence_percent, amount_cents);
+    let route = determine_route(confidence_percent);
 
     let authz = if route == DecisionRoute::AutoApprove {
         check_authorization(
@@ -469,6 +457,15 @@ pub fn issue_credit(
         DecisionOutcome::Approved
     };
 
+    post_credit(
+        ctx,
+        pass_id,
+        station_id.clone(),
+        format!("CR-{}", claim_id),
+        format!("Credit issued for claim {}", claim_id),
+        amount_cents,
+    );
+
     ctx.db.decision_record().insert(DecisionRecord {
         id: 0,
         created_at: ctx.timestamp,
@@ -481,6 +478,7 @@ pub fn issue_credit(
         policy_version: authz.policy_version,
         model_version,
     });
+    sync_kpis(ctx);
 
     log::info!(
         "Credit of ${} issued for claim {} by {}",
@@ -534,11 +532,12 @@ pub fn deny_claim(
         policy_version: authz.policy_version,
         model_version,
     });
+    sync_kpis(ctx);
 
     log::info!("Claim {} denied by {}", claim_id, actor_id);
 }
 
-/// Get pending approvals (only escalated and human-approval items)
+/// Get pending approvals (only escalated items)
 pub fn get_pending_approvals(ctx: &ReducerContext) -> Vec<ApprovalQueue> {
     ctx.db
         .approval_queue()

@@ -5,23 +5,23 @@
     "latitude": 78.2306,
     "longitude": 15.3894,
     "altitude_m": 450,
-    "monthly_revenue_cents": 4850000000
+    "antennas": 100
   },
   {
     "id": "trollsat",
     "name": "TrollSat",
     "latitude": -72.0114,
-    "longitude": 2.5350,
+    "longitude": 2.535,
     "altitude_m": 1270,
-    "monthly_revenue_cents": 3420000000
+    "antennas": 12
   },
   {
     "id": "inuvik",
     "name": "Inuvik",
     "latitude": 68.3195,
-    "longitude": -133.5270,
+    "longitude": -133.527,
     "altitude_m": 103,
-    "monthly_revenue_cents": 2180000000
+    "antennas": 10
   },
   {
     "id": "punta-arenas",
@@ -29,39 +29,39 @@
     "latitude": -53.1548,
     "longitude": -70.9113,
     "altitude_m": 37,
-    "monthly_revenue_cents": 1920000000
+    "antennas": 10
   },
   {
     "id": "aws-alaska",
     "name": "AWS Ground Station Alaska",
-    "latitude": 64.8590,
-    "longitude": -147.8350,
+    "latitude": 64.859,
+    "longitude": -147.835,
     "altitude_m": 137,
-    "monthly_revenue_cents": 2650000000
+    "antennas": 2
   },
   {
     "id": "aws-oregon",
     "name": "AWS Ground Station Oregon",
     "latitude": 45.8163,
-    "longitude": -119.2890,
+    "longitude": -119.289,
     "altitude_m": 180,
-    "monthly_revenue_cents": 1840000000
+    "antennas": 2
   },
   {
     "id": "aws-ohio",
     "name": "AWS Ground Station Ohio",
-    "latitude": 40.1020,
+    "latitude": 40.102,
     "longitude": -83.1583,
     "altitude_m": 270,
-    "monthly_revenue_cents": 1560000000
+    "antennas": 2
   },
   {
     "id": "aws-ireland",
     "name": "AWS Ground Station Ireland",
     "latitude": 53.4167,
-    "longitude": -7.9000,
+    "longitude": -7.9,
     "altitude_m": 90,
-    "monthly_revenue_cents": 1380000000
+    "antennas": 2
   },
   {
     "id": "aws-sydney",
@@ -69,15 +69,15 @@
     "latitude": -33.9167,
     "longitude": 151.1833,
     "altitude_m": 25,
-    "monthly_revenue_cents": 1720000000
+    "antennas": 2
   },
   {
     "id": "aws-seoul",
     "name": "AWS Ground Station Seoul",
     "latitude": 37.5635,
-    "longitude": 126.9780,
+    "longitude": 126.978,
     "altitude_m": 40,
-    "monthly_revenue_cents": 1450000000
+    "antennas": 2
   },
   {
     "id": "hartebeesthoek",
@@ -85,7 +85,7 @@
     "latitude": -25.8872,
     "longitude": 27.7075,
     "altitude_m": 1415,
-    "monthly_revenue_cents": 1280000000
+    "antennas": 12
   },
   {
     "id": "mauritius",
@@ -93,7 +93,7 @@
     "latitude": -20.3484,
     "longitude": 57.5522,
     "altitude_m": 420,
-    "monthly_revenue_cents": 1150000000
+    "antennas": 8
   },
   {
     "id": "singapore",
@@ -101,7 +101,7 @@
     "latitude": 1.3521,
     "longitude": 103.8198,
     "altitude_m": 15,
-    "monthly_revenue_cents": 980000000
+    "antennas": 10
   },
   {
     "id": "bangalore",
@@ -109,7 +109,7 @@
     "latitude": 12.9716,
     "longitude": 77.5946,
     "altitude_m": 920,
-    "monthly_revenue_cents": 870000000
+    "antennas": 6
   },
   {
     "id": "awarua",
@@ -117,6 +117,110 @@
     "latitude": -46.5289,
     "longitude": 168.3806,
     "altitude_m": 30,
-    "monthly_revenue_cents": 720000000
+    "antennas": 8
+  },
+  {
+    "id": "tromso",
+    "name": "Tromsø",
+    "latitude": 69.6625,
+    "longitude": 18.9408,
+    "altitude_m": 130,
+    "antennas": 40
+  },
+  {
+    "id": "vardo",
+    "name": "Vardø",
+    "latitude": 70.37,
+    "longitude": 31.1,
+    "altitude_m": 30,
+    "antennas": 10
+  },
+  {
+    "id": "grimstad",
+    "name": "Grimstad",
+    "latitude": 58.33,
+    "longitude": 8.35,
+    "altitude_m": 50,
+    "antennas": 8
+  },
+  {
+    "id": "puertollano",
+    "name": "Puertollano",
+    "latitude": 38.688,
+    "longitude": -4.11,
+    "altitude_m": 700,
+    "antennas": 10
+  },
+  {
+    "id": "nemea",
+    "name": "Nemea",
+    "latitude": 37.81,
+    "longitude": 22.66,
+    "altitude_m": 350,
+    "antennas": 6
+  },
+  {
+    "id": "dubai",
+    "name": "Dubai",
+    "latitude": 25.2048,
+    "longitude": 55.2708,
+    "altitude_m": 10,
+    "antennas": 8
+  },
+  {
+    "id": "hawaii",
+    "name": "South Point Hawaii",
+    "latitude": 19.014,
+    "longitude": -155.663,
+    "altitude_m": 370,
+    "antennas": 8
+  },
+  {
+    "id": "panama",
+    "name": "Panama",
+    "latitude": 8.9824,
+    "longitude": -79.5199,
+    "altitude_m": 20,
+    "antennas": 6
+  },
+  {
+    "id": "jeju",
+    "name": "Jeju",
+    "latitude": 33.4996,
+    "longitude": 126.5312,
+    "altitude_m": 50,
+    "antennas": 8
+  },
+  {
+    "id": "tokyo",
+    "name": "Tokyo",
+    "latitude": 35.6762,
+    "longitude": 139.6503,
+    "altitude_m": 40,
+    "antennas": 6
+  },
+  {
+    "id": "mingenew",
+    "name": "Mingenew",
+    "latitude": -29.013,
+    "longitude": 115.345,
+    "altitude_m": 250,
+    "antennas": 8
+  },
+  {
+    "id": "tolhuin",
+    "name": "Tolhuin",
+    "latitude": -54.51,
+    "longitude": -67.2,
+    "altitude_m": 100,
+    "antennas": 6
+  },
+  {
+    "id": "brewster",
+    "name": "Brewster",
+    "latitude": 48.147,
+    "longitude": -119.695,
+    "altitude_m": 370,
+    "antennas": 10
   }
 ]

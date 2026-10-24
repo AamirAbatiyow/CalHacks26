@@ -1,7 +1,7 @@
 use spacetimedb::{ReducerContext, ScheduleAt, SpacetimeType, Table, Timestamp};
 use std::time::Duration;
 
-use ledger::{ledger_entry, sync_ledger_kpis, LedgerEntry, LedgerEntryType};
+use ledger::{ledger_entry, LedgerEntry, LedgerEntryType};
 
 pub mod approvals;
 pub mod attack_run;
@@ -9,11 +9,15 @@ pub mod authority;
 pub mod claim;
 pub mod confidence_gate;
 pub mod events;
+pub mod kpis;
 pub mod ledger;
 pub mod ml;
 pub mod policy;
+pub mod settlement;
 pub mod sla;
 
+#[cfg(test)]
+mod attack_tests;
 #[cfg(test)]
 mod authority_tests;
 #[cfg(test)]
@@ -110,6 +114,8 @@ pub struct SimClock {
     pub sim_time_anchor: Timestamp,
 }
 
+/// Derived from pass, ledger, decision, dispute and escalation rows by `kpis::sync_kpis`.
+#[derive(Clone, PartialEq, Debug)]
 #[spacetimedb::table(accessor = kpi, public)]
 pub struct Kpi {
     #[primary_key]
@@ -118,6 +124,8 @@ pub struct Kpi {
     pub revenue_at_risk_cents: i64,
     pub credits_paid_cents: i64,
     pub recovered_cents: i64,
+    pub leakage_avoided_cents: i64,
+    pub review_cost_saved_cents: i64,
 }
 
 #[spacetimedb::table(accessor = decision_record, public)]
@@ -155,14 +163,7 @@ pub fn init(ctx: &ReducerContext) {
         sim_time_anchor: ctx.timestamp,
     });
 
-    // Credits paid and recovered are derived from the ledger (see ledger::sync_ledger_kpis).
-    ctx.db.kpi().insert(Kpi {
-        id: "main".to_string(),
-        billed_this_month_cents: 1940000000,
-        revenue_at_risk_cents: 41200000,
-        credits_paid_cents: 0,
-        recovered_cents: 0,
-    });
+    kpis::sync_kpis(ctx);
 
     ctx.db.sim_tick_schedule().insert(SimTickSchedule {
         scheduled_id: 0,
@@ -213,6 +214,7 @@ pub fn sim_tick(ctx: &ReducerContext, _timer: SimTickSchedule) {
             });
         }
     }
+    kpis::sync_kpis(ctx);
 }
 
 #[spacetimedb::reducer]
@@ -307,6 +309,42 @@ pub fn seed_pass(ctx: &ReducerContext, sat_id: u32, station_id: String, start_mi
         max_elevation_deg: max_el,
         revenue_cents: revenue,
     });
+    kpis::sync_kpis(ctx);
+}
+
+/// One row of a `seed_passes` batch; fields match `seed_pass`.
+#[derive(SpacetimeType, Clone, Debug)]
+pub struct PassSeed {
+    pub sat_id: u32,
+    pub station_id: String,
+    pub start_micros: i64,
+    pub end_micros: i64,
+    pub status: u8,
+    pub max_el: f64,
+    pub revenue: i64,
+}
+
+/// Bulk form of `seed_pass` for the generated pass history (tens of thousands of rows).
+#[spacetimedb::reducer]
+pub fn seed_passes(ctx: &ReducerContext, passes: Vec<PassSeed>) {
+    for p in passes {
+        ctx.db.pass().insert(Pass {
+            id: 0,
+            satellite_id: p.sat_id,
+            station_id: p.station_id,
+            start_time: Timestamp::from_micros_since_unix_epoch(p.start_micros),
+            end_time: Timestamp::from_micros_since_unix_epoch(p.end_micros),
+            status: match p.status {
+                0 => PassStatus::Scheduled,
+                1 => PassStatus::Active,
+                2 => PassStatus::Ok,
+                _ => PassStatus::Dropped,
+            },
+            max_elevation_deg: p.max_el,
+            revenue_cents: p.revenue,
+        });
+    }
+    kpis::sync_kpis(ctx);
 }
 
 #[spacetimedb::reducer]
@@ -381,61 +419,72 @@ pub fn seed_finance_history(ctx: &ReducerContext) {
     };
     let after = |pass: &Pass, min: i64| pass.end_time.to_micros_since_unix_epoch() + min * minute;
 
-    // Credits: one entry per credited pass, summing to $86,000.
-    let credits: [(Option<&&Pass>, DecisionType, DecisionOutcome, i64, &str); 5] = [
-        (dropped.first(), DecisionType::CreditIssued, DecisionOutcome::Approved, 2450000, "Pass dropped with no downlink; SLA credit approved after review"),
-        (dropped.get(2), DecisionType::CreditIssued, DecisionOutcome::Approved, 3100000, "Pass dropped mid-contact; SLA credit approved after review"),
-        (completed.get(3), DecisionType::DisputeResolved, DecisionOutcome::Approved, 1850000, "Customer dispute approved after manual review"),
-        (completed.get(9), DecisionType::DisputeResolved, DecisionOutcome::Approved, 1180000, "Partial credit for degraded link quality"),
-        (completed.get(15), DecisionType::CreditIssued, DecisionOutcome::AutoApproved, 20000, "Short contact under SLA minimum; auto-approved under $300 cap"),
+    // Every amount is a share of the revenue of the pass it refers to, so no
+    // credit, recovery or claim can exceed what that pass was billed.
+    let share = |pass: &Pass, percent: i64| pass.revenue_cents * percent / 100;
+
+    let credits: [(Option<&&Pass>, DecisionType, DecisionOutcome, i64, &str); 6] = [
+        (dropped.first(), DecisionType::CreditIssued, DecisionOutcome::Approved, 100, "Pass dropped with no downlink; full SLA credit approved after review"),
+        (completed.get(3), DecisionType::DisputeResolved, DecisionOutcome::Approved, 50, "Customer dispute approved after manual review; half the pass credited"),
+        (completed.get(9), DecisionType::DisputeResolved, DecisionOutcome::Approved, 20, "Partial credit for degraded link quality"),
+        (completed.get(15), DecisionType::CreditIssued, DecisionOutcome::AutoApproved, 5, "Short contact under SLA minimum; auto-approved at 97% confidence"),
+        (completed.get(17), DecisionType::CreditIssued, DecisionOutcome::AutoApproved, 5, "Short contact under SLA minimum; auto-approved at 97% confidence"),
+        (completed.get(24), DecisionType::CreditIssued, DecisionOutcome::AutoApproved, 5, "Short contact under SLA minimum; auto-approved at 96% confidence"),
     ];
-    for (pass, decision_type, outcome, amount, reason) in credits {
+    for (pass, decision_type, outcome, percent, reason) in credits {
         if let Some(pass) = pass {
+            let amount = share(pass, percent);
             decide(pass, 25, decision_type, outcome, amount, reason.to_string());
             post(Some(*pass), after(pass, 30), LedgerEntryType::Credit,
                 format!("Credit issued for Pass #{}", pass.id), format!("CR-2026-{}", pass.id), -amount);
         }
     }
 
-    // Recoveries: summing to $131,000.
     if let Some(pass) = dropped.get(1) {
-        decide(pass, 40, DecisionType::PassRecovered, DecisionOutcome::Approved, 8850000,
+        let amount = share(pass, 100);
+        decide(pass, 40, DecisionType::PassRecovered, DecisionOutcome::Approved, amount,
             "Backup ground station captured pass data".to_string());
         post(Some(*pass), after(pass, 45), LedgerEntryType::Recovery,
-            format!("Recovered revenue from backup capture of Pass #{}", pass.id), format!("REC-2026-{}", pass.id), 8850000);
+            format!("Recovered revenue from backup capture of Pass #{}", pass.id), format!("REC-2026-{}", pass.id), amount);
     }
-    post(None, now - 2880 * minute, LedgerEntryType::Recovery,
-        "Insurance recovery for storm damage claim".to_string(), "REC-2026-INS-07".to_string(), 4250000);
 
-    // Open and denied items: audit only, no money moved.
+    // Open and denied items: audit only, no money moved. The third dropped pass
+    // is left unresolved and, with the open dispute, makes up revenue at risk.
     if let Some(pass) = completed.get(6) {
-        decide(pass, 35, DecisionType::DisputeCreated, DecisionOutcome::Pending, 3200000,
+        decide(pass, 35, DecisionType::DisputeCreated, DecisionOutcome::Pending, share(pass, 100),
             "Customer reported incomplete data transfer".to_string());
     }
     if let Some(pass) = completed.get(12) {
-        decide(pass, 50, DecisionType::CreditIssued, DecisionOutcome::Denied, 15600000,
-            "Claim exceeds policy threshold; denied after review".to_string());
+        decide(pass, 50, DecisionType::CreditIssued, DecisionOutcome::Denied, share(pass, 100),
+            "Full refund claimed but telemetry confirms complete downlink; denied after review".to_string());
     }
 
-    post(None, now - 90 * minute, LedgerEntryType::Invoice,
-        "Monthly service invoice - SvalSat".to_string(), "INV-2026-SVB-10".to_string(), 4850000);
-    post(None, now - 1440 * minute, LedgerEntryType::Invoice,
-        "Monthly service invoice - TrollSat".to_string(), "INV-2026-ANT-10".to_string(), 3200000);
-
-    sync_ledger_kpis(ctx);
-}
-
-#[spacetimedb::reducer]
-pub fn update_kpi(ctx: &ReducerContext, billed: i64, at_risk: i64, credits: i64, recovered: i64) {
-    if let Some(kpi) = ctx.db.kpi().id().find("main".to_string()) {
-        ctx.db.kpi().id().update(Kpi {
-            billed_this_month_cents: billed,
-            revenue_at_risk_cents: at_risk,
-            credits_paid_cents: credits,
-            recovered_cents: recovered,
-            ..kpi
+    // One invoice per station for the passes billed so far, so the ledger's
+    // invoices total the "Billed this month" KPI.
+    let mut billed: Vec<(String, i64)> = Vec::new();
+    for pass in ctx.db.pass().iter().filter(|p| p.status != PassStatus::Scheduled) {
+        match billed.iter_mut().find(|(id, _)| *id == pass.station_id) {
+            Some((_, total)) => *total += pass.revenue_cents,
+            None => billed.push((pass.station_id.clone(), pass.revenue_cents)),
+        }
+    }
+    billed.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+    for (i, (station_id, total)) in billed.into_iter().enumerate() {
+        let name = ctx.db.station().id().find(&station_id).map(|s| s.name).unwrap_or_else(|| station_id.clone());
+        ctx.db.ledger_entry().insert(LedgerEntry {
+            id: 0,
+            created_at: Timestamp::from_micros_since_unix_epoch(now - (60 + 10 * i as i64) * minute),
+            entry_type: LedgerEntryType::Invoice,
+            description: format!("Pass revenue invoice - {}", name),
+            reference_id: Some(format!("INV-2026-{}", station_id.to_uppercase())),
+            amount_cents: total,
+            dispute_id: None,
+            pass_id: None,
+            station_id: Some(station_id),
         });
     }
+
+    kpis::sync_kpis(ctx);
 }
 
 #[spacetimedb::reducer]

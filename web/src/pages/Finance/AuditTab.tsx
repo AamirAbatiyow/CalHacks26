@@ -1,4 +1,5 @@
 import type { DecisionRecord } from '../../types';
+import { formatDollars } from '../../utils/money';
 
 interface AuditTabProps {
   decisions: DecisionRecord[];
@@ -13,18 +14,6 @@ function formatTimestamp(micros: bigint): string {
     minute: '2-digit',
     second: '2-digit',
   });
-}
-
-function formatDollars(cents: bigint): string {
-  const dollars = Number(cents) / 100;
-  const absValue = Math.abs(dollars);
-  if (absValue >= 1000000) {
-    return `$${(absValue / 1000000).toFixed(2)}M`;
-  }
-  if (absValue >= 1000) {
-    return `$${(absValue / 1000).toFixed(1)}K`;
-  }
-  return `$${absValue.toFixed(0)}`;
 }
 
 function getDecisionLabel(type: string): string {

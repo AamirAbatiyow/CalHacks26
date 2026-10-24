@@ -90,6 +90,8 @@ export interface Kpi {
   revenueAtRiskCents: bigint;
   creditsPaidCents: bigint;
   recoveredCents: bigint;
+  leakageAvoidedCents: bigint;
+  reviewCostSavedCents: bigint;
 }
 
 export interface DecisionRecord {
@@ -116,6 +118,7 @@ export interface EscalatedClaim {
   policyVersion: string;
   modelVersion: string;
   createdAt: bigint;
+  passIds: bigint[];
 }
 
 export interface LayerState {
@@ -129,7 +132,6 @@ export type PlaybackSpeed = 1 | 4 | 16;
 
 export const ClaimGate = {
   Auto: 'Auto',
-  Approval: 'Approval',
   Escalated: 'Escalated',
 } as const;
 export type ClaimGate = (typeof ClaimGate)[keyof typeof ClaimGate];
@@ -193,6 +195,14 @@ export interface ClaimWeather {
   claimId: string;
   kpIndex: number;
   stormActive: boolean;
+}
+
+export interface ClaimReason {
+  id: bigint;
+  claimId: string;
+  feature: string;
+  detail: string;
+  shapValue: number;
 }
 
 export const LedgerEntryType = {

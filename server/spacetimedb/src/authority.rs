@@ -48,7 +48,6 @@ pub struct ActorIdentity {
     pub identity_id: String,
     pub actor_type: ActorType,
     pub display_name: String,
-    pub max_auto_approve_cents: i64,
     pub can_edit_policies: bool,
     pub can_escalate: bool,
     pub created_at: Timestamp,
@@ -60,7 +59,6 @@ pub struct ActorIdentity {
 pub struct ActorPermissionCap {
     #[primary_key]
     pub actor_type_id: u8,
-    pub max_auto_approve_cents: i64,
     pub can_edit_policies: bool,
     pub can_approve_escalations: bool,
 }
@@ -84,13 +82,12 @@ const DEFAULT_CEDAR_POLICY: &str = r#"
 // Ground Truth Cedar Policy v4
 // Defines authorization rules for the AI billing analyst system
 
-// AI Analyst permissions - limited authority
+// AI Analyst permissions - auto-approval is gated on confidence only
 permit(
     principal == GroundTruth::Actor::"ai_analyst",
     action == GroundTruth::Action::"auto_approve",
     resource
 ) when {
-    resource.amount_cents <= 30000 &&
     context.confidence_percent >= 95
 };
 
@@ -118,15 +115,6 @@ forbid(
     action == GroundTruth::Action::"edit_policy",
     resource
 );
-
-// AI Analyst forbidden from approving amounts over cap
-forbid(
-    principal == GroundTruth::Actor::"ai_analyst",
-    action == GroundTruth::Action::"auto_approve",
-    resource
-) when {
-    resource.amount_cents > 30000
-};
 
 // Human Approver permissions - elevated authority
 permit(
@@ -322,8 +310,10 @@ pub fn evaluate_authorization(
 /// Initialize authority system with default policies and actors
 #[spacetimedb::reducer]
 pub fn init_authority(ctx: &ReducerContext) {
+    let version = crate::policy::current_policy_version_id(ctx)
+        .unwrap_or_else(|| crate::CURRENT_POLICY_VERSION.to_string());
     ctx.db.cedar_policy_store().insert(CedarPolicyStore {
-        version: crate::CURRENT_POLICY_VERSION.to_string(),
+        version,
         policy_text: DEFAULT_CEDAR_POLICY.to_string(),
         created_at: ctx.timestamp,
         is_active: true,
@@ -332,21 +322,18 @@ pub fn init_authority(ctx: &ReducerContext) {
 
     ctx.db.actor_permission_cap().insert(ActorPermissionCap {
         actor_type_id: 0,
-        max_auto_approve_cents: 30000,
         can_edit_policies: false,
         can_approve_escalations: false,
     });
 
     ctx.db.actor_permission_cap().insert(ActorPermissionCap {
         actor_type_id: 1,
-        max_auto_approve_cents: i64::MAX,
         can_edit_policies: false,
         can_approve_escalations: true,
     });
 
     ctx.db.actor_permission_cap().insert(ActorPermissionCap {
         actor_type_id: 2,
-        max_auto_approve_cents: i64::MAX,
         can_edit_policies: true,
         can_approve_escalations: true,
     });
@@ -355,7 +342,6 @@ pub fn init_authority(ctx: &ReducerContext) {
         identity_id: "ai_analyst".to_string(),
         actor_type: ActorType::AiAnalyst,
         display_name: "Ground Truth AI Analyst".to_string(),
-        max_auto_approve_cents: 30000,
         can_edit_policies: false,
         can_escalate: true,
         created_at: ctx.timestamp,
@@ -379,17 +365,16 @@ pub fn register_actor(
         _ => ActorType::SystemAdmin,
     };
 
-    let (max_approve, can_edit, can_escalate) = match atype {
-        ActorType::AiAnalyst => (30000, false, true),
-        ActorType::HumanApprover => (i64::MAX, false, true),
-        ActorType::SystemAdmin => (i64::MAX, true, true),
+    let (can_edit, can_escalate) = match atype {
+        ActorType::AiAnalyst => (false, true),
+        ActorType::HumanApprover => (false, true),
+        ActorType::SystemAdmin => (true, true),
     };
 
     ctx.db.actor_identity().insert(ActorIdentity {
         identity_id,
         actor_type: atype,
         display_name,
-        max_auto_approve_cents: max_approve,
         can_edit_policies: can_edit,
         can_escalate,
         created_at: ctx.timestamp,
@@ -463,6 +448,52 @@ pub fn add_policy_version(
 /// Get the current active policy version
 pub fn get_active_policy(ctx: &ReducerContext) -> Option<CedarPolicyStore> {
     ctx.db.cedar_policy_store().iter().find(|p| p.is_active)
+}
+
+/// Makes `version` the only active Cedar policy so authorization results are
+/// stamped with the version the Policies page marks Current. A version the
+/// store has not seen yet starts from the previously active policy text.
+pub fn activate_policy_version(ctx: &ReducerContext, version: &str, description: &str) {
+    let source_text = get_active_policy(ctx)
+        .map(|p| p.policy_text)
+        .unwrap_or_else(|| DEFAULT_CEDAR_POLICY.to_string());
+
+    let others: Vec<CedarPolicyStore> = ctx
+        .db
+        .cedar_policy_store()
+        .iter()
+        .filter(|p| p.is_active && p.version != version)
+        .collect();
+    for policy in others {
+        ctx.db.cedar_policy_store().version().update(CedarPolicyStore {
+            is_active: false,
+            ..policy
+        });
+    }
+
+    match ctx.db.cedar_policy_store().version().find(version.to_string()) {
+        Some(existing) if existing.is_active => {}
+        Some(existing) => {
+            ctx.db.cedar_policy_store().version().update(CedarPolicyStore {
+                is_active: true,
+                ..existing
+            });
+        }
+        None => {
+            ctx.db.cedar_policy_store().insert(CedarPolicyStore {
+                version: version.to_string(),
+                policy_text: source_text,
+                created_at: ctx.timestamp,
+                is_active: true,
+                description: description.to_string(),
+            });
+        }
+    }
+}
+
+/// Version label of the active Cedar policy, if any.
+pub fn active_policy_version(ctx: &ReducerContext) -> Option<String> {
+    get_active_policy(ctx).map(|p| p.version)
 }
 
 /// Check if an actor can perform an action on a resource

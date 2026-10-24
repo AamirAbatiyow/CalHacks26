@@ -5,6 +5,7 @@ import type { Station, Satellite, Pass, SpaceWeather, LayerState } from '../type
 import { PassStatus } from '../types';
 import { GLOBE_ROTATION_PERIOD_MS, AURORAL_OVAL_BASE_LATITUDE, AURORAL_OVAL_KP_SCALE, COLORS } from '../config';
 import { CONTINENT_PATHS } from '../data/continents';
+import { latLonToVector3, createStationDot } from './globeMarkers';
 import './Globe.css';
 
 interface GlobeProps {
@@ -18,16 +19,8 @@ interface GlobeProps {
 
 const EARTH_RADIUS = 1;
 const SATELLITE_ALTITUDE = 0.08;
-
-function latLonToVector3(lat: number, lon: number, radius: number): THREE.Vector3 {
-  const phi = (90 - lat) * (Math.PI / 180);
-  const theta = (lon + 180) * (Math.PI / 180);
-  return new THREE.Vector3(
-    -radius * Math.sin(phi) * Math.cos(theta),
-    radius * Math.cos(phi),
-    radius * Math.sin(phi) * Math.sin(theta)
-  );
-}
+/** Dropped passes are linked on the globe for the playback bar's 24-hour window. */
+const PASS_LINK_WINDOW_MICROS = 24 * 60 * 60 * 1_000_000;
 
 function getSatellitePosition(sat: Satellite, time: Date): THREE.Vector3 | null {
   try {
@@ -260,13 +253,7 @@ export function Globe({ stations, satellites, passes, spaceWeather, currentTime,
 
     if (layers.groundStations && stations.length > 0) {
       stations.forEach((station) => {
-        const pos = latLonToVector3(station.latitude, station.longitude, EARTH_RADIUS + 0.002);
-        const revenueShare = Math.min(1, Number(station.monthlyRevenueCents) / 5000000000);
-        const geometry = new THREE.CircleGeometry(0.005 + 0.007 * revenueShare, 24);
-        const material = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.position.copy(pos);
-        mesh.lookAt(0, 0, 0);
+        const mesh = createStationDot(station.latitude, station.longitude, station.monthlyRevenueCents);
         mesh.userData.layerType = 'station';
         group.add(mesh);
       });
@@ -305,8 +292,10 @@ export function Globe({ stations, satellites, passes, spaceWeather, currentTime,
     }
 
     if (layers.passTraffic && passes.length > 0) {
+      const linkWindowStart = currentTime - BigInt(PASS_LINK_WINDOW_MICROS);
       passes.forEach((pass) => {
         if (pass.status !== PassStatus.Active && pass.status !== PassStatus.Dropped) return;
+        if (pass.status === PassStatus.Dropped && (pass.startTime < linkWindowStart || pass.startTime > currentTime)) return;
         
         const station = stations.find(s => s.id === pass.stationId);
         const sat = satellites.find(s => s.noradId === pass.satelliteId);

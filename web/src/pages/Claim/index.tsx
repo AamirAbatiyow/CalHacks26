@@ -2,6 +2,8 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { ClaimGlobe } from './ClaimGlobe';
 import { ClaimPlaybackBar } from './ClaimPlaybackBar';
 import { useClaimData } from '../../hooks/useClaimData';
+import { useHashParam } from '../../hooks/useHashPage';
+import { useTable } from '../../hooks/useTable';
 import { ClaimGate, DataIntegrityStatus } from '../../types';
 import './Claim.css';
 
@@ -14,34 +16,40 @@ function getGateLabel(gate: ClaimGate): string {
   switch (gate) {
     case ClaimGate.Auto:
       return 'auto';
-    case ClaimGate.Approval:
-      return 'needs approval';
     case ClaimGate.Escalated:
       return 'escalated';
   }
 }
 
-interface ClaimPageProps {
-  claimId?: string;
+function getCreditLabel(creditCents: bigint, claimedCents: bigint): string {
+  if (creditCents <= 0n) return 'No credit';
+  return creditCents >= claimedCents ? 'Full credit' : 'Partial credit';
 }
 
-export default function ClaimPage({ claimId = 'CLM-10021' }: ClaimPageProps) {
-  const liveData = useClaimData(claimId);
-  const { claim, pass, evidence, decision, outcome, weather, connected } = liveData;
+function formatShap(value: number): string {
+  return `${value >= 0 ? '+' : '\u2212'}${Math.abs(value).toFixed(2)}`;
+}
+
+function VersionLink({ label, version, policyVersion, known }: { label: string; version: string; policyVersion: string; known: boolean }) {
+  if (!known) return <span>{label} {version}</span>;
+  return (
+    <a className="decision-link" href={`#/policies/${encodeURIComponent(policyVersion)}`} title={`Open policy ${policyVersion} in Policies`}>
+      {label} {version}
+    </a>
+  );
+}
+
+export default function ClaimPage() {
+  const requestedClaimId = useHashParam();
+  const { claimId, claim, pass, evidence, decision, outcome, weather, reasons, stationRevenueCents, connected } =
+    useClaimData(requestedClaimId);
+  const policyVersions = useTable('policyVersion');
 
   const [currentTimeOverride, setCurrentTimeOverride] = useState<bigint | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState<1 | 4>(4);
 
   const currentTime = currentTimeOverride ?? pass?.contactStartTime ?? BigInt(0);
-
-  useEffect(() => {
-    if (!connected || claim) return;
-
-    const timer = setTimeout(() => liveData.seedDemoClaim(), 1500);
-
-    return () => clearTimeout(timer);
-  }, [connected, claim, liveData]);
 
   useEffect(() => {
     if (!isPlaying || !pass) return;
@@ -112,12 +120,17 @@ export default function ClaimPage({ claimId = 'CLM-10021' }: ClaimPageProps) {
   }
 
   if (!claim || !pass || !evidence || !decision || !outcome || !weather) {
+    const message = !claimId
+      ? 'No claims yet. Run server/seed.sh to seed one.'
+      : claim ? `Loading claim ${claimId}...` : `Claim ${claimId} not found.`;
     return (
       <div className="claim-page">
-        <div className="claim-loading">Loading claim data...</div>
+        <div className="claim-loading">{message}</div>
       </div>
     );
   }
+
+  const policyKnown = policyVersions.some(v => v.id === decision.policyVersion);
 
   return (
     <div className="claim-page">
@@ -127,6 +140,7 @@ export default function ClaimPage({ claimId = 'CLM-10021' }: ClaimPageProps) {
             stationLat={pass.stationLat}
             stationLon={pass.stationLon}
             stationName={pass.stationName}
+            stationRevenueCents={stationRevenueCents}
             satelliteTle1={pass.satelliteTle1}
             satelliteTle2={pass.satelliteTle2}
             currentTime={currentTime}
@@ -176,27 +190,41 @@ export default function ClaimPage({ claimId = 'CLM-10021' }: ClaimPageProps) {
 
             <div className="decision-card">
               <div className="decision-main">
-                <span className="decision-credit">Partial credit {formatDollarsExact(decision.creditAmountCents)}</span>
+                <span className="decision-credit">
+                  {getCreditLabel(decision.creditAmountCents, claim.amountClaimedCents)} {formatDollarsExact(decision.creditAmountCents)}
+                </span>
                 <span className="decision-separator">·</span>
                 <span className="decision-confidence">confidence {decision.confidencePercent}%</span>
                 <span className="decision-separator">·</span>
                 <span className={`decision-gate ${decision.gate.toLowerCase()}`}>{getGateLabel(decision.gate)}</span>
               </div>
+              {reasons.length > 0 && (
+                <div className="decision-reasons">
+                  <span className="decision-reasons-title">Why (SHAP)</span>
+                  {reasons.map(reason => (
+                    <div key={String(reason.id)} className="reason-row">
+                      <span className="reason-feature">
+                        {reason.feature}
+                        {reason.detail && <span className="reason-detail"> · {reason.detail}</span>}
+                      </span>
+                      <span className={`reason-value ${reason.shapValue < 0 ? 'negative' : ''}`}>{formatShap(reason.shapValue)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="decision-meta">
                 <span>Rule: {decision.rule}</span>
                 <span className="decision-separator">·</span>
-                <span>Policy {decision.policyVersion}</span>
+                <VersionLink label="Policy" version={decision.policyVersion} policyVersion={decision.policyVersion} known={policyKnown} />
                 <span className="decision-separator">·</span>
-                <span>Model {decision.modelVersion}</span>
+                <VersionLink label="Model" version={decision.modelVersion} policyVersion={decision.policyVersion} known={policyKnown} />
               </div>
             </div>
 
             <div className="outcome-row">
-              {outcome.creditMemoSent && <span className="outcome-item">Credit memo sent</span>}
-              {outcome.creditMemoSent && outcome.ledgerPosted && (
-                <span className="outcome-separator">·</span>
-              )}
-              {outcome.ledgerPosted && <span className="outcome-item">Ledger posted</span>}
+              <span className="outcome-item">{outcome.creditMemoSent ? 'Credit memo sent' : 'Credit memo not sent'}</span>
+              <span className="outcome-separator">·</span>
+              <span className="outcome-item">{outcome.ledgerPosted ? 'Ledger posted' : 'Ledger not posted'}</span>
             </div>
           </div>
         </div>

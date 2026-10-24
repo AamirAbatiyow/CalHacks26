@@ -1,21 +1,11 @@
 import type { Kpi } from '../types';
 import type { ConnectionState } from '../hooks/useSpacetimeDB';
+import { formatDollars } from '../utils/money';
 import './KpiStrip.css';
 
 interface KpiStripProps {
   kpi: Kpi | null;
   connectionState: ConnectionState;
-}
-
-function formatDollars(cents: bigint): string {
-  const dollars = Number(cents) / 100;
-  if (dollars >= 1000000) {
-    return `$${(dollars / 1000000).toFixed(1)}M`;
-  }
-  if (dollars >= 1000) {
-    return `$${(dollars / 1000).toFixed(0)}K`;
-  }
-  return `$${dollars.toFixed(0)}`;
 }
 
 interface KpiItemProps {

@@ -187,14 +187,49 @@
   color: var(--color-green);
 }
 
-.decision-gate.approval {
-  background: var(--color-amber-muted);
-  color: var(--color-amber);
-}
-
 .decision-gate.escalated {
   background: rgba(239, 68, 68, 0.2);
   color: var(--color-red);
+}
+
+.decision-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0;
+  border-top: 1px solid var(--color-muted);
+  border-bottom: 1px solid var(--color-muted);
+}
+
+.decision-reasons-title {
+  font-size: var(--font-metadata);
+  color: var(--color-secondary);
+}
+
+.reason-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: var(--font-metadata);
+}
+
+.reason-feature {
+  color: var(--color-primary);
+}
+
+.reason-detail {
+  color: var(--color-secondary);
+}
+
+.reason-value {
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.reason-value.negative {
+  color: var(--color-amber);
 }
 
 .decision-meta {
@@ -204,6 +239,18 @@
   gap: 8px;
   font-size: var(--font-metadata);
   color: var(--color-secondary);
+}
+
+.decision-link {
+  color: var(--color-secondary);
+  text-decoration: underline;
+  text-decoration-color: var(--color-muted);
+  text-underline-offset: 2px;
+}
+
+.decision-link:hover {
+  color: var(--color-primary);
+  text-decoration-color: var(--color-primary);
 }
 
 .outcome-row {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { Station, Satellite, Pass, SpaceWeather, SimClock, Kpi, PlaybackSpeed } from '../types';
+import type { Station, Satellite, Pass, SpaceWeather, SimClock, PlaybackSpeed } from '../types';
 import { PassStatus, FlareClass } from '../types';
 import { SPACETIMEDB_HOST, SPACETIMEDB_MODULE } from '../config';
 import { DbConnection, tables, type SubscriptionHandle } from '../module_bindings';
@@ -68,7 +68,6 @@ export function useSpacetimeDB() {
   const [passes, setPasses] = useState<Pass[]>([]);
   const [spaceWeather, setSpaceWeather] = useState<SpaceWeather[]>([]);
   const [simClock, setSimClock] = useState<SimClock | null>(null);
-  const [kpi, setKpi] = useState<Kpi | null>(null);
   const [error, setError] = useState<string | null>(null);
   
   const connectionRef = useRef<DbConnection | null>(null);
@@ -97,6 +96,7 @@ export function useSpacetimeDB() {
             const sub = connection.subscriptionBuilder()
               .onApplied(() => {
                 console.log('Subscription applied, syncing data...');
+                synced = true;
                 syncAllData(connection.db);
               })
               .onError((errCtx) => {
@@ -109,7 +109,6 @@ export function useSpacetimeDB() {
                 tables.pass,
                 tables.spaceWeather,
                 tables.simClock,
-                tables.kpi,
               ]);
             
             subscriptionRef.current = sub;
@@ -171,7 +170,7 @@ export function useSpacetimeDB() {
         });
         
         conn.db.pass.onInsert((_ctx, row) => {
-          console.log('Pass inserted:', row);
+          if (!synced) return;
           setPasses(prev => {
             const exists = prev.some(p => p.id === row.id);
             if (exists) return prev;
@@ -193,6 +192,7 @@ export function useSpacetimeDB() {
         });
         
         conn.db.pass.onUpdate((_ctx, oldRow, newRow) => {
+          if (!synced) return;
           setPasses(prev => prev.map(p => 
             p.id === oldRow.id ? {
               id: newRow.id,
@@ -246,27 +246,6 @@ export function useSpacetimeDB() {
             isPlaying: newRow.isPlaying,
             realTimeAnchor: extractMicros(newRow.realTimeAnchor),
             simTimeAnchor: extractMicros(newRow.simTimeAnchor),
-          });
-        });
-        
-        conn.db.kpi.onInsert((_ctx, row) => {
-          console.log('KPI inserted:', row);
-          setKpi({
-            id: row.id,
-            billedThisMonthCents: row.billedThisMonthCents,
-            revenueAtRiskCents: row.revenueAtRiskCents,
-            creditsPaidCents: row.creditsPaidCents,
-            recoveredCents: row.recoveredCents,
-          });
-        });
-        
-        conn.db.kpi.onUpdate((_ctx, _oldRow, newRow) => {
-          setKpi({
-            id: newRow.id,
-            billedThisMonthCents: newRow.billedThisMonthCents,
-            revenueAtRiskCents: newRow.revenueAtRiskCents,
-            creditsPaidCents: newRow.creditsPaidCents,
-            recoveredCents: newRow.recoveredCents,
           });
         });
 
@@ -334,22 +313,12 @@ export function useSpacetimeDB() {
           simTimeAnchor: extractMicros(row.simTimeAnchor),
         });
       }
-      
-      const kpiRows = Array.from(db.kpi.iter());
-      if (kpiRows.length > 0) {
-        const row = kpiRows[kpiRows.length - 1];
-        console.log('Syncing KPI:', row);
-        setKpi({
-          id: row.id,
-          billedThisMonthCents: row.billedThisMonthCents,
-          revenueAtRiskCents: row.revenueAtRiskCents,
-          creditsPaidCents: row.creditsPaidCents,
-          recoveredCents: row.recoveredCents,
-        });
-      }
     };
     
     let disposed = false;
+    // Initial rows arrive in bulk through syncAllData; per-row callbacks only
+    // apply live changes after that, so tens of thousands of passes load in one pass.
+    let synced = false;
     connect();
     
     return () => {
@@ -411,7 +380,6 @@ export function useSpacetimeDB() {
     passes,
     spaceWeather,
     simClock,
-    kpi,
     setPlaybackPlaying,
     setPlaybackSpeedDb,
     seekToTime,
