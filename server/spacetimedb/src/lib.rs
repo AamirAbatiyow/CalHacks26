@@ -14,6 +14,8 @@ pub mod policy;
 pub mod sla;
 
 #[cfg(test)]
+mod attack_tests;
+#[cfg(test)]
 mod authority_tests;
 #[cfg(test)]
 mod tests;
