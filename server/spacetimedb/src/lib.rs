@@ -1,6 +1,9 @@
 use spacetimedb::{ReducerContext, ScheduleAt, SpacetimeType, Table, Timestamp};
 use std::time::Duration;
 
+// ML model predictions module
+pub mod ml;
+
 #[derive(SpacetimeType, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PassStatus {
     Scheduled,

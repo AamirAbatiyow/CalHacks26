@@ -1,0 +1,331 @@
+"""
+Curated ground station data from KSAT and AWS Ground Station.
+
+These are hand-curated from public sources for comparison with SatNOGS data.
+"""
+
+import logging
+from typing import Dict, Any, List
+from pathlib import Path
+
+from .config import RAW_DIR, PROCESSED_DIR
+from .utils import save_json, logger
+
+logger = logging.getLogger(__name__)
+
+# KSAT Ground Station Network
+# Sources:
+# - https://www.ksat.no/services/ground-station-services/ksat-ground-station-network/
+# - https://www.ksat.no/news/ksat-expands-global-network/
+# - Public press releases and company information
+
+KSAT_STATIONS = [
+    {
+        "id": "ksat_svalbard",
+        "name": "SvalSat (Svalbard Satellite Station)",
+        "operator": "KSAT",
+        "latitude": 78.2298,
+        "longitude": 15.4075,
+        "altitude_m": 464,
+        "location": "Svalbard, Norway",
+        "capabilities": ["S-band", "X-band", "Ka-band", "polar_orbit_coverage"],
+        "notes": "World's largest commercial ground station, unique polar location for every orbit contact",
+        "source_url": "https://www.ksat.no/services/ground-station-services/ksat-ground-station-network/"
+    },
+    {
+        "id": "ksat_tromso",
+        "name": "TrollSat (Tromsø Satellite Station)",
+        "operator": "KSAT",
+        "latitude": 69.6625,
+        "longitude": 18.9396,
+        "altitude_m": 131,
+        "location": "Tromsø, Norway",
+        "capabilities": ["S-band", "X-band", "Ka-band"],
+        "notes": "Arctic coverage, complementary to SvalSat",
+        "source_url": "https://www.ksat.no/services/ground-station-services/ksat-ground-station-network/"
+    },
+    {
+        "id": "ksat_troll",
+        "name": "TrollSat Antarctica",
+        "operator": "KSAT",
+        "latitude": -72.0117,
+        "longitude": 2.5350,
+        "altitude_m": 1275,
+        "location": "Queen Maud Land, Antarctica",
+        "capabilities": ["S-band", "X-band", "polar_orbit_coverage"],
+        "notes": "Antarctic coverage for polar-orbiting satellites",
+        "source_url": "https://www.ksat.no/services/ground-station-services/ksat-ground-station-network/"
+    },
+    {
+        "id": "ksat_grimstad",
+        "name": "Grimstad Ground Station",
+        "operator": "KSAT",
+        "latitude": 58.3469,
+        "longitude": 8.5947,
+        "altitude_m": 35,
+        "location": "Grimstad, Norway",
+        "capabilities": ["S-band", "X-band"],
+        "notes": "Southern Norway coverage",
+        "source_url": "https://www.ksat.no/services/ground-station-services/ksat-ground-station-network/"
+    },
+    {
+        "id": "ksat_dubai",
+        "name": "Dubai Ground Station",
+        "operator": "KSAT",
+        "latitude": 25.0657,
+        "longitude": 55.1713,
+        "altitude_m": 15,
+        "location": "Dubai, UAE",
+        "capabilities": ["S-band", "X-band"],
+        "notes": "Middle East coverage",
+        "source_url": "https://www.ksat.no/news/ksat-expands-global-network/"
+    },
+    {
+        "id": "ksat_mauritius",
+        "name": "Mauritius Ground Station",
+        "operator": "KSAT",
+        "latitude": -20.2481,
+        "longitude": 57.5139,
+        "altitude_m": 400,
+        "location": "Mauritius",
+        "capabilities": ["S-band", "X-band"],
+        "notes": "Indian Ocean coverage",
+        "source_url": "https://www.ksat.no/services/ground-station-services/ksat-ground-station-network/"
+    },
+    {
+        "id": "ksat_punta_arenas",
+        "name": "Punta Arenas Ground Station",
+        "operator": "KSAT",
+        "latitude": -53.1638,
+        "longitude": -70.9171,
+        "altitude_m": 15,
+        "location": "Punta Arenas, Chile",
+        "capabilities": ["S-band", "X-band", "polar_orbit_coverage"],
+        "notes": "South American polar coverage",
+        "source_url": "https://www.ksat.no/services/ground-station-services/ksat-ground-station-network/"
+    },
+    {
+        "id": "ksat_singapore",
+        "name": "Singapore Ground Station",
+        "operator": "KSAT",
+        "latitude": 1.3521,
+        "longitude": 103.8198,
+        "altitude_m": 15,
+        "location": "Singapore",
+        "capabilities": ["S-band", "X-band"],
+        "notes": "Southeast Asia coverage",
+        "source_url": "https://www.ksat.no/services/ground-station-services/ksat-ground-station-network/"
+    },
+    {
+        "id": "ksat_hawaii",
+        "name": "Hawaii Ground Station",
+        "operator": "KSAT",
+        "latitude": 19.8199,
+        "longitude": -155.4682,
+        "altitude_m": 3400,
+        "location": "Hawaii, USA",
+        "capabilities": ["S-band", "X-band"],
+        "notes": "Pacific Ocean coverage",
+        "source_url": "https://www.ksat.no/services/ground-station-services/ksat-ground-station-network/"
+    },
+    {
+        "id": "ksat_alaska",
+        "name": "Alaska Ground Station",
+        "operator": "KSAT",
+        "latitude": 64.8591,
+        "longitude": -147.8502,
+        "altitude_m": 150,
+        "location": "Fairbanks, Alaska, USA",
+        "capabilities": ["S-band", "X-band", "polar_orbit_coverage"],
+        "notes": "Arctic coverage, polar orbit support",
+        "source_url": "https://www.ksat.no/services/ground-station-services/ksat-ground-station-network/"
+    },
+]
+
+# AWS Ground Station Locations
+# Source: https://aws.amazon.com/ground-station/locations/
+# Note: AWS operates antenna farms at these locations
+
+AWS_GROUND_STATIONS = [
+    {
+        "id": "aws_ohio",
+        "name": "AWS Ground Station - US East (Ohio)",
+        "operator": "AWS",
+        "latitude": 40.0999,
+        "longitude": -83.0999,
+        "altitude_m": 280,
+        "location": "Ohio, USA",
+        "aws_region": "us-east-2",
+        "capabilities": ["S-band", "X-band", "wideband"],
+        "source_url": "https://aws.amazon.com/ground-station/locations/"
+    },
+    {
+        "id": "aws_oregon",
+        "name": "AWS Ground Station - US West (Oregon)",
+        "operator": "AWS",
+        "latitude": 45.8237,
+        "longitude": -119.2946,
+        "altitude_m": 200,
+        "location": "Oregon, USA",
+        "aws_region": "us-west-2",
+        "capabilities": ["S-band", "X-band", "wideband"],
+        "source_url": "https://aws.amazon.com/ground-station/locations/"
+    },
+    {
+        "id": "aws_ireland",
+        "name": "AWS Ground Station - Europe (Ireland)",
+        "operator": "AWS",
+        "latitude": 53.4264,
+        "longitude": -7.9407,
+        "altitude_m": 90,
+        "location": "Ireland",
+        "aws_region": "eu-west-1",
+        "capabilities": ["S-band", "X-band", "wideband"],
+        "source_url": "https://aws.amazon.com/ground-station/locations/"
+    },
+    {
+        "id": "aws_stockholm",
+        "name": "AWS Ground Station - Europe (Stockholm)",
+        "operator": "AWS",
+        "latitude": 59.3293,
+        "longitude": 18.0686,
+        "altitude_m": 30,
+        "location": "Stockholm, Sweden",
+        "aws_region": "eu-north-1",
+        "capabilities": ["S-band", "X-band", "wideband"],
+        "source_url": "https://aws.amazon.com/ground-station/locations/"
+    },
+    {
+        "id": "aws_bahrain",
+        "name": "AWS Ground Station - Middle East (Bahrain)",
+        "operator": "AWS",
+        "latitude": 26.0667,
+        "longitude": 50.5577,
+        "altitude_m": 5,
+        "location": "Bahrain",
+        "aws_region": "me-south-1",
+        "capabilities": ["S-band", "X-band", "wideband"],
+        "source_url": "https://aws.amazon.com/ground-station/locations/"
+    },
+    {
+        "id": "aws_cape_town",
+        "name": "AWS Ground Station - Africa (Cape Town)",
+        "operator": "AWS",
+        "latitude": -33.9249,
+        "longitude": 18.4241,
+        "altitude_m": 50,
+        "location": "Cape Town, South Africa",
+        "aws_region": "af-south-1",
+        "capabilities": ["S-band", "X-band", "wideband"],
+        "source_url": "https://aws.amazon.com/ground-station/locations/"
+    },
+    {
+        "id": "aws_sydney",
+        "name": "AWS Ground Station - Asia Pacific (Sydney)",
+        "operator": "AWS",
+        "latitude": -33.8688,
+        "longitude": 151.2093,
+        "altitude_m": 30,
+        "location": "Sydney, Australia",
+        "aws_region": "ap-southeast-2",
+        "capabilities": ["S-band", "X-band", "wideband"],
+        "source_url": "https://aws.amazon.com/ground-station/locations/"
+    },
+    {
+        "id": "aws_singapore",
+        "name": "AWS Ground Station - Asia Pacific (Singapore)",
+        "operator": "AWS",
+        "latitude": 1.3521,
+        "longitude": 103.8198,
+        "altitude_m": 15,
+        "location": "Singapore",
+        "aws_region": "ap-southeast-1",
+        "capabilities": ["S-band", "X-band", "wideband"],
+        "source_url": "https://aws.amazon.com/ground-station/locations/"
+    },
+    {
+        "id": "aws_seoul",
+        "name": "AWS Ground Station - Asia Pacific (Seoul)",
+        "operator": "AWS",
+        "latitude": 37.5665,
+        "longitude": 126.9780,
+        "altitude_m": 40,
+        "location": "Seoul, South Korea",
+        "aws_region": "ap-northeast-2",
+        "capabilities": ["S-band", "X-band", "wideband"],
+        "source_url": "https://aws.amazon.com/ground-station/locations/"
+    },
+    {
+        "id": "aws_hawaii",
+        "name": "AWS Ground Station - US (Hawaii)",
+        "operator": "AWS",
+        "latitude": 19.8968,
+        "longitude": -155.5828,
+        "altitude_m": 2000,
+        "location": "Hawaii, USA",
+        "aws_region": "us-west-2",
+        "capabilities": ["S-band", "X-band", "wideband"],
+        "notes": "Pacific coverage",
+        "source_url": "https://aws.amazon.com/ground-station/locations/"
+    },
+    {
+        "id": "aws_punta_arenas",
+        "name": "AWS Ground Station - South America (Punta Arenas)",
+        "operator": "AWS",
+        "latitude": -53.1548,
+        "longitude": -70.9108,
+        "altitude_m": 15,
+        "location": "Punta Arenas, Chile",
+        "aws_region": "sa-east-1",
+        "capabilities": ["S-band", "X-band", "wideband", "polar_orbit_coverage"],
+        "notes": "Polar orbit coverage for South America",
+        "source_url": "https://aws.amazon.com/ground-station/locations/"
+    },
+]
+
+
+def get_curated_stations() -> Dict[str, Any]:
+    """
+    Get all curated ground station data.
+    
+    Returns dict with:
+    - ksat_stations: list of KSAT ground stations
+    - aws_stations: list of AWS Ground Station locations
+    - all_stations: combined list
+    - stats: statistics
+    """
+    logger.info("Loading curated ground station data...")
+    
+    all_stations = KSAT_STATIONS + AWS_GROUND_STATIONS
+    
+    stats = {
+        "ksat_stations": len(KSAT_STATIONS),
+        "aws_stations": len(AWS_GROUND_STATIONS),
+        "total_stations": len(all_stations)
+    }
+    
+    # Save to raw directory
+    save_json({
+        "ksat": KSAT_STATIONS,
+        "aws": AWS_GROUND_STATIONS,
+        "combined": all_stations
+    }, RAW_DIR / "curated_stations_raw.json")
+    
+    logger.info(f"Loaded {stats['total_stations']} curated stations "
+                f"({stats['ksat_stations']} KSAT, {stats['aws_stations']} AWS)")
+    
+    return {
+        "ksat_stations": KSAT_STATIONS,
+        "aws_stations": AWS_GROUND_STATIONS,
+        "all_stations": all_stations,
+        "stats": stats
+    }
+
+
+if __name__ == "__main__":
+    result = get_curated_stations()
+    print(f"KSAT stations: {result['stats']['ksat_stations']}")
+    print(f"AWS stations: {result['stats']['aws_stations']}")
+    
+    for station in result['all_stations']:
+        print(f"  - {station['name']} ({station['latitude']:.4f}, {station['longitude']:.4f})")

@@ -206,6 +206,107 @@ npm run build
 spacetime logs ground-truth --server local -f
 ```
 
+## ML Pass-Failure Prediction
+
+The `/ml` directory contains a gradient-boosted model (LightGBM) for predicting satellite pass failures. The model uses real SatNOGS observation outcomes combined with space weather and local conditions to estimate failure probability per pass.
+
+### Architecture
+
+```
+/ml
+├── __init__.py          # Module initialization
+├── data_loader.py       # SatNOGS data loading + synthetic augmentation
+├── features.py          # Feature engineering
+├── train.py             # Training pipeline
+├── score.py             # Scoring with SHAP explanations
+├── models/              # Saved model artifacts
+│   ├── model_v1.0.0.lgb
+│   ├── config_v1.0.0.json
+│   └── metrics_v1.0.0.json
+├── tests/
+│   └── test_model.py    # Unit tests
+└── requirements.txt     # Python dependencies
+```
+
+### Features
+
+The model uses the following features:
+- **Pass geometry**: max elevation, duration, satellite inclination/period/apogee
+- **Space weather**: Kp index, solar flare class (None/C/M/X)
+- **Local weather**: cloud cover, precipitation, temperature, humidity, wind speed
+- **Station**: latitude, longitude (high-latitude aurora risk)
+- **Derived**: elevation bins, short pass flag, Kp-latitude interaction
+
+### Model Metrics (v1.0.0)
+
+| Metric | Value |
+|--------|-------|
+| AUC-ROC | 0.66 |
+| AUC-PR | 0.35 |
+| Brier Score | 0.17 |
+| ECE (Calibration) | 0.09 |
+| Accuracy | 0.76 |
+
+**Training Data**: 99 real SatNOGS observations + 2,901 synthetic samples (3,000 total)
+
+### Running the ML Pipeline
+
+**Install dependencies:**
+```bash
+pip install -r ml/requirements.txt
+```
+
+**Train a model:**
+```bash
+python -m ml.train --samples 3000 --version "v1.0.0"
+```
+
+**Score passes:**
+```bash
+python -m ml.score --demo  # Demo with synthetic data
+python -m ml.score --input passes.json --output predictions.json
+```
+
+**Run tests:**
+```bash
+pytest ml/tests/ -v
+```
+
+### Output Format
+
+Each prediction includes:
+- `failure_probability`: Float [0.0, 1.0]
+- `estimated_loss_cents`: failure_probability × pass_value_cents
+- `shap_contributions`: Per-factor explanations (e.g., {"Kp Index": +0.15, "Max Elevation": -0.08})
+- `model_version`: Version string for audit trail
+
+### SpacetimeDB Integration
+
+The `model_prediction` table stores predictions with SHAP breakdown:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `pass_id` | u64 | Reference to pass table |
+| `model_version` | String | Model version for audit |
+| `failure_probability` | f32 | Predicted failure prob |
+| `estimated_loss_cents` | i64 | Expected dollar loss |
+| `shap_factors` | Vec | Top contributing factors |
+
+Use these reducers to insert predictions:
+- `insert_model_prediction` - Single prediction
+- `batch_insert_predictions` - Batch insert from JSON
+- `register_model_version` - Register new model with metrics
+
+Decision records reference `model_version` to maintain audit trail.
+
+### Extending with More Data
+
+To train on more real data:
+1. Run the data pipeline: `python -m pipeline.run --obs-limit 10000`
+2. Retrain: `python -m ml.train --samples 10000 --version "v2.0.0"`
+
+The model will use real data when available and fall back to synthetic augmentation.
+
 ## Mock Data Note
 
 All financial data (KPIs, revenue figures) is mock data for demonstration purposes. In production, these would connect to actual billing systems.
