@@ -81,6 +81,7 @@ function useDecisionRow(key: string | null): DecisionRow | null {
           policyVersion: row.policyVersion,
           modelVersion: row.modelVersion,
           createdAt: micros(row.createdAt),
+          passIds: row.passIds,
         }) : null;
       }
       default:

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import {
   Background,
   BackgroundVariant,
@@ -45,7 +45,11 @@ function ReplayCanvas({ trace, timeline }: { trace: DecisionTrace; timeline: Tim
   const signature = JSON.stringify(trace.stages);
   const { nodes, edges } = useMemo(() => layoutTrace(JSON.parse(signature) as TraceStage[]), [signature]);
   const flow = useReactFlow();
-  const [initialized, setInitialized] = useState(false);
+  const measured = useStore(s => {
+    let count = 0;
+    s.nodeLookup.forEach(n => { if (n.measured.width) count++; });
+    return count;
+  });
   const canvasWidth = useStore(s => s.width);
   const { active, done } = timeline;
 
@@ -56,7 +60,7 @@ function ReplayCanvas({ trace, timeline }: { trace: DecisionTrace; timeline: Tim
   }, [nodes, canvasWidth]);
 
   useEffect(() => {
-    if (!initialized) return;
+    if (measured < nodes.length) return;
     const overview = done && overviewFits;
     const from = overview ? 0 : Math.max(0, active - FOLLOW_WINDOW + 1);
     const framed = nodes.slice(from, active + 1).map(n => ({ id: n.id }));
@@ -67,7 +71,7 @@ function ReplayCanvas({ trace, timeline }: { trace: DecisionTrace; timeline: Tim
       minZoom: 0.5,
       duration: overview ? 900 : 700,
     });
-  }, [initialized, active, done, overviewFits, nodes, flow]);
+  }, [measured, active, done, overviewFits, nodes, flow]);
 
   return (
     <ReactFlow
@@ -85,7 +89,6 @@ function ReplayCanvas({ trace, timeline }: { trace: DecisionTrace; timeline: Tim
       minZoom={0.4}
       maxZoom={1.6}
       proOptions={{ hideAttribution: true }}
-      onInit={() => setInitialized(true)}
       fitView
       fitViewOptions={{ nodes: [{ id: '0' }], maxZoom: 1.1 }}
     >

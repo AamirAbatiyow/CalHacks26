@@ -33,13 +33,16 @@ export function fromAuditRecord(record: DecisionRecord): DecisionRow {
   })();
   const ref = record.passId != null ? `Pass #${record.passId}` : record.stationId ?? `Decision #${record.id}`;
   const amount = Math.abs(Number(record.amountCents));
+  const confidence = record.reason.match(/at (\d+(?:\.\d+)?)% confidence/);
+  const share = record.reason.match(/(\d+)% of the pass credited/)?.[1] ?? (/half the pass credited/.test(record.reason) ? '50' : null);
+  const credit = outcome === 'denied' || record.decisionType === 'PassRecovered' || outcome === 'pending' ? 0 : amount;
   return {
     key: `audit:${record.id}`,
     title: `${ref} · ${DECISION_LABELS[record.decisionType] ?? record.decisionType}`,
     subject: record.stationId ?? ref,
-    claimedCents: amount,
-    creditCents: outcome === 'denied' || record.decisionType === 'PassRecovered' || outcome === 'pending' ? 0 : amount,
-    confidencePct: null,
+    claimedCents: share && credit > 0 ? Math.round((credit * 100) / Number(share)) : amount,
+    creditCents: credit,
+    confidencePct: confidence ? Number(confidence[1]) : null,
     outcome,
     reason: record.reason,
     policyVersion: record.policyVersion,
@@ -174,10 +177,16 @@ function seededRoute(row: DecisionRow): DecidedBy {
 
 function rationaleFor(row: DecisionRow, h: number, credit: number): string {
   const gap = Math.round(pick(h, 3, 3, 11, 0));
+  if (/complete downlink/i.test(row.reason)) {
+    return 'Station telemetry shows frames received through loss of signal. The downlink completed, so no SLA credit is owed.';
+  }
+  if (/configuration fault|customer-side/i.test(row.reason)) {
+    return 'The drop traces to the customer modem configuration, not the station. The SLA excludes customer-side faults.';
+  }
   if (/recover|backup/i.test(row.reason) || /recovered/i.test(row.title)) {
     return 'Backup station captured the full pass; revenue is recoverable and no SLA credit is owed.';
   }
-  if (/degrad|partial|link quality/i.test(row.reason)) {
+  if (/degrad|partial|link quality|of the pass credited/i.test(row.reason)) {
     return `Customer packet-loss report matches the station SNR trace. Degradation was partial, so credit is pro-rated to ${usd(credit)}.`;
   }
   if (/incomplete|transfer/i.test(row.reason)) {
@@ -269,7 +278,7 @@ function seededTrace(row: DecisionRow): DecisionTrace {
       tone: 'neutral',
     });
 
-    const humanBound = route !== 'system2';
+    const humanBound = route === 'human' || route === 'pending';
     const failing: number = humanBound ? (h % 2 === 0 ? 2 : 0) : -1;
     const checks: ReverifyCheck[] = [
       { label: 'Evidence exists', ok: failing !== 0 },
