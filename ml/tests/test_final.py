@@ -230,3 +230,21 @@ def test_next_hour_prefers_forward_edge_then_backfill(tmp_path, monkeypatch):
     assert h2 == h - timedelta(hours=1)
     h3, _ = sf.next_hour_to_fetch(now + timedelta(hours=2), 72, anchor, None, {})
     assert h3 == h + timedelta(hours=1)
+
+
+def test_featurize_matches_training_features(synth, monkeypatch):
+    raw, hours, stations, df = synth
+    monkeypatch.setattr(fm, "load_stations", lambda: stations)
+    monkeypatch.setattr(fm, "load_kp", lambda: cf.KpSeries({}))
+    row = df.iloc[-1]
+    new = raw[raw["id"] == row["id"]]
+    context = raw[raw["id"] != row["id"]]
+    X = fm.featurize(new, context, lag_hours=1.0)
+    for c in ("st_fail_streak", "st_failed_frac", "sat_good_frac", "elev_margin_deg"):
+        a, b = X.iloc[0][c], row[c]
+        assert (pd.isna(a) and pd.isna(b)) or a == pytest.approx(b), c
+    # A human ruling on the last escalated pass makes it count immediately.
+    prev = context[context["ground_station"] == row["ground_station"]].iloc[-1]
+    X2 = fm.featurize(new, context, lag_hours=24.0, human_known={int(prev["id"]): prev["end"]})
+    X3 = fm.featurize(new, context, lag_hours=24.0)
+    assert X2.iloc[0]["st_unknown_frac"] <= X3.iloc[0]["st_unknown_frac"]

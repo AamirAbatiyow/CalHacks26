@@ -51,6 +51,8 @@ MODEL_DIR = Path(__file__).resolve().parent / "models" / "final"
 REPORT_DIR = Path(__file__).resolve().parent / "reports"
 SNAPSHOT = ROOT / "data" / "processed" / "satnogs_store_snapshot.parquet"
 BASE_VERSION = "v3.0.0"
+LOOKBACK_H = 6.0          # station / satellite / transmitter history window
+LONG_LOOKBACK_H = 24.0   # station long-window failure share (NaN until the store covers it)
 
 LGB_PARAMS = dict(objective="binary", learning_rate=0.05, num_leaves=15, min_child_samples=20,
                   feature_fraction=0.8, bagging_fraction=0.8, bagging_freq=1, lambda_l2=1.0,
@@ -115,11 +117,11 @@ def write_snapshot(raw: pd.DataFrame) -> None:
     snap.to_parquet(SNAPSHOT, compression="zstd", index=False)
 
 
-def build(lag_hours: float = 1.0, lookback_hours: float = 12.0, raw=None, hours=None) -> pd.DataFrame:
+def build(lag_hours: float = 1.0, lookback_hours: float = LOOKBACK_H, raw=None, hours=None) -> pd.DataFrame:
     if raw is None:
         raw, hours = load_raw()
     return cf.build_dataset(raw, load_stations(), load_kp(), hours, lag_hours=lag_hours,
-                            lookback_hours=lookback_hours)
+                            lookback_hours=lookback_hours, long_lookback_hours=LONG_LOOKBACK_H)
 
 
 # --------------------------------------------------------------------------- model
@@ -447,7 +449,7 @@ def render_report(res: Dict, out_name: str) -> str:
          "station-cluster bootstrap (resampling stations).", ""]
     for lag, info in res["lags"].items():
         L += [f"## Label latency {lag}", "",
-              f"{info['n']} labeled passes with full {lag}+12h history coverage "
+              f"{info['n']} labeled passes with full {lag}+{LOOKBACK_H:g}h history coverage "
               f"(of {info['n_obs_all']} stored observations, all statuses), {info['stations']} stations, "
               f"span {info['span'][0][:16]} to {info['span'][1][:16]} UTC. Status mix: {info['status_counts']}.", ""]
         for split, title in (("station_cv", "Held-out stations (5 station-grouped folds)"),
@@ -557,6 +559,46 @@ def gate_fields(gm: GatedModel, cfg: Dict, dec_row) -> Dict:
             "confidence_percent": min(79, int(100 * max(dec_row["p_fail"], 1 - dec_row["p_fail"])))}
 
 
+def featurize(new_obs: pd.DataFrame, context_obs: pd.DataFrame, lag_hours: float = 1.0,
+              decision_time: Optional[pd.Timestamp] = None, human_known: Optional[Dict[int, str]] = None) -> pd.DataFrame:
+    """Serving-time features for `new_obs` (SatNOGS-shaped rows, status ignored).
+
+    `context_obs` is the operator's record of earlier passes (any statuses, with
+    vetting timestamps); only outcomes known by the decision time are used.
+    `human_known` maps observation id -> ISO time of a human ruling, which makes
+    that outcome known from then on (the HITL early-label effect).
+    """
+    new = new_obs.copy()
+    new["status"] = "future"
+    allobs = cf.normalize_observations(pd.concat([context_obs, new], ignore_index=True, sort=False))
+    known = cf.label_known_at(allobs, lag_hours)
+    if human_known:
+        ids = allobs["id"].to_numpy()
+        for oid, t in human_known.items():
+            known[ids == oid] = np.minimum(known[ids == oid], pd.Timestamp(t).value)
+    q = np.where(allobs["id"].isin(set(new["id"])).to_numpy())[0]
+    T = None if decision_time is None else np.full(len(q), pd.Timestamp(decision_time).value)
+    hist = cf.history_features(allobs, known, q, LOOKBACK_H, LONG_LOOKBACK_H, query_time_ns=T)
+    phys = cf.physical_features(allobs.iloc[q], load_stations(), load_kp())
+    base = allobs.iloc[q][["id", "ground_station", "norad_cat_id", "start_ns", "end_ns"]]
+    return pd.concat([base, phys, hist], axis=1).reset_index(drop=True)
+
+
+def score_observations(new_obs: pd.DataFrame, context_obs: pd.DataFrame, version: Optional[str] = None,
+                       **kw) -> List[Dict]:
+    """Gate decisions (+ the feature rows, for `hitl.ingest_labeled_decision`)."""
+    gm, cfg = load_gated(version)
+    X = featurize(new_obs, context_obs, cfg.get("lag_hours", 1.0), **kw)
+    dec = gm.decide(X)
+    out = []
+    for (_, x), (_, d) in zip(X.iterrows(), dec.iterrows()):
+        out.append({"pass_id": int(x["id"]), "model_version": cfg["version"], "failure_probability": float(d["p_fail"]),
+                    **gate_fields(gm, cfg, d),
+                    "features": {k: (None if isinstance(v, float) and np.isnan(v) else v)
+                                 for k, v in x.items() if k in gm.booster.feature_names}})
+    return out
+
+
 def train_final(lag_hours: float = 1.0, variant: str = FINAL_VARIANT, reason: str = "manual",
                 version: Optional[str] = None, eval_json: Optional[Path] = None, write_snap: bool = True) -> Dict:
     raw, hours = load_raw()
@@ -566,7 +608,7 @@ def train_final(lag_hours: float = 1.0, variant: str = FINAL_VARIANT, reason: st
     t0 = time.time()
     gm = fit_gated(df, variant, inner_folds=5)
     fit_s = time.time() - t0
-    meta = {"reason": reason, "lag_hours": lag_hours, "lookback_hours": 12.0, "n_train": len(df),
+    meta = {"reason": reason, "lag_hours": lag_hours, "lookback_hours": LOOKBACK_H, "n_train": len(df),
             "n_human_labels": 0, "fit_seconds": round(fit_s, 2), "trained_at": datetime.now(timezone.utc).isoformat(),
             "status_counts": df["status"].value_counts().to_dict(), "inner": gm.inner}
     ev = eval_json or REPORT_DIR / "final_v3.json"

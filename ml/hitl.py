@@ -225,10 +225,10 @@ def simulate(lag_hours: float = 1.0, start_frac: float = 0.4, step_hours: float 
     raw, hours = fm.load_raw()
     obs = cf.normalize_observations(raw)
     stations, kp = fm.load_stations(), fm.load_kp()
-    lookback = 12.0
+    lookback = fm.LOOKBACK_H
     known0 = cf.label_known_at(obs, lag_hours)
     covered = cf.history_coverage(obs, hours, lookback + lag_hours)
-    long_ok = cf.history_coverage(obs, hours, 24.0 + lag_hours)
+    long_ok = cf.history_coverage(obs, hours, fm.LONG_LOOKBACK_H + lag_hours)
     long_cols = ["st_n_long", "st_failed_frac_long"]
     q_all = np.where(obs["labeled"].to_numpy() & covered)[0]
     phys = cf.physical_features(obs.iloc[q_all], stations, kp)
@@ -238,7 +238,7 @@ def simulate(lag_hours: float = 1.0, start_frac: float = 0.4, step_hours: float 
     T_end = t_start.max() + 1
 
     init_q = q_all[t_start < T0]
-    hist0 = cf.history_features(obs, known0, init_q, lookback)
+    hist0 = cf.history_features(obs, known0, init_q, lookback, fm.LONG_LOOKBACK_H)
     hist0.loc[~long_ok[init_q], long_cols] = np.nan
     init = pd.concat([base_cols.loc[init_q], phys.loc[init_q], hist0], axis=1).reset_index(drop=True)
     gm0 = fm.fit_gated(init, variant, seed=seed)
@@ -259,7 +259,7 @@ def simulate(lag_hours: float = 1.0, start_frac: float = 0.4, step_hours: float 
             sel = q_all[(t_start >= a) & (t_start < b)]
             if len(sel):
                 k = known if mode != "frozen" else known0
-                h = cf.history_features(obs, k, sel, lookback)
+                h = cf.history_features(obs, k, sel, lookback, fm.LONG_LOOKBACK_H)
                 h.loc[~long_ok[sel], long_cols] = np.nan
                 X = pd.concat([base_cols.loc[sel], phys.loc[sel], h], axis=1)
                 dec = learner.gm.decide(X)
