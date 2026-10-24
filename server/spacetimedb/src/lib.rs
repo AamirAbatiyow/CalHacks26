@@ -1,6 +1,12 @@
 use spacetimedb::{ReducerContext, ScheduleAt, SpacetimeType, Table, Timestamp};
 use std::time::Duration;
 
+pub mod authority;
+pub mod confidence_gate;
+
+#[cfg(test)]
+mod tests;
+
 #[derive(SpacetimeType, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PassStatus {
     Scheduled,
