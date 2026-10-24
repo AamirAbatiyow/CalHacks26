@@ -1,0 +1,172 @@
+{
+ "policy_version": "v3.2.0",
+ "model_version": "v3.1.0",
+ "tier": "B",
+ "lag_hours": 1.0,
+ "n_train": 3604,
+ "created_at": "2026-10-24T19:08:29.699425+00:00",
+ "kept_groups": [
+  "model-gate",
+  "ops-decoded-frames",
+  "ops-no-artifacts"
+ ],
+ "learned_effects": [],
+ "heldout": {
+  "station_cv": {
+   "fail_n": 510,
+   "fail_precision": 0.9980392156862745,
+   "fail_wilson95": [
+    0.9889777175818589,
+    0.9996537984339716
+   ],
+   "ok_n": 1144,
+   "ok_precision": 0.993006993006993,
+   "ok_wilson95": [
+    0.9862616011957535,
+    0.9964523900030322
+   ],
+   "coverage": 0.4589345172031077,
+   "escalated": 0.5410654827968924,
+   "accuracy_auto": 0.9945586457073761
+  },
+  "time": {
+   "fail_n": 217,
+   "fail_precision": 1.0,
+   "fail_wilson95": [
+    0.9826047266457046,
+    1.0000000000000002
+   ],
+   "ok_n": 347,
+   "ok_precision": 0.9971181556195965,
+   "ok_wilson95": [
+    0.9838586354678999,
+    0.9994911155308416
+   ],
+   "coverage": 0.5217391304347826,
+   "escalated": 0.4782608695652174,
+   "accuracy_auto": 0.99822695035461
+  }
+ },
+ "rules": [
+  {
+   "id": "v3.2.0-r1",
+   "policy_version_id": "v3.2.0",
+   "name": "No artifacts uploaded",
+   "description": "No audio and no waterfall uploaded by pass end + lag (zero-artifact observation)",
+   "cedar_code": "permit(\n  principal == GroundTruth::Actor::\"ai_analyst\",\n  action == GroundTruth::Action::\"auto_decide_failed\",\n  resource\n) when {\n  context.own_artifacts == 0\n};",
+   "enabled": true,
+   "order_index": 0,
+   "rule_id": "ops-no-artifacts",
+   "effect": "failed",
+   "group": "ops_evidence",
+   "conditions": [
+    [
+     "own_artifacts",
+     "==",
+     0
+    ]
+   ],
+   "train": {
+    "n": 477,
+    "precision": 1.0,
+    "wilson80_lb": 0.9965684230611751
+   },
+   "heldout_stations": {
+    "n": 477,
+    "precision": 1.0,
+    "wilson95": [
+     0.9920106746171712,
+     0.9999999999999999
+    ]
+   },
+   "future_time": {
+    "n": 167,
+    "precision": 1.0,
+    "wilson95": [
+     0.977513673484678,
+     0.9999999999999999
+    ]
+   }
+  },
+  {
+   "id": "v3.2.0-r2",
+   "policy_version_id": "v3.2.0",
+   "name": "Decoded frames uploaded",
+   "description": "At least one demodulated data frame uploaded by pass end + lag",
+   "cedar_code": "permit(\n  principal == GroundTruth::Actor::\"ai_analyst\",\n  action == GroundTruth::Action::\"auto_decide_ok\",\n  resource\n) when {\n  context.own_n_demod >= 1\n};",
+   "enabled": true,
+   "order_index": 1,
+   "rule_id": "ops-decoded-frames",
+   "effect": "ok",
+   "group": "ops_evidence",
+   "conditions": [
+    [
+     "own_n_demod",
+     ">=",
+     1.0
+    ]
+   ],
+   "train": {
+    "n": 1144,
+    "precision": 0.993006993006993,
+    "wilson80_lb": 0.9890667067215793
+   },
+   "heldout_stations": {
+    "n": 1144,
+    "precision": 0.993006993006993,
+    "wilson95": [
+     0.9862616011957535,
+     0.9964523900030322
+    ]
+   },
+   "future_time": {
+    "n": 347,
+    "precision": 0.9971181556195965,
+    "wilson95": [
+     0.9838586354678999,
+     0.9994911155308416
+    ]
+   }
+  },
+  {
+   "id": "v3.2.0-r3",
+   "policy_version_id": "v3.2.0",
+   "name": "v3.1.0 model gate",
+   "description": "v3.1.0 raw score at or above the Wilson80 threshold picked on passes reaching the gate (train stats in-sample)",
+   "cedar_code": "permit(\n  principal == GroundTruth::Actor::\"ai_analyst\",\n  action == GroundTruth::Action::\"auto_decide_failed\",\n  resource\n) when {\n  context.model_raw.greaterThanOrEqual(decimal(\"0.9459\"))\n};",
+   "enabled": true,
+   "order_index": 2,
+   "rule_id": "model-gate",
+   "effect": "failed",
+   "group": "model",
+   "conditions": [
+    [
+     "model_raw",
+     ">=",
+     0.9458925435098503
+    ]
+   ],
+   "train": {
+    "n": 271,
+    "precision": 1.0,
+    "wilson80_lb": 0.9939756326740142
+   },
+   "heldout_stations": {
+    "n": 33,
+    "precision": 0.9696969696969697,
+    "wilson95": [
+     0.8468093832683193,
+     0.9946307279103482
+    ]
+   },
+   "future_time": {
+    "n": 50,
+    "precision": 1.0,
+    "wilson95": [
+     0.9286499658256813,
+     1.0
+    ]
+   }
+  }
+ ]
+}

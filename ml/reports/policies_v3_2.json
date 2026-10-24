@@ -1,0 +1,2675 @@
+{
+ "generated_at": "2026-10-24T19:04:04.476487+00:00",
+ "version": "v3.2.0",
+ "target": 0.95,
+ "z": 1.2816,
+ "lags": {
+  "1h": {
+   "n": 3604,
+   "stations": 350,
+   "status_counts": {
+    "good": 1973,
+    "bad": 1020,
+    "failed": 611
+   },
+   "tiers": {
+    "A": {
+     "all": {
+      "station_cv": {
+       "n": 3604,
+       "fail_n": 448,
+       "fail_precision": 0.9308035714285714,
+       "fail_wilson95": [
+        0.9034549585409646,
+        0.9508267189318489
+       ],
+       "fail_wilson80_lb": 0.9138106348442446,
+       "fail_cluster_ci": [
+        0.8664760569865388,
+        0.989693784677857
+       ],
+       "ok_n": 45,
+       "ok_precision": 0.9777777777777777,
+       "ok_wilson95": [
+        0.8843305361128119,
+        0.9960665024772425
+       ],
+       "ok_wilson80_lb": 0.9285766214924576,
+       "ok_cluster_ci": [
+        0.8965063520871144,
+        1.0
+       ],
+       "coverage": 0.13679245283018868,
+       "escalated": 0.8632075471698113,
+       "accuracy_auto": 0.9350912778904665,
+       "accuracy_auto_wilson95": [
+        0.9098041272560281,
+        0.9536501406635663
+       ],
+       "fail_recall": 0.2556713672593501,
+       "recall_failed_class": 0.44189852700491,
+       "recall_bad_class": 0.14411764705882352,
+       "ok_recall": 0.022301064368981247,
+       "meets_target": false,
+       "groups": {
+        "model-gate": {
+         "effect": "failed",
+         "n": 253,
+         "precision": 0.9881422924901185,
+         "wilson95": [
+          0.9657228795390607,
+          0.9959593401636664
+         ],
+         "wilson80_lb": 0.9757475015942351,
+         "coverage": 0.07019977802441732,
+         "without": {
+          "coverage": 0.06659267480577137,
+          "fail_precision": 0.8564102564102564,
+          "ok_precision": 0.9777777777777777,
+          "fail_wilson80_lb": 0.8212461514948644,
+          "ok_wilson80_lb": 0.9285766214924576,
+          "accuracy_auto": 0.8791666666666667
+         },
+         "marginal_coverage": 0.0701997780244173
+        },
+        "ops-outage-streak": {
+         "effect": "failed",
+         "n": 195,
+         "precision": 0.8564102564102564,
+         "wilson95": [
+          0.8002982736203526,
+          0.8987506175573485
+         ],
+         "wilson80_lb": 0.8212461514948644,
+         "coverage": 0.054106548279689234,
+         "without": {
+          "coverage": 0.09739178690344062,
+          "fail_precision": 0.9869281045751634,
+          "ok_precision": 0.9777777777777777,
+          "fail_wilson80_lb": 0.975631460884977,
+          "ok_wilson80_lb": 0.9285766214924576,
+          "accuracy_auto": 0.9857549857549858
+         },
+         "marginal_coverage": 0.039400665926748055
+        },
+        "stage2-ok": {
+         "effect": "ok",
+         "n": 45,
+         "precision": 0.9777777777777777,
+         "wilson95": [
+          0.8843305361128119,
+          0.9960665024772425
+         ],
+         "wilson80_lb": 0.9285766214924576,
+         "coverage": 0.012486126526082131,
+         "without": {
+          "coverage": 0.12430632630410655,
+          "fail_precision": 0.9308035714285714,
+          "ok_precision": null,
+          "fail_wilson80_lb": 0.9138106348442446,
+          "ok_wilson80_lb": null,
+          "accuracy_auto": 0.9308035714285714
+         },
+         "marginal_coverage": 0.012486126526082122
+        }
+       },
+       "n_folds_enabled": {
+        "model-gate": 5,
+        "stage2-ok": 2,
+        "ops-outage-streak": 2
+       },
+       "fitted_last": [
+        {
+         "id": "ops-outage-streak",
+         "name": "Station outage streak",
+         "effect": "failed",
+         "group": "ops_history",
+         "conditions": [
+          [
+           "dt_st_fail_streak",
+           ">=",
+           2.0
+          ]
+         ],
+         "description": "Station's last N resolved passes (as of pass end + lag) all failed",
+         "train_n": 231,
+         "train_precision": 0.974025974025974,
+         "train_wilson80": 0.9569017937756761
+        },
+        {
+         "id": "model-gate",
+         "name": "v3.1.0 model gate",
+         "effect": "failed",
+         "group": "model",
+         "conditions": [
+          [
+           "model_raw",
+           ">=",
+           0.9817698123363023
+          ]
+         ],
+         "description": "v3.1.0 raw score at or above the Wilson80 threshold picked on passes reaching the gate",
+         "train_n": 0,
+         "train_precision": null,
+         "train_wilson80": null
+        },
+        {
+         "id": "stage2-ok",
+         "name": "Stage-2 model: ok",
+         "effect": "ok",
+         "group": "learned_model",
+         "conditions": [
+          [
+           "stage2_base",
+           "<=",
+           0.026025673882208236
+          ]
+         ],
+         "description": "Gated LightGBM on decision-time features, fit on passes no earlier policy decides",
+         "train_n": 0,
+         "train_precision": null,
+         "train_wilson80": null
+        }
+       ]
+      },
+      "time": {
+       "n": 1081,
+       "fail_n": 159,
+       "fail_precision": 0.9748427672955975,
+       "fail_wilson95": [
+        0.9371069914760977,
+        0.9901744894231321
+       ],
+       "fail_wilson80_lb": 0.9534250353178563,
+       "fail_cluster_ci": [
+        0.935772417875111,
+        1.0
+       ],
+       "ok_n": 0,
+       "ok_precision": null,
+       "ok_wilson95": null,
+       "ok_wilson80_lb": null,
+       "ok_cluster_ci": null,
+       "coverage": 0.14708603145235893,
+       "escalated": 0.852913968547641,
+       "accuracy_auto": 0.9748427672955975,
+       "accuracy_auto_wilson95": [
+        0.9371069914760977,
+        0.9901744894231321
+       ],
+       "fail_recall": 0.32563025210084034,
+       "recall_failed_class": 0.48623853211009177,
+       "recall_bad_class": 0.18992248062015504,
+       "ok_recall": 0.0,
+       "meets_target": true,
+       "groups": {
+        "model-gate": {
+         "effect": "failed",
+         "n": 118,
+         "precision": 0.9830508474576272,
+         "wilson95": [
+          0.9403013738539171,
+          0.9953396551542378
+         ],
+         "wilson80_lb": 0.9599051735443765,
+         "coverage": 0.1091581868640148,
+         "without": {
+          "coverage": 0.037927844588344126,
+          "fail_precision": 0.9512195121951219,
+          "ok_precision": null,
+          "fail_wilson80_lb": 0.8881302910840754,
+          "ok_wilson80_lb": null,
+          "accuracy_auto": 0.9512195121951219
+         },
+         "marginal_coverage": 0.10915818686401481
+        },
+        "ops-outage-streak": {
+         "effect": "failed",
+         "n": 41,
+         "precision": 0.9512195121951219,
+         "wilson95": [
+          0.8386073303764864,
+          0.9865193377174265
+         ],
+         "wilson80_lb": 0.8881302910840754,
+         "coverage": 0.037927844588344126,
+         "without": {
+          "coverage": 0.13598519888991675,
+          "fail_precision": 0.9863945578231292,
+          "ok_precision": null,
+          "fail_wilson80_lb": 0.9677089461648527,
+          "ok_wilson80_lb": null,
+          "accuracy_auto": 0.9863945578231292
+         },
+         "marginal_coverage": 0.011100832562442181
+        }
+       },
+       "n_folds_enabled": {
+        "model-gate": 1,
+        "ops-outage-streak": 1
+       },
+       "cut": "2026-10-21T09:04:54.100000+00:00",
+       "n_train": 2145,
+       "unseen_stations": {
+        "n": 33,
+        "fail_n": 2,
+        "fail_precision": 1.0,
+        "fail_wilson95": [
+         0.34237195288961925,
+         1.0
+        ],
+        "fail_wilson80_lb": 0.5490736556392763,
+        "fail_cluster_ci": [
+         1.0,
+         1.0
+        ],
+        "ok_n": 0,
+        "ok_precision": null,
+        "ok_wilson95": null,
+        "ok_wilson80_lb": null,
+        "ok_cluster_ci": null,
+        "coverage": 0.06060606060606061,
+        "escalated": 0.9393939393939394,
+        "accuracy_auto": 1.0,
+        "accuracy_auto_wilson95": [
+         0.34237195288961925,
+         1.0
+        ],
+        "fail_recall": 0.125,
+        "recall_failed_class": 0.2222222222222222,
+        "recall_bad_class": 0.0,
+        "ok_recall": 0.0,
+        "meets_target": false
+       },
+       "fitted_last": [
+        {
+         "id": "ops-outage-streak",
+         "name": "Station outage streak",
+         "effect": "failed",
+         "group": "ops_history",
+         "conditions": [
+          [
+           "dt_st_fail_streak",
+           ">=",
+           6.0
+          ]
+         ],
+         "description": "Station's last N resolved passes (as of pass end + lag) all failed",
+         "train_n": 46,
+         "train_precision": 1.0,
+         "train_wilson80": 0.9655245083770855
+        },
+        {
+         "id": "model-gate",
+         "name": "v3.1.0 model gate",
+         "effect": "failed",
+         "group": "model",
+         "conditions": [
+          [
+           "model_raw",
+           ">=",
+           0.9628055650019814
+          ]
+         ],
+         "description": "v3.1.0 raw score at or above the Wilson80 threshold picked on passes reaching the gate",
+         "train_n": 0,
+         "train_precision": null,
+         "train_wilson80": null
+        }
+       ]
+      }
+     },
+     "kept_groups": [
+      "model-gate"
+     ],
+     "dropped_for_target": [],
+     "kept": {
+      "station_cv": {
+       "n": 3604,
+       "fail_n": 380,
+       "fail_precision": 0.9789473684210527,
+       "fail_wilson95": [
+        0.9590131731645901,
+        0.9892946704875831
+       ],
+       "fail_wilson80_lb": 0.9672451959714412,
+       "fail_cluster_ci": [
+        0.9600778443113773,
+        0.9968089961836137
+       ],
+       "ok_n": 0,
+       "ok_precision": null,
+       "ok_wilson95": null,
+       "ok_wilson80_lb": null,
+       "ok_cluster_ci": null,
+       "coverage": 0.10543840177580466,
+       "escalated": 0.8945615982241953,
+       "accuracy_auto": 0.9789473684210527,
+       "accuracy_auto_wilson95": [
+        0.9590131731645901,
+        0.9892946704875831
+       ],
+       "fail_recall": 0.22808093194359289,
+       "recall_failed_class": 0.3895253682487725,
+       "recall_bad_class": 0.13137254901960785,
+       "ok_recall": 0.0,
+       "meets_target": true,
+       "groups": {
+        "model-gate": {
+         "effect": "failed",
+         "n": 380,
+         "precision": 0.9789473684210527,
+         "wilson95": [
+          0.9590131731645901,
+          0.9892946704875831
+         ],
+         "wilson80_lb": 0.9672451959714412,
+         "coverage": 0.10543840177580466,
+         "without": {
+          "coverage": 0.0,
+          "fail_precision": null,
+          "ok_precision": null,
+          "fail_wilson80_lb": null,
+          "ok_wilson80_lb": null,
+          "accuracy_auto": null
+         },
+         "marginal_coverage": 0.10543840177580466
+        }
+       },
+       "n_folds_enabled": {
+        "model-gate": 5
+       },
+       "fitted_last": [
+        {
+         "id": "model-gate",
+         "name": "v3.1.0 model gate",
+         "effect": "failed",
+         "group": "model",
+         "conditions": [
+          [
+           "model_raw",
+           ">=",
+           0.9566385015803186
+          ]
+         ],
+         "description": "v3.1.0 raw score at or above the Wilson80 threshold picked on passes reaching the gate",
+         "train_n": 0,
+         "train_precision": null,
+         "train_wilson80": null
+        }
+       ]
+      },
+      "time": {
+       "n": 1081,
+       "fail_n": 157,
+       "fail_precision": 0.9808917197452229,
+       "fail_wilson95": [
+        0.9453312104309163,
+        0.9934806392398158
+       ],
+       "fail_wilson80_lb": 0.961119388049843,
+       "fail_cluster_ci": [
+        0.9504132231404959,
+        1.0
+       ],
+       "ok_n": 0,
+       "ok_precision": null,
+       "ok_wilson95": null,
+       "ok_wilson80_lb": null,
+       "ok_cluster_ci": null,
+       "coverage": 0.1452358926919519,
+       "escalated": 0.8547641073080481,
+       "accuracy_auto": 0.9808917197452229,
+       "accuracy_auto_wilson95": [
+        0.9453312104309163,
+        0.9934806392398158
+       ],
+       "fail_recall": 0.3235294117647059,
+       "recall_failed_class": 0.463302752293578,
+       "recall_bad_class": 0.2054263565891473,
+       "ok_recall": 0.0,
+       "meets_target": true,
+       "groups": {
+        "model-gate": {
+         "effect": "failed",
+         "n": 157,
+         "precision": 0.9808917197452229,
+         "wilson95": [
+          0.9453312104309163,
+          0.9934806392398158
+         ],
+         "wilson80_lb": 0.961119388049843,
+         "coverage": 0.1452358926919519,
+         "without": {
+          "coverage": 0.0,
+          "fail_precision": null,
+          "ok_precision": null,
+          "fail_wilson80_lb": null,
+          "ok_wilson80_lb": null,
+          "accuracy_auto": null
+         },
+         "marginal_coverage": 0.1452358926919519
+        }
+       },
+       "n_folds_enabled": {
+        "model-gate": 1
+       },
+       "cut": "2026-10-21T09:04:54.100000+00:00",
+       "n_train": 2145,
+       "unseen_stations": {
+        "n": 33,
+        "fail_n": 2,
+        "fail_precision": 1.0,
+        "fail_wilson95": [
+         0.34237195288961925,
+         1.0
+        ],
+        "fail_wilson80_lb": 0.5490736556392763,
+        "fail_cluster_ci": [
+         1.0,
+         1.0
+        ],
+        "ok_n": 0,
+        "ok_precision": null,
+        "ok_wilson95": null,
+        "ok_wilson80_lb": null,
+        "ok_cluster_ci": null,
+        "coverage": 0.06060606060606061,
+        "escalated": 0.9393939393939394,
+        "accuracy_auto": 1.0,
+        "accuracy_auto_wilson95": [
+         0.34237195288961925,
+         1.0
+        ],
+        "fail_recall": 0.125,
+        "recall_failed_class": 0.2222222222222222,
+        "recall_bad_class": 0.0,
+        "ok_recall": 0.0,
+        "meets_target": false
+       },
+       "fitted_last": [
+        {
+         "id": "model-gate",
+         "name": "v3.1.0 model gate",
+         "effect": "failed",
+         "group": "model",
+         "conditions": [
+          [
+           "model_raw",
+           ">=",
+           0.9584045832543175
+          ]
+         ],
+         "description": "v3.1.0 raw score at or above the Wilson80 threshold picked on passes reaching the gate",
+         "train_n": 0,
+         "train_precision": null,
+         "train_wilson80": null
+        }
+       ]
+      }
+     },
+     "seconds": 23.8
+    },
+    "B": {
+     "all": {
+      "station_cv": {
+       "n": 3604,
+       "fail_n": 523,
+       "fail_precision": 0.9980879541108987,
+       "fail_wilson95": [
+        0.9892496314572227,
+        0.9996624058610147
+       ],
+       "fail_wilson80_lb": 0.9936292426507997,
+       "fail_cluster_ci": [
+        0.9945250461217614,
+        1.0
+       ],
+       "ok_n": 1144,
+       "ok_precision": 0.993006993006993,
+       "ok_wilson95": [
+        0.9862616011957535,
+        0.9964523900030322
+       ],
+       "ok_wilson80_lb": 0.9890667067215793,
+       "ok_cluster_ci": [
+        0.9870437457279563,
+        0.9983403520101124
+       ],
+       "coverage": 0.4625416204217536,
+       "escalated": 0.5374583795782464,
+       "accuracy_auto": 0.9946010797840432,
+       "accuracy_auto_wilson95": [
+        0.9897707399443371,
+        0.9971570454304107
+       ],
+       "fail_recall": 0.3200490496627836,
+       "recall_failed_class": 0.8003273322422259,
+       "recall_bad_class": 0.03235294117647059,
+       "ok_recall": 0.575772934617334,
+       "meets_target": true,
+       "groups": {
+        "model-gate": {
+         "effect": "failed",
+         "n": 33,
+         "precision": 0.9696969696969697,
+         "wilson95": [
+          0.8468093832683193,
+          0.9946307279103482
+         ],
+         "wilson80_lb": 0.9039629370931502,
+         "coverage": 0.009156492785793563,
+         "without": {
+          "coverage": 0.45394006659267483,
+          "fail_precision": 1.0,
+          "ok_precision": 0.993006993006993,
+          "fail_wilson80_lb": 0.9966726962026339,
+          "ok_wilson80_lb": 0.9890667067215793,
+          "accuracy_auto": 0.9951100244498777
+         },
+         "marginal_coverage": 0.00860155382907879
+        },
+        "ops-decoded-frames": {
+         "effect": "ok",
+         "n": 1144,
+         "precision": 0.993006993006993,
+         "wilson95": [
+          0.9862616011957535,
+          0.9964523900030322
+         ],
+         "wilson80_lb": 0.9890667067215793,
+         "coverage": 0.3174250832408435,
+         "without": {
+          "coverage": 0.1451165371809101,
+          "fail_precision": 0.9980879541108987,
+          "ok_precision": null,
+          "fail_wilson80_lb": 0.9936292426507997,
+          "ok_wilson80_lb": null,
+          "accuracy_auto": 0.9980879541108987
+         },
+         "marginal_coverage": 0.3174250832408435
+        },
+        "ops-no-artifacts": {
+         "effect": "failed",
+         "n": 477,
+         "precision": 1.0,
+         "wilson95": [
+          0.9920106746171712,
+          0.9999999999999999
+         ],
+         "wilson80_lb": 0.9965684230611751,
+         "coverage": 0.1323529411764706,
+         "without": {
+          "coverage": 0.35155382907880134,
+          "fail_precision": 0.991869918699187,
+          "ok_precision": 0.993006993006993,
+          "fail_wilson80_lb": 0.973211310126547,
+          "ok_wilson80_lb": 0.9890667067215793,
+          "accuracy_auto": 0.9928966061562746
+         },
+         "marginal_coverage": 0.11098779134295228
+        },
+        "stage2-failed": {
+         "effect": "failed",
+         "n": 13,
+         "precision": 1.0,
+         "wilson95": [
+          0.7718981569447083,
+          1.0
+         ],
+         "wilson80_lb": 0.8878266196667463,
+         "coverage": 0.003607103218645949,
+         "without": {
+          "coverage": 0.4589345172031077,
+          "fail_precision": 0.9980392156862745,
+          "ok_precision": 0.993006993006993,
+          "fail_wilson80_lb": 0.9934674235450919,
+          "ok_wilson80_lb": 0.9890667067215793,
+          "accuracy_auto": 0.9945586457073761
+         },
+         "marginal_coverage": 0.003607103218645935
+        }
+       },
+       "n_folds_enabled": {
+        "stage2-failed": 3,
+        "ops-decoded-frames": 5,
+        "ops-no-artifacts": 5,
+        "model-gate": 2
+       },
+       "fitted_last": [
+        {
+         "id": "ops-no-artifacts",
+         "name": "No artifacts uploaded",
+         "effect": "failed",
+         "group": "ops_evidence",
+         "conditions": [
+          [
+           "own_artifacts",
+           "==",
+           0
+          ]
+         ],
+         "description": "No audio and no waterfall uploaded by pass end + lag (zero-artifact observation)",
+         "train_n": 347,
+         "train_precision": 1.0,
+         "train_wilson80": 0.9952888745153446
+        },
+        {
+         "id": "ops-decoded-frames",
+         "name": "Decoded frames uploaded",
+         "effect": "ok",
+         "group": "ops_evidence",
+         "conditions": [
+          [
+           "own_n_demod",
+           ">=",
+           1.0
+          ]
+         ],
+         "description": "At least one demodulated data frame uploaded by pass end + lag",
+         "train_n": 911,
+         "train_precision": 0.995609220636663,
+         "train_wilson80": 0.991773957859971
+        },
+        {
+         "id": "model-gate",
+         "name": "v3.1.0 model gate",
+         "effect": "failed",
+         "group": "model",
+         "conditions": [
+          [
+           "model_raw",
+           ">=",
+           0.9817698123363023
+          ]
+         ],
+         "description": "v3.1.0 raw score at or above the Wilson80 threshold picked on passes reaching the gate",
+         "train_n": 0,
+         "train_precision": null,
+         "train_wilson80": null
+        }
+       ]
+      },
+      "time": {
+       "n": 1081,
+       "fail_n": 217,
+       "fail_precision": 1.0,
+       "fail_wilson95": [
+        0.9826047266457046,
+        1.0000000000000002
+       ],
+       "fail_wilson80_lb": 0.9924877433672885,
+       "fail_cluster_ci": [
+        1.0,
+        1.0
+       ],
+       "ok_n": 347,
+       "ok_precision": 0.9971181556195965,
+       "ok_wilson95": [
+        0.9838586354678999,
+        0.9994911155308416
+       ],
+       "ok_wilson80_lb": 0.9904146901617118,
+       "ok_cluster_ci": [
+        0.9895470383275261,
+        1.0
+       ],
+       "coverage": 0.5217391304347826,
+       "escalated": 0.4782608695652174,
+       "accuracy_auto": 0.99822695035461,
+       "accuracy_auto_wilson95": [
+        0.9900256714251616,
+        0.999686952658738
+       ],
+       "fail_recall": 0.45588235294117646,
+       "recall_failed_class": 0.7935779816513762,
+       "recall_bad_class": 0.17054263565891473,
+       "ok_recall": 0.571900826446281,
+       "meets_target": true,
+       "groups": {
+        "model-gate": {
+         "effect": "failed",
+         "n": 50,
+         "precision": 1.0,
+         "wilson95": [
+          0.9286499658256813,
+          1.0
+         ],
+         "wilson80_lb": 0.9681948277910742,
+         "coverage": 0.04625346901017576,
+         "without": {
+          "coverage": 0.47548566142460685,
+          "fail_precision": 1.0,
+          "ok_precision": 0.9971181556195965,
+          "fail_wilson80_lb": 0.9902604706759868,
+          "ok_wilson80_lb": 0.9904146901617118,
+          "accuracy_auto": 0.9980544747081712
+         },
+         "marginal_coverage": 0.04625346901017574
+        },
+        "ops-decoded-frames": {
+         "effect": "ok",
+         "n": 347,
+         "precision": 0.9971181556195965,
+         "wilson95": [
+          0.9838586354678999,
+          0.9994911155308416
+         ],
+         "wilson80_lb": 0.9904146901617118,
+         "coverage": 0.3209990749306198,
+         "without": {
+          "coverage": 0.20074005550416282,
+          "fail_precision": 1.0,
+          "ok_precision": null,
+          "fail_wilson80_lb": 0.9924877433672885,
+          "ok_wilson80_lb": null,
+          "accuracy_auto": 1.0
+         },
+         "marginal_coverage": 0.32099907493061974
+        },
+        "ops-no-artifacts": {
+         "effect": "failed",
+         "n": 167,
+         "precision": 1.0,
+         "wilson95": [
+          0.977513673484678,
+          0.9999999999999999
+         ],
+         "wilson80_lb": 0.9902604706759868,
+         "coverage": 0.15448658649398705,
+         "without": {
+          "coverage": 0.4440333024976873,
+          "fail_precision": 1.0,
+          "ok_precision": 0.9971181556195965,
+          "fail_wilson80_lb": 0.9878010392144644,
+          "ok_wilson80_lb": 0.9904146901617118,
+          "accuracy_auto": 0.9979166666666667
+         },
+         "marginal_coverage": 0.0777058279370953
+        }
+       },
+       "n_folds_enabled": {
+        "model-gate": 1,
+        "ops-decoded-frames": 1,
+        "ops-no-artifacts": 1
+       },
+       "cut": "2026-10-21T09:04:54.100000+00:00",
+       "n_train": 2145,
+       "unseen_stations": {
+        "n": 33,
+        "fail_n": 9,
+        "fail_precision": 1.0,
+        "fail_wilson95": [
+         0.7008472464490407,
+         1.0
+        ],
+        "fail_wilson80_lb": 0.8456660763691944,
+        "fail_cluster_ci": [
+         1.0,
+         1.0
+        ],
+        "ok_n": 11,
+        "ok_precision": 1.0,
+        "ok_wilson95": [
+         0.7411599827511859,
+         1.0
+        ],
+        "ok_wilson80_lb": 0.8700811748401732,
+        "ok_cluster_ci": [
+         1.0,
+         1.0
+        ],
+        "coverage": 0.6060606060606061,
+        "escalated": 0.3939393939393939,
+        "accuracy_auto": 1.0,
+        "accuracy_auto_wilson95": [
+         0.8388698745050667,
+         1.0
+        ],
+        "fail_recall": 0.5625,
+        "recall_failed_class": 1.0,
+        "recall_bad_class": 0.0,
+        "ok_recall": 0.6470588235294118,
+        "meets_target": false
+       },
+       "fitted_last": [
+        {
+         "id": "ops-no-artifacts",
+         "name": "No artifacts uploaded",
+         "effect": "failed",
+         "group": "ops_evidence",
+         "conditions": [
+          [
+           "own_artifacts",
+           "==",
+           0
+          ]
+         ],
+         "description": "No audio and no waterfall uploaded by pass end + lag (zero-artifact observation)",
+         "train_n": 247,
+         "train_precision": 1.0,
+         "train_wilson80": 0.9933941358797772
+        },
+        {
+         "id": "ops-decoded-frames",
+         "name": "Decoded frames uploaded",
+         "effect": "ok",
+         "group": "ops_evidence",
+         "conditions": [
+          [
+           "own_n_demod",
+           ">=",
+           1.0
+          ]
+         ],
+         "description": "At least one demodulated data frame uploaded by pass end + lag",
+         "train_n": 670,
+         "train_precision": 0.991044776119403,
+         "train_wilson80": 0.9850329125505233
+        },
+        {
+         "id": "model-gate",
+         "name": "v3.1.0 model gate",
+         "effect": "failed",
+         "group": "model",
+         "conditions": [
+          [
+           "model_raw",
+           ">=",
+           0.9676293110466309
+          ]
+         ],
+         "description": "v3.1.0 raw score at or above the Wilson80 threshold picked on passes reaching the gate",
+         "train_n": 0,
+         "train_precision": null,
+         "train_wilson80": null
+        }
+       ]
+      }
+     },
+     "kept_groups": [
+      "model-gate",
+      "ops-decoded-frames",
+      "ops-no-artifacts"
+     ],
+     "dropped_for_target": [],
+     "kept": {
+      "station_cv": {
+       "n": 3604,
+       "fail_n": 510,
+       "fail_precision": 0.9980392156862745,
+       "fail_wilson95": [
+        0.9889777175818589,
+        0.9996537984339716
+       ],
+       "fail_wilson80_lb": 0.9934674235450919,
+       "fail_cluster_ci": [
+        0.9944738544640473,
+        1.0
+       ],
+       "ok_n": 1144,
+       "ok_precision": 0.993006993006993,
+       "ok_wilson95": [
+        0.9862616011957535,
+        0.9964523900030322
+       ],
+       "ok_wilson80_lb": 0.9890667067215793,
+       "ok_cluster_ci": [
+        0.9870437457279563,
+        0.9983403520101124
+       ],
+       "coverage": 0.4589345172031077,
+       "escalated": 0.5410654827968924,
+       "accuracy_auto": 0.9945586457073761,
+       "accuracy_auto_wilson95": [
+        0.9896905986931417,
+        0.9971346806339061
+       ],
+       "fail_recall": 0.3120784794604537,
+       "recall_failed_class": 0.7986906710310966,
+       "recall_bad_class": 0.020588235294117647,
+       "ok_recall": 0.575772934617334,
+       "meets_target": true,
+       "groups": {
+        "model-gate": {
+         "effect": "failed",
+         "n": 33,
+         "precision": 0.9696969696969697,
+         "wilson95": [
+          0.8468093832683193,
+          0.9946307279103482
+         ],
+         "wilson80_lb": 0.9039629370931502,
+         "coverage": 0.009156492785793563,
+         "without": {
+          "coverage": 0.44977802441731407,
+          "fail_precision": 1.0,
+          "ok_precision": 0.993006993006993,
+          "fail_wilson80_lb": 0.9965684230611751,
+          "ok_wilson80_lb": 0.9890667067215793,
+          "accuracy_auto": 0.9950647748303516
+         },
+         "marginal_coverage": 0.009156492785793613
+        },
+        "ops-decoded-frames": {
+         "effect": "ok",
+         "n": 1144,
+         "precision": 0.993006993006993,
+         "wilson95": [
+          0.9862616011957535,
+          0.9964523900030322
+         ],
+         "wilson80_lb": 0.9890667067215793,
+         "coverage": 0.3174250832408435,
+         "without": {
+          "coverage": 0.14150943396226415,
+          "fail_precision": 0.9980392156862745,
+          "ok_precision": null,
+          "fail_wilson80_lb": 0.9934674235450919,
+          "ok_wilson80_lb": null,
+          "accuracy_auto": 0.9980392156862745
+         },
+         "marginal_coverage": 0.3174250832408435
+        },
+        "ops-no-artifacts": {
+         "effect": "failed",
+         "n": 477,
+         "precision": 1.0,
+         "wilson95": [
+          0.9920106746171712,
+          0.9999999999999999
+         ],
+         "wilson80_lb": 0.9965684230611751,
+         "coverage": 0.1323529411764706,
+         "without": {
+          "coverage": 0.34517203107658156,
+          "fail_precision": 0.99,
+          "ok_precision": 0.993006993006993,
+          "fail_wilson80_lb": 0.9671594347946849,
+          "ok_wilson80_lb": 0.9890667067215793,
+          "accuracy_auto": 0.9927652733118971
+         },
+         "marginal_coverage": 0.11376248612652612
+        }
+       },
+       "n_folds_enabled": {
+        "ops-decoded-frames": 5,
+        "ops-no-artifacts": 5,
+        "model-gate": 2
+       },
+       "fitted_last": [
+        {
+         "id": "ops-no-artifacts",
+         "name": "No artifacts uploaded",
+         "effect": "failed",
+         "group": "ops_evidence",
+         "conditions": [
+          [
+           "own_artifacts",
+           "==",
+           0
+          ]
+         ],
+         "description": "No audio and no waterfall uploaded by pass end + lag (zero-artifact observation)",
+         "train_n": 347,
+         "train_precision": 1.0,
+         "train_wilson80": 0.9952888745153446
+        },
+        {
+         "id": "ops-decoded-frames",
+         "name": "Decoded frames uploaded",
+         "effect": "ok",
+         "group": "ops_evidence",
+         "conditions": [
+          [
+           "own_n_demod",
+           ">=",
+           1.0
+          ]
+         ],
+         "description": "At least one demodulated data frame uploaded by pass end + lag",
+         "train_n": 911,
+         "train_precision": 0.995609220636663,
+         "train_wilson80": 0.991773957859971
+        },
+        {
+         "id": "model-gate",
+         "name": "v3.1.0 model gate",
+         "effect": "failed",
+         "group": "model",
+         "conditions": [
+          [
+           "model_raw",
+           ">=",
+           0.9817698123363023
+          ]
+         ],
+         "description": "v3.1.0 raw score at or above the Wilson80 threshold picked on passes reaching the gate",
+         "train_n": 0,
+         "train_precision": null,
+         "train_wilson80": null
+        }
+       ]
+      },
+      "time": {
+       "n": 1081,
+       "fail_n": 217,
+       "fail_precision": 1.0,
+       "fail_wilson95": [
+        0.9826047266457046,
+        1.0000000000000002
+       ],
+       "fail_wilson80_lb": 0.9924877433672885,
+       "fail_cluster_ci": [
+        1.0,
+        1.0
+       ],
+       "ok_n": 347,
+       "ok_precision": 0.9971181556195965,
+       "ok_wilson95": [
+        0.9838586354678999,
+        0.9994911155308416
+       ],
+       "ok_wilson80_lb": 0.9904146901617118,
+       "ok_cluster_ci": [
+        0.9895470383275261,
+        1.0
+       ],
+       "coverage": 0.5217391304347826,
+       "escalated": 0.4782608695652174,
+       "accuracy_auto": 0.99822695035461,
+       "accuracy_auto_wilson95": [
+        0.9900256714251616,
+        0.999686952658738
+       ],
+       "fail_recall": 0.45588235294117646,
+       "recall_failed_class": 0.7935779816513762,
+       "recall_bad_class": 0.17054263565891473,
+       "ok_recall": 0.571900826446281,
+       "meets_target": true,
+       "groups": {
+        "model-gate": {
+         "effect": "failed",
+         "n": 50,
+         "precision": 1.0,
+         "wilson95": [
+          0.9286499658256813,
+          1.0
+         ],
+         "wilson80_lb": 0.9681948277910742,
+         "coverage": 0.04625346901017576,
+         "without": {
+          "coverage": 0.47548566142460685,
+          "fail_precision": 1.0,
+          "ok_precision": 0.9971181556195965,
+          "fail_wilson80_lb": 0.9902604706759868,
+          "ok_wilson80_lb": 0.9904146901617118,
+          "accuracy_auto": 0.9980544747081712
+         },
+         "marginal_coverage": 0.04625346901017574
+        },
+        "ops-decoded-frames": {
+         "effect": "ok",
+         "n": 347,
+         "precision": 0.9971181556195965,
+         "wilson95": [
+          0.9838586354678999,
+          0.9994911155308416
+         ],
+         "wilson80_lb": 0.9904146901617118,
+         "coverage": 0.3209990749306198,
+         "without": {
+          "coverage": 0.20074005550416282,
+          "fail_precision": 1.0,
+          "ok_precision": null,
+          "fail_wilson80_lb": 0.9924877433672885,
+          "ok_wilson80_lb": null,
+          "accuracy_auto": 1.0
+         },
+         "marginal_coverage": 0.32099907493061974
+        },
+        "ops-no-artifacts": {
+         "effect": "failed",
+         "n": 167,
+         "precision": 1.0,
+         "wilson95": [
+          0.977513673484678,
+          0.9999999999999999
+         ],
+         "wilson80_lb": 0.9902604706759868,
+         "coverage": 0.15448658649398705,
+         "without": {
+          "coverage": 0.4440333024976873,
+          "fail_precision": 1.0,
+          "ok_precision": 0.9971181556195965,
+          "fail_wilson80_lb": 0.9878010392144644,
+          "ok_wilson80_lb": 0.9904146901617118,
+          "accuracy_auto": 0.9979166666666667
+         },
+         "marginal_coverage": 0.0777058279370953
+        }
+       },
+       "n_folds_enabled": {
+        "model-gate": 1,
+        "ops-decoded-frames": 1,
+        "ops-no-artifacts": 1
+       },
+       "cut": "2026-10-21T09:04:54.100000+00:00",
+       "n_train": 2145,
+       "unseen_stations": {
+        "n": 33,
+        "fail_n": 9,
+        "fail_precision": 1.0,
+        "fail_wilson95": [
+         0.7008472464490407,
+         1.0
+        ],
+        "fail_wilson80_lb": 0.8456660763691944,
+        "fail_cluster_ci": [
+         1.0,
+         1.0
+        ],
+        "ok_n": 11,
+        "ok_precision": 1.0,
+        "ok_wilson95": [
+         0.7411599827511859,
+         1.0
+        ],
+        "ok_wilson80_lb": 0.8700811748401732,
+        "ok_cluster_ci": [
+         1.0,
+         1.0
+        ],
+        "coverage": 0.6060606060606061,
+        "escalated": 0.3939393939393939,
+        "accuracy_auto": 1.0,
+        "accuracy_auto_wilson95": [
+         0.8388698745050667,
+         1.0
+        ],
+        "fail_recall": 0.5625,
+        "recall_failed_class": 1.0,
+        "recall_bad_class": 0.0,
+        "ok_recall": 0.6470588235294118,
+        "meets_target": false
+       },
+       "fitted_last": [
+        {
+         "id": "ops-no-artifacts",
+         "name": "No artifacts uploaded",
+         "effect": "failed",
+         "group": "ops_evidence",
+         "conditions": [
+          [
+           "own_artifacts",
+           "==",
+           0
+          ]
+         ],
+         "description": "No audio and no waterfall uploaded by pass end + lag (zero-artifact observation)",
+         "train_n": 247,
+         "train_precision": 1.0,
+         "train_wilson80": 0.9933941358797772
+        },
+        {
+         "id": "ops-decoded-frames",
+         "name": "Decoded frames uploaded",
+         "effect": "ok",
+         "group": "ops_evidence",
+         "conditions": [
+          [
+           "own_n_demod",
+           ">=",
+           1.0
+          ]
+         ],
+         "description": "At least one demodulated data frame uploaded by pass end + lag",
+         "train_n": 670,
+         "train_precision": 0.991044776119403,
+         "train_wilson80": 0.9850329125505233
+        },
+        {
+         "id": "model-gate",
+         "name": "v3.1.0 model gate",
+         "effect": "failed",
+         "group": "model",
+         "conditions": [
+          [
+           "model_raw",
+           ">=",
+           0.9676293110466309
+          ]
+         ],
+         "description": "v3.1.0 raw score at or above the Wilson80 threshold picked on passes reaching the gate",
+         "train_n": 0,
+         "train_precision": null,
+         "train_wilson80": null
+        }
+       ]
+      }
+     },
+     "seconds": 28.7
+    }
+   },
+   "model_only": {
+    "station_cv": {
+     "n": 3604,
+     "fail_n": 380,
+     "fail_precision": 0.9789473684210527,
+     "fail_wilson95": [
+      0.9590131731645901,
+      0.9892946704875831
+     ],
+     "fail_wilson80_lb": 0.9672451959714412,
+     "fail_cluster_ci": [
+      0.9600778443113773,
+      0.9968089961836137
+     ],
+     "ok_n": 0,
+     "ok_precision": null,
+     "ok_wilson95": null,
+     "ok_wilson80_lb": null,
+     "ok_cluster_ci": null,
+     "coverage": 0.10543840177580466,
+     "escalated": 0.8945615982241953,
+     "accuracy_auto": 0.9789473684210527,
+     "accuracy_auto_wilson95": [
+      0.9590131731645901,
+      0.9892946704875831
+     ],
+     "fail_recall": 0.22808093194359289,
+     "recall_failed_class": 0.3895253682487725,
+     "recall_bad_class": 0.13137254901960785,
+     "ok_recall": 0.0,
+     "meets_target": true,
+     "groups": {
+      "model-gate": {
+       "effect": "failed",
+       "n": 380,
+       "precision": 0.9789473684210527,
+       "wilson95": [
+        0.9590131731645901,
+        0.9892946704875831
+       ],
+       "wilson80_lb": 0.9672451959714412,
+       "coverage": 0.10543840177580466,
+       "without": {
+        "coverage": 0.0,
+        "fail_precision": null,
+        "ok_precision": null,
+        "fail_wilson80_lb": null,
+        "ok_wilson80_lb": null,
+        "accuracy_auto": null
+       },
+       "marginal_coverage": 0.10543840177580466
+      }
+     },
+     "n_folds_enabled": {
+      "model-gate": 5
+     },
+     "fitted_last": [
+      {
+       "id": "model-gate",
+       "name": "v3.1.0 model gate",
+       "effect": "failed",
+       "group": "model",
+       "conditions": [
+        [
+         "model_raw",
+         ">=",
+         0.9566385015803186
+        ]
+       ],
+       "description": "v3.1.0 raw score at or above the Wilson80 threshold picked on passes reaching the gate",
+       "train_n": 0,
+       "train_precision": null,
+       "train_wilson80": null
+      }
+     ]
+    },
+    "time": {
+     "n": 1081,
+     "fail_n": 157,
+     "fail_precision": 0.9808917197452229,
+     "fail_wilson95": [
+      0.9453312104309163,
+      0.9934806392398158
+     ],
+     "fail_wilson80_lb": 0.961119388049843,
+     "fail_cluster_ci": [
+      0.9504132231404959,
+      1.0
+     ],
+     "ok_n": 0,
+     "ok_precision": null,
+     "ok_wilson95": null,
+     "ok_wilson80_lb": null,
+     "ok_cluster_ci": null,
+     "coverage": 0.1452358926919519,
+     "escalated": 0.8547641073080481,
+     "accuracy_auto": 0.9808917197452229,
+     "accuracy_auto_wilson95": [
+      0.9453312104309163,
+      0.9934806392398158
+     ],
+     "fail_recall": 0.3235294117647059,
+     "recall_failed_class": 0.463302752293578,
+     "recall_bad_class": 0.2054263565891473,
+     "ok_recall": 0.0,
+     "meets_target": true,
+     "groups": {
+      "model-gate": {
+       "effect": "failed",
+       "n": 157,
+       "precision": 0.9808917197452229,
+       "wilson95": [
+        0.9453312104309163,
+        0.9934806392398158
+       ],
+       "wilson80_lb": 0.961119388049843,
+       "coverage": 0.1452358926919519,
+       "without": {
+        "coverage": 0.0,
+        "fail_precision": null,
+        "ok_precision": null,
+        "fail_wilson80_lb": null,
+        "ok_wilson80_lb": null,
+        "accuracy_auto": null
+       },
+       "marginal_coverage": 0.1452358926919519
+      }
+     },
+     "n_folds_enabled": {
+      "model-gate": 1
+     },
+     "cut": "2026-10-21T09:04:54.100000+00:00",
+     "n_train": 2145,
+     "unseen_stations": {
+      "n": 33,
+      "fail_n": 2,
+      "fail_precision": 1.0,
+      "fail_wilson95": [
+       0.34237195288961925,
+       1.0
+      ],
+      "fail_wilson80_lb": 0.5490736556392763,
+      "fail_cluster_ci": [
+       1.0,
+       1.0
+      ],
+      "ok_n": 0,
+      "ok_precision": null,
+      "ok_wilson95": null,
+      "ok_wilson80_lb": null,
+      "ok_cluster_ci": null,
+      "coverage": 0.06060606060606061,
+      "escalated": 0.9393939393939394,
+      "accuracy_auto": 1.0,
+      "accuracy_auto_wilson95": [
+       0.34237195288961925,
+       1.0
+      ],
+      "fail_recall": 0.125,
+      "recall_failed_class": 0.2222222222222222,
+      "recall_bad_class": 0.0,
+      "ok_recall": 0.0,
+      "meets_target": false
+     },
+     "fitted_last": [
+      {
+       "id": "model-gate",
+       "name": "v3.1.0 model gate",
+       "effect": "failed",
+       "group": "model",
+       "conditions": [
+        [
+         "model_raw",
+         ">=",
+         0.9584045832543175
+        ]
+       ],
+       "description": "v3.1.0 raw score at or above the Wilson80 threshold picked on passes reaching the gate",
+       "train_n": 0,
+       "train_precision": null,
+       "train_wilson80": null
+      }
+     ]
+    }
+   }
+  },
+  "3h": {
+   "n": 3390,
+   "stations": 348,
+   "status_counts": {
+    "good": 1858,
+    "bad": 947,
+    "failed": 585
+   },
+   "tiers": {
+    "A": {
+     "all": {
+      "station_cv": {
+       "n": 3390,
+       "fail_n": 209,
+       "fail_precision": 0.9186602870813397,
+       "fail_wilson95": [
+        0.8736099362722614,
+        0.948597752450244
+       ],
+       "fail_wilson80_lb": 0.8910376159115767,
+       "fail_cluster_ci": [
+        0.8057600177801192,
+        1.0
+       ],
+       "ok_n": 295,
+       "ok_precision": 0.9728813559322034,
+       "ok_wilson95": [
+        0.9474089683498349,
+        0.9861959916021933
+       ],
+       "ok_wilson80_lb": 0.9578961959877544,
+       "ok_cluster_ci": [
+        0.948488237914001,
+        0.9898489975901144
+       ],
+       "coverage": 0.1486725663716814,
+       "escalated": 0.8513274336283185,
+       "accuracy_auto": 0.9503968253968254,
+       "accuracy_auto_wilson95": [
+        0.9278006593619688,
+        0.9661788807150946
+       ],
+       "fail_recall": 0.12532637075718014,
+       "recall_failed_class": 0.24102564102564103,
+       "recall_bad_class": 0.05385427666314678,
+       "ok_recall": 0.15446716899892357,
+       "meets_target": false,
+       "groups": {
+        "model-gate": {
+         "effect": "failed",
+         "n": 62,
+         "precision": 0.9516129032258065,
+         "wilson95": [
+          0.8671174961524586,
+          0.9834086149991539
+         ],
+         "wilson80_lb": 0.9035679517540288,
+         "coverage": 0.018289085545722714,
+         "without": {
+          "coverage": 0.13038348082595871,
+          "fail_precision": 0.9047619047619048,
+          "ok_precision": 0.9728813559322034,
+          "fail_wilson80_lb": 0.8691098420966452,
+          "ok_wilson80_lb": 0.9578961959877544,
+          "accuracy_auto": 0.9502262443438914
+         },
+         "marginal_coverage": 0.0182890855457227
+        },
+        "ops-outage-streak": {
+         "effect": "failed",
+         "n": 95,
+         "precision": 0.8526315789473684,
+         "wilson95": [
+          0.7677122266932916,
+          0.9101400136589488
+         ],
+         "wilson80_lb": 0.8000397446072728,
+         "coverage": 0.028023598820058997,
+         "without": {
+          "coverage": 0.12595870206489676,
+          "fail_precision": 0.9545454545454546,
+          "ok_precision": 0.9728813559322034,
+          "fail_wilson80_lb": 0.9252005520301917,
+          "ok_wilson80_lb": 0.9578961959877544,
+          "accuracy_auto": 0.9672131147540983
+         },
+         "marginal_coverage": 0.022713864306784654
+        },
+        "stage2-failed": {
+         "effect": "failed",
+         "n": 52,
+         "precision": 1.0,
+         "wilson95": [
+          0.9312054095871178,
+          1.0
+         ],
+         "wilson80_lb": 0.9693806477309621,
+         "coverage": 0.015339233038348082,
+         "without": {
+          "coverage": 0.13333333333333333,
+          "fail_precision": 0.89171974522293,
+          "ok_precision": 0.9728813559322034,
+          "fail_wilson80_lb": 0.8557872471207842,
+          "ok_wilson80_lb": 0.9578961959877544,
+          "accuracy_auto": 0.9446902654867256
+         },
+         "marginal_coverage": 0.015339233038348082
+        },
+        "stage2-ok": {
+         "effect": "ok",
+         "n": 295,
+         "precision": 0.9728813559322034,
+         "wilson95": [
+          0.9474089683498349,
+          0.9861959916021933
+         ],
+         "wilson80_lb": 0.9578961959877544,
+         "coverage": 0.08702064896755163,
+         "without": {
+          "coverage": 0.06165191740412979,
+          "fail_precision": 0.9186602870813397,
+          "ok_precision": null,
+          "fail_wilson80_lb": 0.8910376159115767,
+          "ok_wilson80_lb": null,
+          "accuracy_auto": 0.9186602870813397
+         },
+         "marginal_coverage": 0.08702064896755163
+        }
+       },
+       "n_folds_enabled": {
+        "stage2-failed": 2,
+        "stage2-ok": 5,
+        "model-gate": 2,
+        "ops-outage-streak": 1
+       },
+       "fitted_last": [
+        {
+         "id": "stage2-failed",
+         "name": "Stage-2 model: failed",
+         "effect": "failed",
+         "group": "learned_model",
+         "conditions": [
+          [
+           "stage2_raw",
+           ">=",
+           0.9896479940221011
+          ]
+         ],
+         "description": "Gated LightGBM on decision-time features, fit on passes no earlier policy decides",
+         "train_n": 0,
+         "train_precision": null,
+         "train_wilson80": null
+        },
+        {
+         "id": "stage2-ok",
+         "name": "Stage-2 model: ok",
+         "effect": "ok",
+         "group": "learned_model",
+         "conditions": [
+          [
+           "stage2_base",
+           "<=",
+           0.038477242025251164
+          ]
+         ],
+         "description": "Gated LightGBM on decision-time features, fit on passes no earlier policy decides",
+         "train_n": 0,
+         "train_precision": null,
+         "train_wilson80": null
+        }
+       ]
+      },
+      "time": {
+       "n": 1017,
+       "fail_n": 109,
+       "fail_precision": 0.9541284403669725,
+       "fail_wilson95": [
+        0.8970861750742003,
+        0.980249842848268
+       ],
+       "fail_wilson80_lb": 0.9210206014836635,
+       "fail_cluster_ci": [
+        0.8730639073278667,
+        1.0
+       ],
+       "ok_n": 0,
+       "ok_precision": null,
+       "ok_wilson95": null,
+       "ok_wilson80_lb": null,
+       "ok_cluster_ci": null,
+       "coverage": 0.1071779744346116,
+       "escalated": 0.8928220255653884,
+       "accuracy_auto": 0.9541284403669725,
+       "accuracy_auto_wilson95": [
+        0.8970861750742003,
+        0.980249842848268
+       ],
+       "fail_recall": 0.22857142857142856,
+       "recall_failed_class": 0.4090909090909091,
+       "recall_bad_class": 0.08949416342412451,
+       "ok_recall": 0.0,
+       "meets_target": false,
+       "groups": {
+        "ops-outage-streak": {
+         "effect": "failed",
+         "n": 55,
+         "precision": 0.9090909090909091,
+         "wilson95": [
+          0.8042226375086602,
+          0.9605424266636261
+         ],
+         "wilson80_lb": 0.8468573972983388,
+         "coverage": 0.05408062930186824,
+         "without": {
+          "coverage": 0.06489675516224189,
+          "fail_precision": 0.9848484848484849,
+          "ok_precision": null,
+          "fail_wilson80_lb": 0.9506936423957622,
+          "ok_wilson80_lb": null,
+          "accuracy_auto": 0.9848484848484849
+         },
+         "marginal_coverage": 0.04228121927236972
+        },
+        "stage2-failed": {
+         "effect": "failed",
+         "n": 54,
+         "precision": 1.0,
+         "wilson95": [
+          0.9335841332189981,
+          1.0
+         ],
+         "wilson80_lb": 0.9704812220423767,
+         "coverage": 0.05309734513274336,
+         "without": {
+          "coverage": 0.05408062930186824,
+          "fail_precision": 0.9090909090909091,
+          "ok_precision": null,
+          "fail_wilson80_lb": 0.8468573972983388,
+          "ok_wilson80_lb": null,
+          "accuracy_auto": 0.9090909090909091
+         },
+         "marginal_coverage": 0.05309734513274337
+        }
+       },
+       "n_folds_enabled": {
+        "ops-outage-streak": 1,
+        "stage2-failed": 1
+       },
+       "cut": "2026-10-21T09:12:31.100000+00:00",
+       "n_train": 1945,
+       "unseen_stations": {
+        "n": 36,
+        "fail_n": 1,
+        "fail_precision": 1.0,
+        "fail_wilson95": [
+         0.20654329147389294,
+         1.0
+        ],
+        "fail_wilson80_lb": 0.37842972372329314,
+        "fail_cluster_ci": [
+         1.0,
+         1.0
+        ],
+        "ok_n": 0,
+        "ok_precision": null,
+        "ok_wilson95": null,
+        "ok_wilson80_lb": null,
+        "ok_cluster_ci": null,
+        "coverage": 0.027777777777777776,
+        "escalated": 0.9722222222222222,
+        "accuracy_auto": 1.0,
+        "accuracy_auto_wilson95": [
+         0.20654329147389294,
+         1.0
+        ],
+        "fail_recall": 0.058823529411764705,
+        "recall_failed_class": 0.1111111111111111,
+        "recall_bad_class": 0.0,
+        "ok_recall": 0.0,
+        "meets_target": false
+       },
+       "fitted_last": [
+        {
+         "id": "ops-outage-streak",
+         "name": "Station outage streak",
+         "effect": "failed",
+         "group": "ops_history",
+         "conditions": [
+          [
+           "dt_st_fail_streak",
+           ">=",
+           4.0
+          ]
+         ],
+         "description": "Station's last N resolved passes (as of pass end + lag) all failed",
+         "train_n": 57,
+         "train_precision": 1.0,
+         "train_wilson80": 0.9719913271035088
+        },
+        {
+         "id": "stage2-failed",
+         "name": "Stage-2 model: failed",
+         "effect": "failed",
+         "group": "learned_model",
+         "conditions": [
+          [
+           "stage2_raw",
+           ">=",
+           0.9849342449640032
+          ]
+         ],
+         "description": "Gated LightGBM on decision-time features, fit on passes no earlier policy decides",
+         "train_n": 0,
+         "train_precision": null,
+         "train_wilson80": null
+        }
+       ]
+      }
+     },
+     "kept_groups": [],
+     "dropped_for_target": [
+      "stage2-failed",
+      "stage2-ok"
+     ],
+     "kept": {
+      "station_cv": {
+       "n": 3390,
+       "fail_n": 0,
+       "fail_precision": null,
+       "fail_wilson95": null,
+       "fail_wilson80_lb": null,
+       "fail_cluster_ci": null,
+       "ok_n": 0,
+       "ok_precision": null,
+       "ok_wilson95": null,
+       "ok_wilson80_lb": null,
+       "ok_cluster_ci": null,
+       "coverage": 0.0,
+       "escalated": 1.0,
+       "accuracy_auto": null,
+       "accuracy_auto_wilson95": null,
+       "fail_recall": 0.0,
+       "recall_failed_class": 0.0,
+       "recall_bad_class": 0.0,
+       "ok_recall": 0.0,
+       "meets_target": true,
+       "groups": {},
+       "n_folds_enabled": {},
+       "fitted_last": []
+      },
+      "time": {
+       "n": 1017,
+       "fail_n": 0,
+       "fail_precision": null,
+       "fail_wilson95": null,
+       "fail_wilson80_lb": null,
+       "fail_cluster_ci": null,
+       "ok_n": 0,
+       "ok_precision": null,
+       "ok_wilson95": null,
+       "ok_wilson80_lb": null,
+       "ok_cluster_ci": null,
+       "coverage": 0.0,
+       "escalated": 1.0,
+       "accuracy_auto": null,
+       "accuracy_auto_wilson95": null,
+       "fail_recall": 0.0,
+       "recall_failed_class": 0.0,
+       "recall_bad_class": 0.0,
+       "ok_recall": 0.0,
+       "meets_target": true,
+       "groups": {},
+       "n_folds_enabled": {},
+       "cut": "2026-10-21T09:12:31.100000+00:00",
+       "n_train": 1945,
+       "unseen_stations": {
+        "n": 36,
+        "fail_n": 0,
+        "fail_precision": null,
+        "fail_wilson95": null,
+        "fail_wilson80_lb": null,
+        "fail_cluster_ci": null,
+        "ok_n": 0,
+        "ok_precision": null,
+        "ok_wilson95": null,
+        "ok_wilson80_lb": null,
+        "ok_cluster_ci": null,
+        "coverage": 0.0,
+        "escalated": 1.0,
+        "accuracy_auto": null,
+        "accuracy_auto_wilson95": null,
+        "fail_recall": 0.0,
+        "recall_failed_class": 0.0,
+        "recall_bad_class": 0.0,
+        "ok_recall": 0.0,
+        "meets_target": true
+       },
+       "fitted_last": []
+      }
+     },
+     "seconds": 36.3
+    },
+    "B": {
+     "all": {
+      "station_cv": {
+       "n": 3390,
+       "fail_n": 548,
+       "fail_precision": 0.9872262773722628,
+       "fail_wilson95": [
+        0.9738699770253926,
+        0.9937990062480685
+       ],
+       "fail_wilson80_lb": 0.9794612530217194,
+       "fail_cluster_ci": [
+        0.9699827174571499,
+        1.0
+       ],
+       "ok_n": 1082,
+       "ok_precision": 0.9926062846580407,
+       "ok_wilson95": [
+        0.9854781279492891,
+        0.996248856907434
+       ],
+       "ok_wilson80_lb": 0.9884418203472174,
+       "ok_cluster_ci": [
+        0.9854507757250441,
+        0.9981185324553151
+       ],
+       "coverage": 0.4808259587020649,
+       "escalated": 0.5191740412979351,
+       "accuracy_auto": 0.99079754601227,
+       "accuracy_auto_wilson95": [
+        0.9848717540852844,
+        0.9944153444926928
+       ],
+       "fail_recall": 0.3531331592689295,
+       "recall_failed_class": 0.7948717948717948,
+       "recall_bad_class": 0.08025343189017951,
+       "ok_recall": 0.5780409041980624,
+       "meets_target": true,
+       "groups": {
+        "model-gate": {
+         "effect": "failed",
+         "n": 29,
+         "precision": 1.0,
+         "wilson95": [
+          0.8830264055344442,
+          1.0
+         ],
+         "wilson80_lb": 0.9463980211410019,
+         "coverage": 0.00855457227138643,
+         "without": {
+          "coverage": 0.47227138643067845,
+          "fail_precision": 0.9865125240847784,
+          "ok_precision": 0.9926062846580407,
+          "fail_wilson80_lb": 0.9783195094836936,
+          "ok_wilson80_lb": 0.9884418203472174,
+          "accuracy_auto": 0.9906308557151781
+         },
+         "marginal_coverage": 0.008554572271386451
+        },
+        "ops-decoded-frames": {
+         "effect": "ok",
+         "n": 1082,
+         "precision": 0.9926062846580407,
+         "wilson95": [
+          0.9854781279492891,
+          0.996248856907434
+         ],
+         "wilson80_lb": 0.9884418203472174,
+         "coverage": 0.3191740412979351,
+         "without": {
+          "coverage": 0.16283185840707964,
+          "fail_precision": 0.980072463768116,
+          "ok_precision": null,
+          "fail_wilson80_lb": 0.9709042198893869,
+          "ok_wilson80_lb": null,
+          "accuracy_auto": 0.980072463768116
+         },
+         "marginal_coverage": 0.31799410029498526
+        },
+        "ops-no-artifacts": {
+         "effect": "failed",
+         "n": 453,
+         "precision": 1.0,
+         "wilson95": [
+          0.9915909584416128,
+          0.9999999999999999
+         ],
+         "wilson80_lb": 0.9963872744734547,
+         "coverage": 0.1336283185840708,
+         "without": {
+          "coverage": 0.36666666666666664,
+          "fail_precision": 0.9565217391304348,
+          "ok_precision": 0.9926062846580407,
+          "fail_wilson80_lb": 0.9309055904798708,
+          "ok_wilson80_lb": 0.9884418203472174,
+          "accuracy_auto": 0.9879324215607401
+         },
+         "marginal_coverage": 0.11415929203539826
+        },
+        "phys-stale-tle": {
+         "effect": "failed",
+         "n": 10,
+         "precision": 0.8,
+         "wilson95": [
+          0.49015684672072335,
+          0.9433190520193067
+         ],
+         "wilson80_lb": 0.60158782461083,
+         "coverage": 0.0029498525073746312,
+         "without": {
+          "coverage": 0.4778761061946903,
+          "fail_precision": 0.9907063197026023,
+          "ok_precision": 0.9926062846580407,
+          "fail_wilson80_lb": 0.9837123318243729,
+          "ok_wilson80_lb": 0.9884418203472174,
+          "accuracy_auto": 0.9919753086419754
+         },
+         "marginal_coverage": 0.0029498525073746173
+        },
+        "stage2-failed": {
+         "effect": "failed",
+         "n": 56,
+         "precision": 0.9107142857142857,
+         "wilson95": [
+          0.807437601433565,
+          0.9612584227369118
+         ],
+         "wilson80_lb": 0.8494736472287521,
+         "coverage": 0.016519174041297935,
+         "without": {
+          "coverage": 0.46430678466076697,
+          "fail_precision": 0.9959349593495935,
+          "ok_precision": 0.9926062846580407,
+          "fail_wilson80_lb": 0.9902607108494828,
+          "ok_wilson80_lb": 0.9884418203472174,
+          "accuracy_auto": 0.9936467598475223
+         },
+         "marginal_coverage": 0.016519174041297935
+        }
+       },
+       "n_folds_enabled": {
+        "ops-decoded-frames": 5,
+        "ops-no-artifacts": 5,
+        "stage2-failed": 1,
+        "phys-stale-tle": 1,
+        "model-gate": 1
+       },
+       "fitted_last": [
+        {
+         "id": "ops-no-artifacts",
+         "name": "No artifacts uploaded",
+         "effect": "failed",
+         "group": "ops_evidence",
+         "conditions": [
+          [
+           "own_artifacts",
+           "==",
+           0
+          ]
+         ],
+         "description": "No audio and no waterfall uploaded by pass end + lag (zero-artifact observation)",
+         "train_n": 343,
+         "train_precision": 1.0,
+         "train_wilson80": 0.9952341961108606
+        },
+        {
+         "id": "ops-decoded-frames",
+         "name": "Decoded frames uploaded",
+         "effect": "ok",
+         "group": "ops_evidence",
+         "conditions": [
+          [
+           "own_n_demod",
+           ">=",
+           1.0
+          ]
+         ],
+         "description": "At least one demodulated data frame uploaded by pass end + lag",
+         "train_n": 850,
+         "train_precision": 0.9929411764705882,
+         "train_wilson80": 0.9881929065049868
+        },
+        {
+         "id": "model-gate",
+         "name": "v3.1.0 model gate",
+         "effect": "failed",
+         "group": "model",
+         "conditions": [
+          [
+           "model_raw",
+           ">=",
+           0.9495958893204451
+          ]
+         ],
+         "description": "v3.1.0 raw score at or above the Wilson80 threshold picked on passes reaching the gate",
+         "train_n": 0,
+         "train_precision": null,
+         "train_wilson80": null
+        }
+       ]
+      },
+      "time": {
+       "n": 1017,
+       "fail_n": 197,
+       "fail_precision": 0.9898477157360406,
+       "fail_wilson95": [
+        0.9637447895740455,
+        0.9972115063327786
+       ],
+       "fail_wilson80_lb": 0.9758224574379027,
+       "fail_cluster_ci": [
+        0.9616990336804578,
+        1.0
+       ],
+       "ok_n": 318,
+       "ok_precision": 0.9968553459119497,
+       "ok_wilson95": [
+        0.9824047666023707,
+        0.9994446897761711
+       ],
+       "ok_wilson80_lb": 0.9895454939791934,
+       "ok_cluster_ci": [
+        0.989010989010989,
+        1.0
+       ],
+       "coverage": 0.5063913470993117,
+       "escalated": 0.49360865290068834,
+       "accuracy_auto": 0.9941747572815534,
+       "accuracy_auto_wilson95": [
+        0.9830145994271965,
+        0.9980169909464359
+       ],
+       "fail_recall": 0.42857142857142855,
+       "recall_failed_class": 0.8232323232323232,
+       "recall_bad_class": 0.1245136186770428,
+       "ok_recall": 0.5640569395017794,
+       "meets_target": true,
+       "groups": {
+        "ops-decoded-frames": {
+         "effect": "ok",
+         "n": 318,
+         "precision": 0.9968553459119497,
+         "wilson95": [
+          0.9824047666023707,
+          0.9994446897761711
+         ],
+         "wilson80_lb": 0.9895454939791934,
+         "coverage": 0.31268436578171094,
+         "without": {
+          "coverage": 0.19862340216322516,
+          "fail_precision": 0.9653465346534653,
+          "ok_precision": null,
+          "fail_wilson80_lb": 0.9447438300631713,
+          "ok_wilson80_lb": null,
+          "accuracy_auto": 0.9653465346534653
+         },
+         "marginal_coverage": 0.3077679449360865
+        },
+        "ops-no-artifacts": {
+         "effect": "failed",
+         "n": 159,
+         "precision": 1.0,
+         "wilson95": [
+          0.9764089765760101,
+          1.0
+         ],
+         "wilson80_lb": 0.9897754418991027,
+         "coverage": 0.15634218289085547,
+         "without": {
+          "coverage": 0.37561455260570303,
+          "fail_precision": 0.96875,
+          "ok_precision": 0.9968553459119497,
+          "fail_wilson80_lb": 0.9271033110690996,
+          "ok_wilson80_lb": 0.9895454939791934,
+          "accuracy_auto": 0.9921465968586387
+         },
+         "marginal_coverage": 0.13077679449360863
+        },
+        "phys-stale-tle": {
+         "effect": "failed",
+         "n": 12,
+         "precision": 1.0,
+         "wilson95": [
+          0.7574992425007574,
+          1.0
+         ],
+         "wilson80_lb": 0.8796042709642772,
+         "coverage": 0.011799410029498525,
+         "without": {
+          "coverage": 0.49655850540806296,
+          "fail_precision": 0.9893048128342246,
+          "ok_precision": 0.9968553459119497,
+          "fail_wilson80_lb": 0.974543183992151,
+          "ok_wilson80_lb": 0.9895454939791934,
+          "accuracy_auto": 0.994059405940594
+         },
+         "marginal_coverage": 0.009832841691248706
+        },
+        "stage2-failed": {
+         "effect": "failed",
+         "n": 26,
+         "precision": 0.9230769230769231,
+         "wilson95": [
+          0.7585805251948495,
+          0.9786453608166245
+         ],
+         "wilson80_lb": 0.8282882113109676,
+         "coverage": 0.025565388397246803,
+         "without": {
+          "coverage": 0.4808259587020649,
+          "fail_precision": 1.0,
+          "ok_precision": 0.9968553459119497,
+          "fail_wilson80_lb": 0.9904861284231866,
+          "ok_wilson80_lb": 0.9895454939791934,
+          "accuracy_auto": 0.9979550102249489
+         },
+         "marginal_coverage": 0.025565388397246758
+        }
+       },
+       "n_folds_enabled": {
+        "stage2-failed": 1,
+        "ops-decoded-frames": 1,
+        "ops-no-artifacts": 1,
+        "phys-stale-tle": 1
+       },
+       "cut": "2026-10-21T09:12:31.100000+00:00",
+       "n_train": 1945,
+       "unseen_stations": {
+        "n": 36,
+        "fail_n": 9,
+        "fail_precision": 1.0,
+        "fail_wilson95": [
+         0.7008472464490407,
+         1.0
+        ],
+        "fail_wilson80_lb": 0.8456660763691944,
+        "fail_cluster_ci": [
+         1.0,
+         1.0
+        ],
+        "ok_n": 11,
+        "ok_precision": 1.0,
+        "ok_wilson95": [
+         0.7411599827511859,
+         1.0
+        ],
+        "ok_wilson80_lb": 0.8700811748401732,
+        "ok_cluster_ci": [
+         1.0,
+         1.0
+        ],
+        "coverage": 0.5555555555555556,
+        "escalated": 0.4444444444444444,
+        "accuracy_auto": 1.0,
+        "accuracy_auto_wilson95": [
+         0.8388698745050667,
+         1.0
+        ],
+        "fail_recall": 0.5294117647058824,
+        "recall_failed_class": 1.0,
+        "recall_bad_class": 0.0,
+        "ok_recall": 0.5789473684210527,
+        "meets_target": false
+       },
+       "fitted_last": [
+        {
+         "id": "ops-no-artifacts",
+         "name": "No artifacts uploaded",
+         "effect": "failed",
+         "group": "ops_evidence",
+         "conditions": [
+          [
+           "own_artifacts",
+           "==",
+           0
+          ]
+         ],
+         "description": "No audio and no waterfall uploaded by pass end + lag (zero-artifact observation)",
+         "train_n": 225,
+         "train_precision": 1.0,
+         "train_wilson80": 0.992752910109817
+        },
+        {
+         "id": "ops-decoded-frames",
+         "name": "Decoded frames uploaded",
+         "effect": "ok",
+         "group": "ops_evidence",
+         "conditions": [
+          [
+           "own_n_demod",
+           ">=",
+           1.0
+          ]
+         ],
+         "description": "At least one demodulated data frame uploaded by pass end + lag",
+         "train_n": 613,
+         "train_precision": 0.9902120717781403,
+         "train_wilson80": 0.9836469785854389
+        },
+        {
+         "id": "phys-stale-tle",
+         "name": "Stale TLE",
+         "effect": "failed",
+         "group": "physics",
+         "conditions": [
+          [
+           "tle_age_days",
+           ">=",
+           14.0
+          ]
+         ],
+         "description": "TLE older than D days at pass start",
+         "train_n": 35,
+         "train_precision": 1.0,
+         "train_wilson80": 0.9551750392427387
+        },
+        {
+         "id": "stage2-failed",
+         "name": "Stage-2 model: failed",
+         "effect": "failed",
+         "group": "learned_model",
+         "conditions": [
+          [
+           "stage2_raw",
+           ">=",
+           0.9864926605408716
+          ]
+         ],
+         "description": "Gated LightGBM on decision-time features, fit on passes no earlier policy decides",
+         "train_n": 0,
+         "train_precision": null,
+         "train_wilson80": null
+        }
+       ]
+      }
+     },
+     "kept_groups": [
+      "ops-decoded-frames",
+      "ops-no-artifacts"
+     ],
+     "dropped_for_target": [],
+     "kept": {
+      "station_cv": {
+       "n": 3390,
+       "fail_n": 453,
+       "fail_precision": 1.0,
+       "fail_wilson95": [
+        0.9915909584416128,
+        0.9999999999999999
+       ],
+       "fail_wilson80_lb": 0.9963872744734547,
+       "fail_cluster_ci": [
+        1.0,
+        1.0
+       ],
+       "ok_n": 1082,
+       "ok_precision": 0.9926062846580407,
+       "ok_wilson95": [
+        0.9854781279492891,
+        0.996248856907434
+       ],
+       "ok_wilson80_lb": 0.9884418203472174,
+       "ok_cluster_ci": [
+        0.9854507757250441,
+        0.9981185324553151
+       ],
+       "coverage": 0.4528023598820059,
+       "escalated": 0.5471976401179941,
+       "accuracy_auto": 0.9947882736156352,
+       "accuracy_auto_wilson95": [
+        0.9897493128716706,
+        0.997356832426195
+       ],
+       "fail_recall": 0.29569190600522194,
+       "recall_failed_class": 0.7743589743589744,
+       "recall_bad_class": 0.0,
+       "ok_recall": 0.5780409041980624,
+       "meets_target": true,
+       "groups": {
+        "ops-decoded-frames": {
+         "effect": "ok",
+         "n": 1082,
+         "precision": 0.9926062846580407,
+         "wilson95": [
+          0.9854781279492891,
+          0.996248856907434
+         ],
+         "wilson80_lb": 0.9884418203472174,
+         "coverage": 0.3191740412979351,
+         "without": {
+          "coverage": 0.1336283185840708,
+          "fail_precision": 1.0,
+          "ok_precision": null,
+          "fail_wilson80_lb": 0.9963872744734547,
+          "ok_wilson80_lb": null,
+          "accuracy_auto": 1.0
+         },
+         "marginal_coverage": 0.31917404129793514
+        },
+        "ops-no-artifacts": {
+         "effect": "failed",
+         "n": 453,
+         "precision": 1.0,
+         "wilson95": [
+          0.9915909584416128,
+          0.9999999999999999
+         ],
+         "wilson80_lb": 0.9963872744734547,
+         "coverage": 0.1336283185840708,
+         "without": {
+          "coverage": 0.3191740412979351,
+          "fail_precision": null,
+          "ok_precision": 0.9926062846580407,
+          "fail_wilson80_lb": null,
+          "ok_wilson80_lb": 0.9884418203472174,
+          "accuracy_auto": 0.9926062846580407
+         },
+         "marginal_coverage": 0.13362831858407082
+        }
+       },
+       "n_folds_enabled": {
+        "ops-decoded-frames": 5,
+        "ops-no-artifacts": 5
+       },
+       "fitted_last": [
+        {
+         "id": "ops-no-artifacts",
+         "name": "No artifacts uploaded",
+         "effect": "failed",
+         "group": "ops_evidence",
+         "conditions": [
+          [
+           "own_artifacts",
+           "==",
+           0
+          ]
+         ],
+         "description": "No audio and no waterfall uploaded by pass end + lag (zero-artifact observation)",
+         "train_n": 343,
+         "train_precision": 1.0,
+         "train_wilson80": 0.9952341961108606
+        },
+        {
+         "id": "ops-decoded-frames",
+         "name": "Decoded frames uploaded",
+         "effect": "ok",
+         "group": "ops_evidence",
+         "conditions": [
+          [
+           "own_n_demod",
+           ">=",
+           1.0
+          ]
+         ],
+         "description": "At least one demodulated data frame uploaded by pass end + lag",
+         "train_n": 850,
+         "train_precision": 0.9929411764705882,
+         "train_wilson80": 0.9881929065049868
+        }
+       ]
+      },
+      "time": {
+       "n": 1017,
+       "fail_n": 159,
+       "fail_precision": 1.0,
+       "fail_wilson95": [
+        0.9764089765760101,
+        1.0
+       ],
+       "fail_wilson80_lb": 0.9897754418991027,
+       "fail_cluster_ci": [
+        1.0,
+        1.0
+       ],
+       "ok_n": 318,
+       "ok_precision": 0.9968553459119497,
+       "ok_wilson95": [
+        0.9824047666023707,
+        0.9994446897761711
+       ],
+       "ok_wilson80_lb": 0.9895454939791934,
+       "ok_cluster_ci": [
+        0.989010989010989,
+        1.0
+       ],
+       "coverage": 0.4690265486725664,
+       "escalated": 0.5309734513274336,
+       "accuracy_auto": 0.9979035639412998,
+       "accuracy_auto_wilson95": [
+        0.9882214595457366,
+        0.9996298411736686
+       ],
+       "fail_recall": 0.34945054945054943,
+       "recall_failed_class": 0.803030303030303,
+       "recall_bad_class": 0.0,
+       "ok_recall": 0.5640569395017794,
+       "meets_target": true,
+       "groups": {
+        "ops-decoded-frames": {
+         "effect": "ok",
+         "n": 318,
+         "precision": 0.9968553459119497,
+         "wilson95": [
+          0.9824047666023707,
+          0.9994446897761711
+         ],
+         "wilson80_lb": 0.9895454939791934,
+         "coverage": 0.31268436578171094,
+         "without": {
+          "coverage": 0.15634218289085547,
+          "fail_precision": 1.0,
+          "ok_precision": null,
+          "fail_wilson80_lb": 0.9897754418991027,
+          "ok_wilson80_lb": null,
+          "accuracy_auto": 1.0
+         },
+         "marginal_coverage": 0.3126843657817109
+        },
+        "ops-no-artifacts": {
+         "effect": "failed",
+         "n": 159,
+         "precision": 1.0,
+         "wilson95": [
+          0.9764089765760101,
+          1.0
+         ],
+         "wilson80_lb": 0.9897754418991027,
+         "coverage": 0.15634218289085547,
+         "without": {
+          "coverage": 0.31268436578171094,
+          "fail_precision": null,
+          "ok_precision": 0.9968553459119497,
+          "fail_wilson80_lb": null,
+          "ok_wilson80_lb": 0.9895454939791934,
+          "accuracy_auto": 0.9968553459119497
+         },
+         "marginal_coverage": 0.15634218289085544
+        }
+       },
+       "n_folds_enabled": {
+        "ops-decoded-frames": 1,
+        "ops-no-artifacts": 1
+       },
+       "cut": "2026-10-21T09:12:31.100000+00:00",
+       "n_train": 1945,
+       "unseen_stations": {
+        "n": 36,
+        "fail_n": 9,
+        "fail_precision": 1.0,
+        "fail_wilson95": [
+         0.7008472464490407,
+         1.0
+        ],
+        "fail_wilson80_lb": 0.8456660763691944,
+        "fail_cluster_ci": [
+         1.0,
+         1.0
+        ],
+        "ok_n": 11,
+        "ok_precision": 1.0,
+        "ok_wilson95": [
+         0.7411599827511859,
+         1.0
+        ],
+        "ok_wilson80_lb": 0.8700811748401732,
+        "ok_cluster_ci": [
+         1.0,
+         1.0
+        ],
+        "coverage": 0.5555555555555556,
+        "escalated": 0.4444444444444444,
+        "accuracy_auto": 1.0,
+        "accuracy_auto_wilson95": [
+         0.8388698745050667,
+         1.0
+        ],
+        "fail_recall": 0.5294117647058824,
+        "recall_failed_class": 1.0,
+        "recall_bad_class": 0.0,
+        "ok_recall": 0.5789473684210527,
+        "meets_target": false
+       },
+       "fitted_last": [
+        {
+         "id": "ops-no-artifacts",
+         "name": "No artifacts uploaded",
+         "effect": "failed",
+         "group": "ops_evidence",
+         "conditions": [
+          [
+           "own_artifacts",
+           "==",
+           0
+          ]
+         ],
+         "description": "No audio and no waterfall uploaded by pass end + lag (zero-artifact observation)",
+         "train_n": 225,
+         "train_precision": 1.0,
+         "train_wilson80": 0.992752910109817
+        },
+        {
+         "id": "ops-decoded-frames",
+         "name": "Decoded frames uploaded",
+         "effect": "ok",
+         "group": "ops_evidence",
+         "conditions": [
+          [
+           "own_n_demod",
+           ">=",
+           1.0
+          ]
+         ],
+         "description": "At least one demodulated data frame uploaded by pass end + lag",
+         "train_n": 613,
+         "train_precision": 0.9902120717781403,
+         "train_wilson80": 0.9836469785854389
+        }
+       ]
+      }
+     },
+     "seconds": 17.5
+    }
+   },
+   "model_only": {
+    "station_cv": {
+     "n": 3390,
+     "fail_n": 94,
+     "fail_precision": 0.9042553191489362,
+     "fail_wilson95": [
+      0.8279570919390105,
+      0.9488086191695568
+     ],
+     "fail_wilson80_lb": 0.8581335615837865,
+     "fail_cluster_ci": [
+      0.8061150188230632,
+      1.0
+     ],
+     "ok_n": 0,
+     "ok_precision": null,
+     "ok_wilson95": null,
+     "ok_wilson80_lb": null,
+     "ok_cluster_ci": null,
+     "coverage": 0.027728613569321534,
+     "escalated": 0.9722713864306785,
+     "accuracy_auto": 0.9042553191489362,
+     "accuracy_auto_wilson95": [
+      0.8279570919390105,
+      0.9488086191695568
+     ],
+     "fail_recall": 0.05548302872062663,
+     "recall_failed_class": 0.08547008547008547,
+     "recall_bad_class": 0.03695881731784583,
+     "ok_recall": 0.0,
+     "meets_target": false,
+     "groups": {
+      "model-gate": {
+       "effect": "failed",
+       "n": 94,
+       "precision": 0.9042553191489362,
+       "wilson95": [
+        0.8279570919390105,
+        0.9488086191695568
+       ],
+       "wilson80_lb": 0.8581335615837865,
+       "coverage": 0.027728613569321534,
+       "without": {
+        "coverage": 0.0,
+        "fail_precision": null,
+        "ok_precision": null,
+        "fail_wilson80_lb": null,
+        "ok_wilson80_lb": null,
+        "accuracy_auto": null
+       },
+       "marginal_coverage": 0.027728613569321534
+      }
+     },
+     "n_folds_enabled": {
+      "model-gate": 2
+     },
+     "fitted_last": []
+    },
+    "time": {
+     "n": 1017,
+     "fail_n": 0,
+     "fail_precision": null,
+     "fail_wilson95": null,
+     "fail_wilson80_lb": null,
+     "fail_cluster_ci": null,
+     "ok_n": 0,
+     "ok_precision": null,
+     "ok_wilson95": null,
+     "ok_wilson80_lb": null,
+     "ok_cluster_ci": null,
+     "coverage": 0.0,
+     "escalated": 1.0,
+     "accuracy_auto": null,
+     "accuracy_auto_wilson95": null,
+     "fail_recall": 0.0,
+     "recall_failed_class": 0.0,
+     "recall_bad_class": 0.0,
+     "ok_recall": 0.0,
+     "meets_target": true,
+     "groups": {},
+     "n_folds_enabled": {},
+     "cut": "2026-10-21T09:12:31.100000+00:00",
+     "n_train": 1945,
+     "unseen_stations": {
+      "n": 36,
+      "fail_n": 0,
+      "fail_precision": null,
+      "fail_wilson95": null,
+      "fail_wilson80_lb": null,
+      "fail_cluster_ci": null,
+      "ok_n": 0,
+      "ok_precision": null,
+      "ok_wilson95": null,
+      "ok_wilson80_lb": null,
+      "ok_cluster_ci": null,
+      "coverage": 0.0,
+      "escalated": 1.0,
+      "accuracy_auto": null,
+      "accuracy_auto_wilson95": null,
+      "fail_recall": 0.0,
+      "recall_failed_class": 0.0,
+      "recall_bad_class": 0.0,
+      "ok_recall": 0.0,
+      "meets_target": true
+     },
+     "fitted_last": []
+    }
+   }
+  }
+ }
+}

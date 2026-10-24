@@ -292,6 +292,128 @@ spacetime logs ground-truth --server local -f
 
 The `/ml` directory contains a gradient-boosted model (LightGBM) for predicting satellite pass failures. The model uses real SatNOGS observation outcomes combined with space weather and local conditions to estimate failure probability per pass.
 
+### v3.2.0: policy layer on top of v3.1.0
+
+`ml/policies.py` wraps the unchanged v3.1.0 model in an ordered, first-match list of auto-decide policies, each a
+conjunction of thresholds with an effect (`failed` or `ok`). Passes no policy matches go to a human. Policies are
+decided at pass end + label lag (1h), so besides the v3.1.0 features they can use:
+- the pass's own uploads (audio, waterfall, decoded frames);
+- station / satellite / transmitter outcome history as of end + lag (`dt_*`);
+- co-observation (`co_*`: overlapping passes of the same satellite at other stations, and of the same station).
+
+Another pass counts only if its outcome was known by then, under the same label-latency model as v3.
+
+Every threshold and mined rule is fit inside the training fold. Each stage is tuned on the training passes no
+earlier stage decided. Candidates, in order:
+
+| Group | Policy | Effect | In-fold tuning |
+|---|---|---|---|
+| ops evidence (own pass) | no audio and no waterfall uploaded | failed | none |
+| ops evidence (own pass) | ≥ k decoded frames uploaded | ok | k ∈ {1, 2, 5} |
+| physics | max elevation ≤ X° while Kp ≥ Y | failed | X ∈ {10..30}, Y ∈ {3, 4, 5} |
+| ops history | station outage streak ≥ N at end + lag | failed | N ∈ {1..6} |
+| ops history | ≥ N overlapping passes on the same station with no artifacts | failed | N ∈ {1, 2, 3} |
+| physics | TLE age ≥ D days | failed | D ∈ {7, 14, 30, 60} |
+| model | v3.1.0 raw score ≥ t | failed | t: Wilson80 rule on passes reaching the gate |
+| learned | 1–2 condition rules mined by sequential covering | either | must clear Wilson80 ≥ 0.95 on both halves of a station split |
+| learned | stage-2 gated LightGBM on all decision-time features | either | Wilson80 rule on passes reaching it |
+
+A hand rule is enabled in a fold only if its best setting has ≥ 20 training passes and a Wilson 80% lower bound
+≥ 0.95. Each policy's test decisions are then scored. A policy is kept only if:
+- it is ≥ 0.95 precise in every test split where it fires;
+- its precision pooled over both tests has a Wilson 80% lower bound ≥ 0.95;
+- the final list still meets the target on each auto-decided side in both tests (otherwise the weakest kept
+  policy is dropped).
+
+That last selection step looks at the test folds, so the kept-policy numbers are slightly optimistic.
+
+**Tier A vs tier B.** SatNOGS marks a pass `failed` when no audio or waterfall arrives, and auto-vets passes with
+decoded frames as `good`. The two own-pass evidence rules therefore largely restate how the label is produced.
+- Tier A excludes them and every `own_*` feature.
+- Tier B includes them.
+
+For Ground Truth claims they are legitimate checks: did the station upload anything, did it decode the
+satellite. But tier B is not a prediction, and is reported separately.
+
+**Results (lag 1h, 3,604 passes, 350 stations, `ml/reports/policies_v3_2.md`).** The v3.1.0 row is failed-side only,
+as deployed (v3.1.0 has no OK threshold), so its escalation is 89.5% on held-out stations rather than the 87.4% in
+the v3.1.0 table, which counted an in-fold OK side.
+
+| Configuration | Split | Auto "failed": n / precision / 95% CI / LB80 | Auto "ok": n / precision / 95% CI / LB80 | Coverage | Escalated | Accuracy on auto-decided (95% CI) | Target met |
+|---|---|---|---|---|---|---|---|
+| v3.1.0 only | held-out stations | 380 / 0.979 / 0.959–0.989 / 0.967 | 0 | 10.5% | 89.5% | 0.979 (0.959–0.989) | yes |
+| v3.1.0 only | future time | 157 / 0.981 / 0.945–0.993 / 0.961 | 0 | 14.5% | 85.5% | 0.981 (0.945–0.993) | yes |
+| tier A, all candidates | held-out stations | 448 / 0.931 / 0.903–0.951 / 0.914 | 45 / 0.978 / 0.884–0.996 / 0.929 | 13.7% | 86.3% | 0.935 | **no** |
+| tier A, all candidates | future time | 159 / 0.975 / 0.937–0.990 / 0.953 | 0 | 14.7% | 85.3% | 0.975 | yes |
+| tier A, kept (= v3.1.0 gate only) | both | same as v3.1.0 only | | | | | yes |
+| tier B, all candidates | held-out stations | 523 / 0.998 / 0.989–1.000 / 0.994 | 1144 / 0.993 / 0.986–0.996 / 0.989 | 46.3% | 53.7% | 0.995 | yes |
+| tier B, all candidates | future time | 217 / 1.000 / 0.983–1.000 / 0.992 | 347 / 0.997 / 0.984–0.999 / 0.990 | 52.2% | 47.8% | 0.998 | yes |
+| **tier B, kept (v3.2.0)** | **held-out stations** | **510 / 0.998 / 0.989–1.000 / 0.993** | **1144 / 0.993 / 0.986–0.996 / 0.989** | **45.9%** | **54.1%** | **0.995 (0.990–0.997)** | yes |
+| **tier B, kept (v3.2.0)** | **future time** | **217 / 1.000 / 0.983–1.000 / 0.992** | **347 / 0.997 / 0.984–0.999 / 0.990** | **52.2%** | **47.8%** | **0.998 (0.990–1.000)** | yes |
+
+For v3.2.0 on held-out stations:
+- Recall on `failed` passes 79.9%, on `bad` passes 2.1%.
+- 57.6% of OK passes auto-cleared.
+- Future-time test passes from stations never seen in training (33): 9 failed calls and 11 OK calls, all
+  correct, 39.4% escalated.
+
+Per-policy contribution (lag 1h, all candidates, first match wins). "Lost if removed" re-runs the list without
+that policy, and "folds" counts the folds (of 5 station folds / 1 time split) where in-fold tuning enabled it:
+
+| Tier | Policy | Effect | Held-out stations: decided / precision (95% CI) / coverage added / lost if removed / folds | Future time: same | Kept |
+|---|---|---|---|---|---|
+| B | no artifacts uploaded | failed | 477 / 1.000 (0.992–1.000) / 13.2% / 11.1% / 5 | 167 / 1.000 (0.978–1.000) / 15.4% / 7.8% / 1 | yes |
+| B | decoded frames uploaded (k = 1) | ok | 1144 / 0.993 (0.986–0.996) / 31.7% / 31.7% / 5 | 347 / 0.997 (0.984–0.999) / 32.1% / 32.1% / 1 | yes |
+| B | v3.1.0 gate, re-tuned on passes reaching it | failed | 33 / 0.970 (0.847–0.995) / 0.9% / 0.9% / 2 | 50 / 1.000 (0.929–1.000) / 4.6% / 4.6% / 1 | yes (pooled 82/83) |
+| B | stage-2 model | failed | 13 / 1.000 (0.772–1.000) / 0.4% / 0.4% / 3 | – / 0 | no (pooled LB80 0.89) |
+| A | v3.1.0 gate | failed | 253 / 0.988 (0.966–0.996) / 7.0% / 7.0% / 5 | 118 / 0.983 (0.940–0.995) / 10.9% / 10.9% / 1 | yes |
+| A | station outage streak (decision time) | failed | 195 / 0.856 (0.800–0.899) / 5.4% / 3.9% / 2 | 41 / 0.951 (0.839–0.987) / 3.8% / 1.1% / 1 | no |
+| A | stage-2 model | ok | 45 / 0.978 (0.884–0.996) / 1.2% / 1.2% / 2 | – / 0 | no |
+| A, B | low elevation in storm, stale TLE | failed | never enabled (no setting cleared the in-fold bound; Kp never exceeded 4 in this window) | | no |
+| A, B | simultaneous drop on station | failed | never applies: SatNOGS stations never run overlapping observations | | no |
+| A, B | mined 1–2 condition rules | either | none passed the two-half station validation (one fold, 5 calls) | | no |
+
+**Why not 17% escalation.** After the two evidence rules, the remaining 1,983 passes (55%) all uploaded a
+waterfall but no decoded frames: 1,012 `bad`, 837 `good` and 134 `failed`. Whether such a waterfall shows signal
+is exactly what the SatNOGS vetter decides. Nothing we store separates `bad` from `good` there at 0.95:
+- pre-pass physics;
+- station, satellite and transmitter history up to end + lag;
+- co-observation by other stations.
+
+The model gate and stage-2 model add only 1–5 points. Reaching ~17% would mean auto-deciding about 70% of that
+group, which needs the waterfall image itself (signal detection on the waterfall PNG), not more rules. With 3h
+label latency, tier B keeps only the two evidence rules (54.7% / 53.1% escalated, same precision). Tier A keeps
+nothing: the v3.1.0 gate is 0.904 precise at 3h.
+
+**Records and serving.** `python -m ml.policies train` fits the kept policies on all 3,604 passes around the
+v3.1.0 booster (identical weights; only the gate threshold is re-picked on passes the evidence rules leave: 0.946
+vs 0.951). It writes `ml/models/final/policies_v3.2.0.json`. Each record has the app's `CedarRule` fields (`id`,
+`policy_version_id`, `name`, `description`, `cedar_code`, `enabled`, `order_index`) plus conditions, training
+support/precision and held-out precision, e.g.
+
+```
+permit(
+  principal == GroundTruth::Actor::"ai_analyst",
+  action == GroundTruth::Action::"auto_decide_failed",
+  resource
+) when {
+  context.own_artifacts == 0
+};
+```
+
+```python
+from ml.policies import decide_observations
+decide_observations(new_passes_df, recent_passes_df)
+# -> pass_id, policy_version, model_version, route, decision ("failed"/"fine"/"uncertain"), rule_id, confidence_percent
+```
+
+The model registry still points at v3.1.0; v3.2.0 is a policy file on top of it.
+
+```bash
+python -m ml.policies evaluate   # ml/reports/policies_v3_2.{md,json}
+python -m ml.policies train      # ml/models/final/policies_v3.2.0.json
+```
+
 ### v3.1.0: final high-precision gate (current)
 
 `ml/final_model.py` + `ml/causal_features.py` + `ml/hitl.py` + `ml/satnogs_fetcher.py` combine the three earlier ML
