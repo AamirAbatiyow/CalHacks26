@@ -1,13 +1,15 @@
 import { useRef, useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import * as satellite from 'satellite.js';
-import { COLORS } from '../../config';
+import { AURORAL_OVAL_BASE_LATITUDE, AURORAL_OVAL_KP_SCALE, COLORS } from '../../config';
 import { CONTINENT_PATHS } from '../../data/continents';
+import { latLonToVector3, createStationDot } from '../../components/globeMarkers';
 
 interface ClaimGlobeProps {
   stationLat: number;
   stationLon: number;
   stationName: string;
+  stationRevenueCents: bigint;
   satelliteTle1: string;
   satelliteTle2: string;
   currentTime: bigint;
@@ -19,16 +21,6 @@ interface ClaimGlobeProps {
 
 const EARTH_RADIUS = 1;
 const SATELLITE_ALTITUDE = 0.1;
-
-function latLonToVector3(lat: number, lon: number, radius: number): THREE.Vector3 {
-  const phi = (90 - lat) * (Math.PI / 180);
-  const theta = (lon + 180) * (Math.PI / 180);
-  return new THREE.Vector3(
-    -radius * Math.sin(phi) * Math.cos(theta),
-    radius * Math.cos(phi),
-    radius * Math.sin(phi) * Math.sin(theta)
-  );
-}
 
 function getSatellitePosition(tle1: string, tle2: string, time: Date): { pos: THREE.Vector3; lat: number; lon: number } | null {
   try {
@@ -56,8 +48,8 @@ function createDottedEarth(): THREE.Points {
   const geometry = new THREE.BufferGeometry();
   const positions: number[] = [];
 
-  const latCount = 80;
-  const lonCount = 160;
+  const latCount = 90;
+  const lonCount = 180;
 
   for (let latIdx = 0; latIdx < latCount; latIdx++) {
     const lat = (latIdx / (latCount - 1)) * 180 - 90;
@@ -74,8 +66,8 @@ function createDottedEarth(): THREE.Points {
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
 
   const material = new THREE.PointsMaterial({
-    color: 0x444444,
-    size: 0.012,
+    color: 0x333333,
+    size: 0.008,
     sizeAttenuation: true,
   });
 
@@ -98,6 +90,7 @@ export function ClaimGlobe({
   stationLat,
   stationLon,
   stationName: _stationName,
+  stationRevenueCents,
   satelliteTle1,
   satelliteTle2,
   currentTime,
@@ -126,7 +119,7 @@ export function ClaimGlobe({
     sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(
-      35,
+      45,
       containerRef.current.clientWidth / containerRef.current.clientHeight,
       0.1,
       100
@@ -231,12 +224,7 @@ export function ClaimGlobe({
       }
     });
 
-    const stationPos = latLonToVector3(stationLat, stationLon, EARTH_RADIUS);
-    const stationGeometry = new THREE.BoxGeometry(0.04, 0.04, 0.04);
-    const stationMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    const stationMesh = new THREE.Mesh(stationGeometry, stationMaterial);
-    stationMesh.position.copy(stationPos);
-    stationMesh.lookAt(0, 0, 0);
+    const stationMesh = createStationDot(stationLat, stationLon, stationRevenueCents);
     stationMesh.userData.dynamic = true;
     group.add(stationMesh);
 
@@ -244,7 +232,7 @@ export function ClaimGlobe({
     const satResult = getSatellitePosition(satelliteTle1, satelliteTle2, currentDate);
 
     if (satResult) {
-      const satGeometry = new THREE.BoxGeometry(0.025, 0.025, 0.025);
+      const satGeometry = new THREE.BoxGeometry(0.012, 0.012, 0.012);
       const satMaterial = new THREE.MeshBasicMaterial({ color: 0x888888 });
       const satMesh = new THREE.Mesh(satGeometry, satMaterial);
       satMesh.position.copy(satResult.pos);
@@ -278,7 +266,7 @@ export function ClaimGlobe({
 
     const signalLostPos = getSatellitePosition(satelliteTle1, satelliteTle2, new Date(signalLostMs));
     if (signalLostPos) {
-      const markerGeometry = new THREE.SphereGeometry(0.025, 16, 16);
+      const markerGeometry = new THREE.SphereGeometry(0.012, 16, 16);
       const markerMaterial = new THREE.MeshBasicMaterial({ color: COLORS.amber });
       const marker = new THREE.Mesh(markerGeometry, markerMaterial);
       marker.position.copy(signalLostPos.pos);
@@ -300,36 +288,22 @@ export function ClaimGlobe({
     }
 
     if (kpIndex >= 4) {
-      const baseLatitude = 67 - kpIndex * 3;
-      const ovalPoints: THREE.Vector3[] = [];
-      for (let lon = 0; lon <= 360; lon += 5) {
-        ovalPoints.push(latLonToVector3(baseLatitude, lon - 180, EARTH_RADIUS + 0.01));
+      const baseLatitude = AURORAL_OVAL_BASE_LATITUDE - kpIndex * AURORAL_OVAL_KP_SCALE;
+      for (const lat of [baseLatitude, -baseLatitude]) {
+        const ovalPoints: THREE.Vector3[] = [];
+        for (let lon = 0; lon <= 360; lon += 3) {
+          ovalPoints.push(latLonToVector3(lat, lon - 180, EARTH_RADIUS + 0.005));
+        }
+        const oval = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints(ovalPoints),
+          new THREE.LineBasicMaterial({ color: COLORS.amber, transparent: true, opacity: 0.7 }),
+        );
+        oval.userData.dynamic = true;
+        group.add(oval);
       }
-      const ovalGeometry = new THREE.BufferGeometry().setFromPoints(ovalPoints);
-      const ovalMaterial = new THREE.LineBasicMaterial({
-        color: COLORS.amber,
-        transparent: true,
-        opacity: 0.6,
-      });
-      const oval = new THREE.Line(ovalGeometry, ovalMaterial);
-      oval.userData.dynamic = true;
-      group.add(oval);
-
-      const southOvalPoints: THREE.Vector3[] = [];
-      for (let lon = 0; lon <= 360; lon += 5) {
-        southOvalPoints.push(latLonToVector3(-baseLatitude, lon - 180, EARTH_RADIUS + 0.01));
-      }
-      const southOvalGeometry = new THREE.BufferGeometry().setFromPoints(southOvalPoints);
-      const southOval = new THREE.Line(southOvalGeometry, new THREE.LineBasicMaterial({
-        color: COLORS.amber,
-        transparent: true,
-        opacity: 0.6,
-      }));
-      southOval.userData.dynamic = true;
-      group.add(southOval);
     }
 
-  }, [stationLat, stationLon, satelliteTle1, satelliteTle2, currentTime, signalLostTime, contactStartTime, contactEndTime, kpIndex]);
+  }, [stationLat, stationLon, stationRevenueCents, satelliteTle1, satelliteTle2, currentTime, signalLostTime, contactStartTime, contactEndTime, kpIndex]);
 
   return (
     <div className="claim-globe-container">

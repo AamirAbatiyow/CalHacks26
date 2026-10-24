@@ -8,6 +8,24 @@ function readHash(): PageId {
   return (PAGE_IDS as readonly string[]).includes(id) ? (id as PageId) : 'overview';
 }
 
+function readHashParam(): string | null {
+  const param = window.location.hash.replace(/^#\/?/, '').split(/[?]/)[0].split('/')[1];
+  return param ? decodeURIComponent(param) : null;
+}
+
+/** The record id after the page in the hash, e.g. `CLM-10021` in `#/claims/CLM-10021`. */
+export function useHashParam(): string | null {
+  const [param, setParam] = useState<string | null>(readHashParam);
+
+  useEffect(() => {
+    const onHashChange = () => setParam(readHashParam());
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  return param;
+}
+
 export function useHashPage(): [PageId, (page: PageId) => void] {
   const [page, setPage] = useState<PageId>(readHash);
 
