@@ -224,6 +224,30 @@
   background: rgba(255, 255, 255, 0.02);
 }
 
+.audit-row {
+  cursor: pointer;
+}
+
+.audit-row:focus-visible {
+  outline: 1px solid var(--color-accent);
+  outline-offset: -1px;
+}
+
+.audit-replay-cell {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.audit-replay-cell .replay-trigger {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.audit-row:hover .replay-trigger,
+.audit-row:focus-visible .replay-trigger {
+  opacity: 1;
+}
+
 .audit-outcome {
   display: inline-flex;
   padding: 2px 8px;

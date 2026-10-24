@@ -1,4 +1,5 @@
 import type { DecisionRecord } from '../../types';
+import { openReplay } from '../../replay/useDecisionTrace';
 import { formatDollars } from '../../utils/money';
 
 interface AuditTabProps {
@@ -102,13 +103,21 @@ export function AuditTab({ decisions }: AuditTabProps) {
           <th>Cedar Rule</th>
           <th>Policy</th>
           <th>Model</th>
+          <th aria-label="Replay" />
         </tr>
       </thead>
       <tbody>
         {sortedDecisions.map((decision) => {
           const actor = getActor(decision.outcome);
           return (
-            <tr key={decision.id.toString()}>
+            <tr
+              key={decision.id.toString()}
+              className="audit-row"
+              tabIndex={0}
+              onClick={() => openReplay(`audit:${decision.id}`)}
+              onKeyDown={(e) => { if (e.key === 'Enter') openReplay(`audit:${decision.id}`); }}
+              title="Replay this decision"
+            >
               <td style={{ whiteSpace: 'nowrap' }}>{formatTimestamp(decision.createdAt)}</td>
               <td>
                 {decision.passId ? `Pass #${decision.passId}` : decision.stationId || '—'}
@@ -132,12 +141,15 @@ export function AuditTab({ decisions }: AuditTabProps) {
                 {getCedarRule(decision.decisionType)}
               </td>
               <td>
-                <a href="#/policies" className="audit-policy-link">
+                <a href="#/policies" className="audit-policy-link" onClick={(e) => e.stopPropagation()}>
                   {decision.policyVersion}
                 </a>
               </td>
               <td style={{ color: 'var(--color-secondary)' }}>
                 {decision.modelVersion}
+              </td>
+              <td className="audit-replay-cell">
+                <span className="replay-trigger"><span className="replay-trigger-glyph">▶</span>Replay</span>
               </td>
             </tr>
           );
