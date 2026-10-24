@@ -1,17 +1,40 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTable, micros, tag, type RowOf } from '../hooks/useTable';
 import type { ClaimGate, DecisionOutcome, DecisionRecord, DecisionType, EscalatedClaimStatus } from '../types';
-import { buildTrace, fromAuditRecord, fromClaimDecision, fromEscalatedClaim } from './adapter';
-import type { DecisionRow, DecisionTrace, PipelineStepRow } from './types';
+import { STAGE_TITLES, buildTrace, caseKeyFromAuditReason, fromAuditRecord, fromClaimDecision, fromDecisionCase, fromEscalatedClaim } from './adapter';
+import type { DecisionRow, DecisionTrace, PipelineStepRow, ReverifyCheck, StageKind } from './types';
 
-const NO_STEPS: PipelineStepRow[] = [];
+function parseChecks(json: string): ReverifyCheck[] | undefined {
+  if (!json) return undefined;
+  try {
+    const parsed = JSON.parse(json) as ReverifyCheck[];
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 /**
- * Per-step audit path recorded by the decision pipeline. Until its table is in
- * the module bindings every replay falls back to a seeded example path.
+ * Per-step path recorded by the decision pipeline (`pipeline_step`). Decisions
+ * without recorded steps fall back to a seeded example path.
  */
 function usePipelineSteps(): PipelineStepRow[] {
-  return NO_STEPS;
+  const rows = useTable('pipelineStep');
+  return useMemo(() => rows
+    .filter(r => r.stage in STAGE_TITLES)
+    .map(r => ({
+      decisionKey: r.decisionKey,
+      seq: r.seq,
+      stage: r.stage as StageKind,
+      system: r.system,
+      version: r.version ?? null,
+      verdict: r.verdict,
+      confidencePct: r.confidencePct ?? null,
+      amountCents: r.amountCents != null ? Number(r.amountCents) : null,
+      note: r.note,
+      detail: r.detail || undefined,
+      checks: parseChecks(r.checksJson),
+    })), [rows]);
 }
 
 export function toDecisionRecord(row: RowOf<'decisionRecord'>): DecisionRecord {
@@ -35,6 +58,7 @@ function useDecisionRow(key: string | null): DecisionRow | null {
   const claimDecisions = useTable('claimDecision');
   const claimReasons = useTable('claimReason');
   const escalated = useTable('escalatedClaim');
+  const cases = useTable('decisionCase');
 
   return useMemo(() => {
     if (!key) return null;
@@ -44,7 +68,25 @@ function useDecisionRow(key: string | null): DecisionRow | null {
     switch (kind) {
       case 'audit': {
         const row = decisionRecords.find(r => String(r.id) === id);
-        return row ? fromAuditRecord(toDecisionRecord(row)) : null;
+        if (!row) return null;
+        const audit = fromAuditRecord(toDecisionRecord(row));
+        const caseKey = caseKeyFromAuditReason(row.reason);
+        return caseKey && cases.some(c => `case:${c.claimRef}` === caseKey) ? { ...audit, pipelineKey: caseKey } : audit;
+      }
+      case 'case': {
+        const c = cases.find(r => r.claimRef === id);
+        return c ? fromDecisionCase({
+          claimRef: c.claimRef,
+          customer: c.customer,
+          claimType: tag(c.claimType),
+          amountClaimedCents: c.amountClaimedCents,
+          finalCreditCents: c.finalCreditCents,
+          status: tag(c.status),
+          finalVerdict: c.finalVerdict ? tag(c.finalVerdict) : null,
+          escalationReason: c.escalationReason,
+          policyVersion: c.policyVersion,
+          modelVersion: c.modelVersion,
+        }) : null;
       }
       case 'claim': {
         const claim = claims.find(c => c.id === id);
@@ -87,7 +129,7 @@ function useDecisionRow(key: string | null): DecisionRow | null {
       default:
         return null;
     }
-  }, [key, decisionRecords, claims, claimDecisions, claimReasons, escalated]);
+  }, [key, decisionRecords, claims, claimDecisions, claimReasons, escalated, cases]);
 }
 
 export function useDecisionTrace(key: string | null): DecisionTrace | null {

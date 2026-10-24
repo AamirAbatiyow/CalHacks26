@@ -9,6 +9,7 @@ import {
   type DecisionCaseRow,
   type DecisionData,
 } from '../../hooks/useDecisions';
+import { openReplay } from '../../replay/useDecisionTrace';
 import './CaseReview.css';
 
 const REASON_CODES = [
@@ -119,6 +120,9 @@ export function CaseReview({ row, data }: { row: DecisionCaseRow; data: Decision
       <div className="detail-header">
         <h2>{row.customer}</h2>
         <span className="detail-amount">{dollars(row.amountClaimedCents)} claimed · {row.claimRef}</span>
+        <button className="replay-trigger detail-replay" onClick={() => openReplay(`case:${row.claimRef}`)}>
+          <span className="replay-trigger-glyph">▶</span>Replay path
+        </button>
       </div>
       <div className="cr-reason">
         <span className="cr-tag">{CLAIM_TYPE_LABELS[tag(row.claimType)] ?? tag(row.claimType)}</span>
@@ -230,6 +234,9 @@ export function CaseReview({ row, data }: { row: DecisionCaseRow; data: Decision
               Similar claim {similar.claimRef}: {tag(similar.status) === 'AutoDecided'
                 ? `auto-decided ${tag(similar.finalVerdict)} ${dollars(similar.finalCreditCents)} by ${SYSTEM_LABELS[tag(similar.decidedBy)]} · ${similar.modelVersion} · policy ${similar.policyVersion}`
                 : tag(similar.status) === 'Escalated' ? `escalated: ${similar.escalationReason}` : 'deciding…'}
+              <button className="replay-trigger detail-replay" onClick={() => openReplay(`case:${similar.claimRef}`)}>
+                <span className="replay-trigger-glyph">▶</span>Replay {similar.claimRef}
+              </button>
             </div>
           ) : (
             <button className="btn btn-edit cr-similar-btn" onClick={() => reducers()?.fileSimilarCase({ caseId: row.id })}>

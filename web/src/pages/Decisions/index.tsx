@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { micros, reducers, tag } from '../../hooks/useTable';
 import { CLAIM_TYPE_LABELS, SYSTEM_LABELS, dollars, useDecisionData, type DecisionCaseRow } from '../../hooks/useDecisions';
+import { openReplay } from '../../replay/useDecisionTrace';
 import './Decisions.css';
 
 const SCENARIOS = [
@@ -52,6 +53,9 @@ function CaseRow({ c, steps }: { c: DecisionCaseRow; steps: ReturnType<typeof us
       </button>
       {open && (
         <div className="dz-steps">
+          <button className="replay-trigger" onClick={() => openReplay(`case:${c.claimRef}`)}>
+            <span className="replay-trigger-glyph">▶</span>Replay path
+          </button>
           {c.escalationReason && <div className="dz-muted">Escalated: {c.escalationReason}</div>}
           {(steps.get(c.id) ?? []).map(d => (
             <div key={String(d.id)} className="dz-step">

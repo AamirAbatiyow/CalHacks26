@@ -1,4 +1,6 @@
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState, useCallback } from 'react';
+import { useTable } from '../../hooks/useTable';
+import { INJECTION_RUN_TIMEOUT_S, useWorkerStatus } from '../../hooks/useDecisions';
 import { useBreakItDB } from './useBreakItDB';
 import {
   AttackType,
@@ -50,32 +52,44 @@ interface TypeTally {
   total: number;
 }
 
+interface RowStatus {
+  text: string;
+  tone: 'pending' | 'offline';
+  hint?: string;
+}
+
 interface AttackRowProps {
   attackType: AttackType;
   result: TypeTally | null;
   onRun: () => void;
   isRunning: boolean;
+  blocked?: boolean;
+  status?: RowStatus | null;
 }
 
-function AttackRow({ attackType, result, onRun, isRunning }: AttackRowProps) {
+function AttackRow({ attackType, result, onRun, isRunning, blocked, status }: AttackRowProps) {
   const missed = result ? result.total - result.caught : 0;
-  const resultClass = !result ? '' : missed > 0 ? 'missed' : 'caught';
-  const resultText = result ? `${result.caught}/${result.total} caught` : '';
+  const resultClass = status ? status.tone : !result ? '' : missed > 0 ? 'missed' : 'caught';
+  const resultText = status ? status.text : result ? `${result.caught}/${result.total} caught` : '';
 
   return (
-    <div className="breakit-attack-row">
-      <span className="breakit-attack-name">{ATTACK_TYPE_LABELS[attackType]}</span>
-      <button 
-        className="breakit-run-btn" 
-        onClick={onRun}
-        disabled={isRunning}
-      >
-        Run
-      </button>
-      <span className={`breakit-attack-result ${resultClass}`}>
-        {resultText}
-      </span>
-    </div>
+    <>
+      <div className="breakit-attack-row">
+        <span className="breakit-attack-name">{ATTACK_TYPE_LABELS[attackType]}</span>
+        <button
+          className="breakit-run-btn"
+          onClick={onRun}
+          disabled={isRunning || blocked}
+          title={blocked ? status?.hint : undefined}
+        >
+          Run
+        </button>
+        <span className={`breakit-attack-result ${resultClass}`}>
+          {resultText}
+        </span>
+      </div>
+      {status?.hint && <div className={`breakit-attack-hint ${status.tone}`}>{status.hint}</div>}
+    </>
   );
 }
 
@@ -117,6 +131,9 @@ export default function BreakIt() {
     runAllAttacks,
     clearRuns,
   } = useBreakItDB();
+  const cases = useTable('decisionCase');
+  const { online: workerOnline, silenceS: workerSilenceS, now } = useWorkerStatus();
+  const [injectionError, setInjectionError] = useState<string | null>(null);
 
   useEffect(() => {
     if (connected && fixtures.length === 0) {
@@ -161,7 +178,51 @@ export default function BreakIt() {
 
   const baseTimestamp = latestSession?.startedAt ?? BigInt(0);
 
-  const isRunning = latestSession !== null && latestSession.completedAt === null;
+  const injection = useMemo(() => {
+    if (!latestSession) return null;
+    const own = cases.filter(c => c.attackSessionId === latestSession.id);
+    if (own.length === 0) return null;
+    return { total: own.length, decided: own.filter(c => c.decidedAt !== undefined).length };
+  }, [cases, latestSession]);
+
+  const elapsedS = latestSession ? Math.max(0, (now * 1000 - Number(latestSession.startedAt)) / 1e6) : 0;
+  // A run the module never closed (e.g. recorded before the scheduled timeout existed) stops counting as running.
+  const staleInjectionRun = injection !== null && elapsedS > INJECTION_RUN_TIMEOUT_S + 10;
+  const isRunning = latestSession !== null && latestSession.completedAt === null && !staleInjectionRun;
+  const injectionRunning = isRunning && injection !== null;
+
+  const injectionStatus = useMemo((): RowStatus | null => {
+    const start = 'Start the decision worker: cd worker && npm start';
+    if (injectionRunning) {
+      const left = Math.max(0, Math.ceil(INJECTION_RUN_TIMEOUT_S - elapsedS));
+      return workerOnline
+        ? { text: `Deciding ${injection!.decided}/${injection!.total}`, tone: 'pending', hint: `The decision worker is deciding each attack as a real claim. Times out in ${left}s.` }
+        : { text: 'Worker offline', tone: 'offline', hint: `${injection!.decided} of ${injection!.total} decided; the run times out in ${left}s. ${start}` };
+    }
+    if (!workerOnline) {
+      const seen = workerSilenceS === null ? 'has never connected' : `sent its last heartbeat ${workerSilenceS}s ago`;
+      return { text: 'Worker offline', tone: 'offline', hint: `The decision worker decides these claims and ${seen}. ${start}` };
+    }
+    if (injectionError) return { text: 'Run failed', tone: 'offline', hint: injectionError };
+    if (latestSession && injection && latestSession.caught + latestSession.missed < injection.total) {
+      const decided = latestSession.caught + latestSession.missed;
+      return {
+        text: 'Timed out',
+        tone: 'offline',
+        hint: `${latestSession.caught} of ${decided} decided attacks caught; ${injection.total - decided} were never decided, went to Approvals and are not scored.`,
+      };
+    }
+    return null;
+  }, [injectionRunning, injection, elapsedS, workerOnline, workerSilenceS, injectionError, latestSession]);
+
+  const runRow = useCallback((attackType: AttackType) => {
+    if (attackType !== 'PromptInjection') {
+      runAttackType(attackType).catch(() => {});
+      return;
+    }
+    setInjectionError(null);
+    runAttackType(attackType).catch((e: unknown) => setInjectionError(e instanceof Error ? e.message : String(e)));
+  }, [runAttackType]);
 
   return (
     <div className="breakit-page">
@@ -189,8 +250,10 @@ export default function BreakIt() {
                 key={attackType}
                 attackType={attackType}
                 result={attackTypeResults[attackType]}
-                onRun={() => runAttackType(attackType)}
+                onRun={() => runRow(attackType)}
                 isRunning={isRunning}
+                blocked={attackType === 'PromptInjection' && !workerOnline}
+                status={attackType === 'PromptInjection' ? injectionStatus : null}
               />
             ))}
           </div>

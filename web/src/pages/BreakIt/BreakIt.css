@@ -167,6 +167,26 @@
   color: var(--color-amber);
 }
 
+.breakit-attack-result.pending {
+  color: var(--color-secondary);
+}
+
+.breakit-attack-result.offline {
+  color: var(--color-amber);
+}
+
+.breakit-attack-hint {
+  padding: 0 0 8px;
+  margin-top: -4px;
+  font-size: var(--font-metadata);
+  color: var(--color-secondary);
+  border-bottom: 1px solid var(--color-muted);
+}
+
+.breakit-attack-hint.offline {
+  color: var(--color-amber);
+}
+
 .breakit-actions {
   display: flex;
   gap: 12px;

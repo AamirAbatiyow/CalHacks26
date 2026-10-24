@@ -82,9 +82,57 @@ export function fromEscalatedClaim(claim: EscalatedClaim): DecisionRow {
   };
 }
 
+/** A `decision_case` row from the decision pipeline, with enum tags as strings. */
+export interface DecisionCaseSummary {
+  claimRef: string;
+  customer: string;
+  claimType: string;
+  amountClaimedCents: bigint;
+  finalCreditCents: bigint;
+  status: string;
+  finalVerdict: string | null;
+  escalationReason: string;
+  policyVersion: string;
+  modelVersion: string;
+}
+
+const CLAIM_TYPE_TITLES: Record<string, string> = {
+  DroppedPass: 'Dropped pass',
+  DegradedLink: 'Degraded link',
+  LateDelivery: 'Late delivery',
+};
+
+export function fromDecisionCase(c: DecisionCaseSummary): DecisionRow {
+  const approved = c.finalVerdict === 'Approve';
+  const outcome: DecisionRow['outcome'] =
+    c.status === 'AutoDecided' ? (approved ? 'auto' : 'denied')
+      : c.status === 'HumanDecided' ? (approved ? 'approved' : 'denied')
+        : c.status === 'Escalated' ? 'escalated'
+          : 'pending';
+  return {
+    key: `case:${c.claimRef}`,
+    title: `${c.claimRef} · ${CLAIM_TYPE_TITLES[c.claimType] ?? c.claimType}`,
+    subject: c.customer,
+    claimedCents: Number(c.amountClaimedCents),
+    creditCents: Number(c.finalCreditCents),
+    confidencePct: null,
+    outcome,
+    reason: c.escalationReason,
+    policyVersion: c.policyVersion,
+    modelVersion: c.modelVersion,
+  };
+}
+
+/** Audit rows written by the decision pipeline start `[System] CLM-20000: ...`. */
+export function caseKeyFromAuditReason(reason: string): string | null {
+  const m = reason.match(/^\[[^\]]+\] ([A-Z]+-[\w-]+): /);
+  return m ? `case:${m[1]}` : null;
+}
+
 /** The decision's real path from the pipeline audit when it has one, else a seeded example path. */
 export function buildTrace(row: DecisionRow, steps: PipelineStepRow[] = []): DecisionTrace {
-  const own = steps.filter(s => s.decisionKey === row.key).sort((a, b) => a.seq - b.seq);
+  const key = row.pipelineKey ?? row.key;
+  const own = steps.filter(s => s.decisionKey === key).sort((a, b) => a.seq - b.seq);
   return own.length > 0 ? traceFromPipeline(row, own) : seededTrace(row);
 }
 
@@ -96,37 +144,65 @@ function toneOf(verdict: string): StageTone {
   return 'neutral';
 }
 
+function stageTone(s: PipelineStepRow): StageTone {
+  switch (s.stage) {
+    case 'system1': return (s.confidencePct ?? 0) >= AUTO_CONFIDENCE_PCT ? 'pass' : 'neutral';
+    case 'claim':
+    case 'label': return 'neutral';
+    default: return toneOf(s.verdict);
+  }
+}
+
+function stageHeadline(s: PipelineStepRow): Headline {
+  if (s.confidencePct != null && s.stage === 'system1') return { kind: 'pct', value: s.confidencePct, digits: 1 };
+  if (s.confidencePct != null && s.stage === 'retrain') return { kind: 'pct', value: s.confidencePct, digits: 2 };
+  if (s.stage === 'system2' && s.verdict !== 'Approve') return { kind: 'text', text: s.verdict };
+  if (s.amountCents != null && s.stage !== 'cedar') return { kind: 'usd', cents: s.amountCents };
+  return { kind: 'text', text: s.verdict };
+}
+
+/** The branch a recorded stage could have taken but did not, drawn as a faint stub. */
+function untakenBranch(s: PipelineStepRow, next: PipelineStepRow | undefined): string | undefined {
+  const pass = toneOf(s.verdict) === 'pass';
+  switch (s.stage) {
+    case 'system1':
+      if (next?.stage === 'cedar' && next.system !== 'Cedar') return 'no rule → System 2';
+      if (next?.stage === 'cedar') return `< ${AUTO_CONFIDENCE_PCT}% → System 2`;
+      return (s.confidencePct ?? 0) >= AUTO_CONFIDENCE_PCT ? 'no text needed → Cedar' : `≥ ${AUTO_CONFIDENCE_PCT}% → Cedar`;
+    case 'cedar': return pass ? 'deny → human' : 'allow → decided';
+    case 'injection': return pass ? 'flagged → human' : 'clean → System 2';
+    case 'reverify': return pass ? 'fail → human' : 'pass → decided';
+    default: return undefined;
+  }
+}
+
 function traceFromPipeline(row: DecisionRow, steps: PipelineStepRow[]): DecisionTrace {
   const retrainAt = steps.findIndex(s => s.stage === 'retrain');
-  const stages = steps.map<TraceStage>((s) => {
-    const headline: Headline =
-      s.confidencePct != null && (s.stage === 'system1' || s.stage === 'retrain')
-        ? { kind: 'pct', value: s.confidencePct, digits: 1 }
-        : s.amountCents != null
-          ? { kind: 'usd', cents: s.amountCents }
-          : { kind: 'text', text: s.verdict };
-    return {
-      kind: s.stage,
-      system: s.system,
-      version: s.version,
-      headline,
-      caption: s.note,
-      note: s.stage === 'system2' ? s.note : undefined,
-      tone: toneOf(s.verdict),
-      parent: s.stage === 'proposal' && retrainAt >= 0 ? retrainAt : undefined,
-      href: s.stage === 'proposal' ? '#/policies' : undefined,
-    };
-  });
-  const last = steps[steps.length - 1];
-  const decidedBy: DecidedBy = steps.some(s => s.stage === 'human')
-    ? (toneOf(steps.find(s => s.stage === 'human')!.verdict) === 'warn' ? 'pending' : 'human')
-    : steps.some(s => s.stage === 'system2') ? 'system2' : 'system1';
+  const stages = steps.map<TraceStage>((s, i) => ({
+    kind: s.stage,
+    system: s.system,
+    version: s.version,
+    headline: stageHeadline(s),
+    caption: s.note,
+    note: s.detail,
+    checks: s.checks,
+    tone: stageTone(s),
+    parent: s.stage === 'proposal' && retrainAt >= 0 ? retrainAt : undefined,
+    untaken: untakenBranch(s, steps[i + 1]),
+    href: s.stage === 'proposal' ? '#/policies' : s.stage === 'model' ? '#/decisions' : undefined,
+  }));
+  const human = steps.find(s => s.stage === 'human');
+  const decided = [...steps].reverse().find(s => (s.stage === 'decided' || s.stage === 'human') && s.amountCents != null);
+  const decidedBy: DecidedBy = human
+    ? (toneOf(human.verdict) === 'warn' ? 'pending' : 'human')
+    : steps.some(s => s.stage === 'decided' && s.system.startsWith('Learned rule')) ? 'rule'
+      : steps.some(s => s.stage === 'system2') ? 'system2' : 'system1';
   return {
     key: row.key,
     title: row.title,
     subject: row.subject,
-    claimedCents: row.claimedCents,
-    amountCents: last?.amountCents ?? row.creditCents,
+    claimedCents: steps.find(s => s.stage === 'claim')?.amountCents ?? row.claimedCents,
+    amountCents: decided?.amountCents ?? row.creditCents,
     decidedBy,
     policyVersion: row.policyVersion,
     modelVersion: row.modelVersion,

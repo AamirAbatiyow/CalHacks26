@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTable, micros, tag, type RowOf } from './useTable';
 
 export type DecisionCaseRow = RowOf<'decisionCase'>;
@@ -49,13 +49,31 @@ export const CLAIM_TYPE_LABELS: Record<string, string> = {
   LateDelivery: 'Late delivery',
 };
 
+/** Mirrors `WORKER_STALE_SECS` in `decision.rs`; the worker heartbeats every 5 s. */
+export const WORKER_STALE_S = 15;
+/** Mirrors `INJECTION_RUN_TIMEOUT_SECS` in `decision.rs`. */
+export const INJECTION_RUN_TIMEOUT_S = 60;
+
+/** The decision worker's heartbeat, re-evaluated every second so it goes offline when heartbeats stop. */
+export function useWorkerStatus() {
+  const workers = useTable('workerStatus');
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const worker = workers[0] ?? null;
+  const silenceS = worker ? Math.max(0, Math.round((now * 1000 - Number(micros(worker.lastSeen))) / 1e6)) : null;
+  return { worker, silenceS, online: silenceS !== null && silenceS <= WORKER_STALE_S, now };
+}
+
 export function useDecisionData() {
   const cases = useTable('decisionCase');
   const steps = useTable('caseDecision');
   const models = useTable('modelVersion');
   const rules = useTable('learnedRule');
   const labels = useTable('labeledDecision');
-  const workers = useTable('workerStatus');
+  const { worker, online: workerOnline } = useWorkerStatus();
   const messages = useTable('disputeMessage');
 
   return useMemo(() => {
@@ -77,8 +95,6 @@ export function useDecisionData() {
     const modelByLabel = new Map<bigint, ModelVersionRow>();
     for (const m of models) if (m.triggeredByLabel !== undefined) modelByLabel.set(m.triggeredByLabel, m);
     const messageById = new Map(messages.map(m => [m.id, m]));
-    const worker = workers[0] ?? null;
-    const workerAgeS = worker ? (Date.now() * 1000 - Number(micros(worker.lastSeen))) / 1e6 : Infinity;
     return {
       cases: sortedCases,
       escalated: sortedCases.filter(c => tag(c.status) === 'Escalated'),
@@ -92,9 +108,9 @@ export function useDecisionData() {
       labelCount: labels.length,
       historyLabels,
       worker,
-      workerOnline: workerAgeS < 15,
+      workerOnline,
     };
-  }, [cases, steps, models, rules, labels, workers, messages]);
+  }, [cases, steps, models, rules, labels, worker, workerOnline, messages]);
 }
 
 export type DecisionData = ReturnType<typeof useDecisionData>;
