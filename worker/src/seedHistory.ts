@@ -17,4 +17,4 @@ connect(async conn => {
     console.error('Seeding labeled history failed:', err);
     process.exit(1);
   }
-});
+}, { retry: false });

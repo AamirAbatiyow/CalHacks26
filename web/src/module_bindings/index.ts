@@ -36,11 +36,13 @@ import {
 // Import all reducer arg schemas
 import AddPolicyVersionReducer from "./add_policy_version_reducer";
 import AdvanceReplayReducer from "./advance_replay_reducer";
+import ApproveAuthorityChangeReducer from "./approve_authority_change_reducer";
 import ApproveClaimDecisionReducer from "./approve_claim_decision_reducer";
 import ApproveDisputeReducer from "./approve_dispute_reducer";
 import ApproveEscalatedClaimReducer from "./approve_escalated_claim_reducer";
 import ClearAttackRunsReducer from "./clear_attack_runs_reducer";
 import CreatePolicyVersionReducer from "./create_policy_version_reducer";
+import DecideAttackReducer from "./decide_attack_reducer";
 import DecideCaseReducer from "./decide_case_reducer";
 import DenyClaimReducer from "./deny_claim_reducer";
 import DenyDisputeReducer from "./deny_dispute_reducer";
@@ -79,6 +81,8 @@ import RecordWeatherAlertReducer from "./record_weather_alert_reducer";
 import RegisterActorReducer from "./register_actor_reducer";
 import RegisterAttackerReducer from "./register_attacker_reducer";
 import RegisterModelVersionReducer from "./register_model_version_reducer";
+import RequestClaimCapChangeReducer from "./request_claim_cap_change_reducer";
+import RequestPayoutLimitChangeReducer from "./request_payout_limit_change_reducer";
 import RunAllAttacksReducer from "./run_all_attacks_reducer";
 import RunAttackFixtureReducer from "./run_attack_fixture_reducer";
 import RunAttackTypeReducer from "./run_attack_type_reducer";
@@ -133,11 +137,14 @@ import ActorIdentityRow from "./actor_identity_table";
 import ActorPermissionCapRow from "./actor_permission_cap_table";
 import ApprovalQueueRow from "./approval_queue_table";
 import AttackClaimRow from "./attack_claim_table";
+import AttackClearanceRow from "./attack_clearance_table";
+import AttackEvalRow from "./attack_eval_table";
 import AttackFixtureRow from "./attack_fixture_table";
 import AttackRunRow from "./attack_run_table";
 import AttackRunSessionRow from "./attack_run_session_table";
 import AuditDecisionRow from "./audit_decision_table";
 import AuditLogRow from "./audit_log_table";
+import AuthorityChangeRow from "./authority_change_table";
 import AuthorizationLogRow from "./authorization_log_table";
 import CaseConflictRow from "./case_conflict_table";
 import CaseDecisionRow from "./case_decision_table";
@@ -240,6 +247,31 @@ const tablesSchema = __schema({
       { name: 'attack_claim_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, AttackClaimRow),
+  attackClearance: __table({
+    name: 'attack_clearance',
+    indexes: [
+      { accessor: 'id', name: 'attack_clearance_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'attack_clearance_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, AttackClearanceRow),
+  attackEval: __table({
+    name: 'attack_eval',
+    indexes: [
+      { accessor: 'id', name: 'attack_eval_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+      { accessor: 'session_id', name: 'attack_eval_session_id_idx_btree', algorithm: 'btree', columns: [
+        'sessionId',
+      ] },
+    ],
+    constraints: [
+      { name: 'attack_eval_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, AttackEvalRow),
   attackFixture: __table({
     name: 'attack_fixture',
     indexes: [
@@ -301,6 +333,17 @@ const tablesSchema = __schema({
       { name: 'audit_log_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, AuditLogRow),
+  authorityChange: __table({
+    name: 'authority_change',
+    indexes: [
+      { accessor: 'id', name: 'authority_change_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'authority_change_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, AuthorityChangeRow),
   authorizationLog: __table({
     name: 'authorization_log',
     indexes: [
@@ -970,11 +1013,13 @@ const tablesSchema = __schema({
 const reducersSchema = __reducers(
   __reducerSchema("add_policy_version", AddPolicyVersionReducer),
   __reducerSchema("advance_replay", AdvanceReplayReducer),
+  __reducerSchema("approve_authority_change", ApproveAuthorityChangeReducer),
   __reducerSchema("approve_claim_decision", ApproveClaimDecisionReducer),
   __reducerSchema("approve_dispute", ApproveDisputeReducer),
   __reducerSchema("approve_escalated_claim", ApproveEscalatedClaimReducer),
   __reducerSchema("clear_attack_runs", ClearAttackRunsReducer),
   __reducerSchema("create_policy_version", CreatePolicyVersionReducer),
+  __reducerSchema("decide_attack", DecideAttackReducer),
   __reducerSchema("decide_case", DecideCaseReducer),
   __reducerSchema("deny_claim", DenyClaimReducer),
   __reducerSchema("deny_dispute", DenyDisputeReducer),
@@ -1013,6 +1058,8 @@ const reducersSchema = __reducers(
   __reducerSchema("register_actor", RegisterActorReducer),
   __reducerSchema("register_attacker", RegisterAttackerReducer),
   __reducerSchema("register_model_version", RegisterModelVersionReducer),
+  __reducerSchema("request_claim_cap_change", RequestClaimCapChangeReducer),
+  __reducerSchema("request_payout_limit_change", RequestPayoutLimitChangeReducer),
   __reducerSchema("run_all_attacks", RunAllAttacksReducer),
   __reducerSchema("run_attack_fixture", RunAttackFixtureReducer),
   __reducerSchema("run_attack_type", RunAttackTypeReducer),
@@ -1075,6 +1122,10 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "approval_queue": Omit<typeof tablesSchema.schemaType.tables["approvalQueue"], "accessorName"> & { readonly accessorName: "approval_queue" };
     /** @deprecated Use `attackClaim` instead. This alias will be removed in the next major version. */
     readonly "attack_claim": Omit<typeof tablesSchema.schemaType.tables["attackClaim"], "accessorName"> & { readonly accessorName: "attack_claim" };
+    /** @deprecated Use `attackClearance` instead. This alias will be removed in the next major version. */
+    readonly "attack_clearance": Omit<typeof tablesSchema.schemaType.tables["attackClearance"], "accessorName"> & { readonly accessorName: "attack_clearance" };
+    /** @deprecated Use `attackEval` instead. This alias will be removed in the next major version. */
+    readonly "attack_eval": Omit<typeof tablesSchema.schemaType.tables["attackEval"], "accessorName"> & { readonly accessorName: "attack_eval" };
     /** @deprecated Use `attackFixture` instead. This alias will be removed in the next major version. */
     readonly "attack_fixture": Omit<typeof tablesSchema.schemaType.tables["attackFixture"], "accessorName"> & { readonly accessorName: "attack_fixture" };
     /** @deprecated Use `attackRun` instead. This alias will be removed in the next major version. */
@@ -1085,6 +1136,8 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "audit_decision": Omit<typeof tablesSchema.schemaType.tables["auditDecision"], "accessorName"> & { readonly accessorName: "audit_decision" };
     /** @deprecated Use `auditLog` instead. This alias will be removed in the next major version. */
     readonly "audit_log": Omit<typeof tablesSchema.schemaType.tables["auditLog"], "accessorName"> & { readonly accessorName: "audit_log" };
+    /** @deprecated Use `authorityChange` instead. This alias will be removed in the next major version. */
+    readonly "authority_change": Omit<typeof tablesSchema.schemaType.tables["authorityChange"], "accessorName"> & { readonly accessorName: "authority_change" };
     /** @deprecated Use `authorizationLog` instead. This alias will be removed in the next major version. */
     readonly "authorization_log": Omit<typeof tablesSchema.schemaType.tables["authorizationLog"], "accessorName"> & { readonly accessorName: "authorization_log" };
     /** @deprecated Use `caseConflict` instead. This alias will be removed in the next major version. */
@@ -1201,11 +1254,14 @@ const tableAccessorAliases = {
   "actor_permission_cap": "actorPermissionCap",
   "approval_queue": "approvalQueue",
   "attack_claim": "attackClaim",
+  "attack_clearance": "attackClearance",
+  "attack_eval": "attackEval",
   "attack_fixture": "attackFixture",
   "attack_run": "attackRun",
   "attack_run_session": "attackRunSession",
   "audit_decision": "auditDecision",
   "audit_log": "auditLog",
+  "authority_change": "authorityChange",
   "authorization_log": "authorizationLog",
   "case_conflict": "caseConflict",
   "case_decision": "caseDecision",
@@ -1281,6 +1337,10 @@ export type DbView = __DbViewBase & {
   readonly "approval_queue": __DbViewBase["approvalQueue"];
   /** @deprecated Use `attackClaim` instead. This alias will be removed in the next major version. */
   readonly "attack_claim": __DbViewBase["attackClaim"];
+  /** @deprecated Use `attackClearance` instead. This alias will be removed in the next major version. */
+  readonly "attack_clearance": __DbViewBase["attackClearance"];
+  /** @deprecated Use `attackEval` instead. This alias will be removed in the next major version. */
+  readonly "attack_eval": __DbViewBase["attackEval"];
   /** @deprecated Use `attackFixture` instead. This alias will be removed in the next major version. */
   readonly "attack_fixture": __DbViewBase["attackFixture"];
   /** @deprecated Use `attackRun` instead. This alias will be removed in the next major version. */
@@ -1291,6 +1351,8 @@ export type DbView = __DbViewBase & {
   readonly "audit_decision": __DbViewBase["auditDecision"];
   /** @deprecated Use `auditLog` instead. This alias will be removed in the next major version. */
   readonly "audit_log": __DbViewBase["auditLog"];
+  /** @deprecated Use `authorityChange` instead. This alias will be removed in the next major version. */
+  readonly "authority_change": __DbViewBase["authorityChange"];
   /** @deprecated Use `authorizationLog` instead. This alias will be removed in the next major version. */
   readonly "authorization_log": __DbViewBase["authorizationLog"];
   /** @deprecated Use `caseConflict` instead. This alias will be removed in the next major version. */
@@ -1397,6 +1459,10 @@ export type Tables = __TablesBase & {
   readonly "approval_queue": __TablesBase["approvalQueue"];
   /** @deprecated Use `attackClaim` instead. This alias will be removed in the next major version. */
   readonly "attack_claim": __TablesBase["attackClaim"];
+  /** @deprecated Use `attackClearance` instead. This alias will be removed in the next major version. */
+  readonly "attack_clearance": __TablesBase["attackClearance"];
+  /** @deprecated Use `attackEval` instead. This alias will be removed in the next major version. */
+  readonly "attack_eval": __TablesBase["attackEval"];
   /** @deprecated Use `attackFixture` instead. This alias will be removed in the next major version. */
   readonly "attack_fixture": __TablesBase["attackFixture"];
   /** @deprecated Use `attackRun` instead. This alias will be removed in the next major version. */
@@ -1407,6 +1473,8 @@ export type Tables = __TablesBase & {
   readonly "audit_decision": __TablesBase["auditDecision"];
   /** @deprecated Use `auditLog` instead. This alias will be removed in the next major version. */
   readonly "audit_log": __TablesBase["auditLog"];
+  /** @deprecated Use `authorityChange` instead. This alias will be removed in the next major version. */
+  readonly "authority_change": __TablesBase["authorityChange"];
   /** @deprecated Use `authorizationLog` instead. This alias will be removed in the next major version. */
   readonly "authorization_log": __TablesBase["authorizationLog"];
   /** @deprecated Use `caseConflict` instead. This alias will be removed in the next major version. */

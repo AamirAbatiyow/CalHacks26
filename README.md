@@ -21,7 +21,7 @@ All three read the same SpacetimeDB Maincloud database, `ground-truth-aamir`, ov
 - **Hyphenate (deterministic + AI that learns safely).** Human rulings become labeled decisions. After 3 consistent rulings with no contradiction the system proposes a Cedar rule, replays it over the whole labeled history, and blocks it if precision regresses. When the loop shipped (PR [#26](https://github.com/AamirAbatiyow/CalHacks26/pull/26)), mined policy v6 cut escalations from **2,772 to 1,362** while precision rose from **98.89% to 99.07%** with **0 regressions**; on the current, larger seed the same step is **3,406 → 1,660** at **98.87% → 99.06%**, again with 0 regressions. A live ruling then produced **v7**, which is promoted. The four governing rules (the 95% gate, escalation, AI cannot edit policy, human authority) are fixed and cannot be switched off.
 - **SpacetimeDB.** The whole decision system (evidence, routing, Cedar authorization, re-verification, ledger, KPIs, audit and replay) runs inside reducers in one Rust module. Every screen updates live through subscriptions, and the worker is just another subscriber.
 - **SpaceX.** 169 satellites with real CelesTrak TLEs are SGP4-propagated against 28 real ground-station locations to produce about 49,000 priced passes. A pass-failure classifier is trained on real SatNOGS observations: 0.979 precision on held-out stations (PR [#23](https://github.com/AamirAbatiyow/CalHacks26/pull/23), open).
-- **CRS (fraud).** **Break It** fires real adversarial claims through the real decision path from separate identities and reports what was caught, held for a human or missed. Prompt injection: **11 of 12 caught**. Before/after learning (PR [#28](https://github.com/AamirAbatiyow/CalHacks26/pull/28), pending): **29 caught / 45 held / 2 missed** before, **70 / 1 / 5** after one human ruling and v7.
+- **CRS (fraud).** **Break It** fires real adversarial claims through the real decision path from separate identities and reports what was caught, held for a human or missed. Prompt injection: **11 of 12 caught**. Before/after learning (PR [#28](https://github.com/AamirAbatiyow/CalHacks26/pull/28)): **31 caught / 40 held / 0 missed** before, **67 / 1 / 3** after one human ruling and v7. Separation of duties, enforced in Cedar, now refuses the insider attacks that used to cause $1.645M in bad payouts.
 
 ---
 
@@ -281,15 +281,19 @@ The worker's System 1 channel showed the same shape in PR [#20](https://github.c
 | Got through the (credulous) mock, failed module re-verification | 2 | A fabricated citation and a polite false-outage claim |
 | Missed | 1 | Social engineering in the uncertain band: the text claims a total outage, telemetry shows a real 18% loss and every structured check passes. Auto-approved for $15.75, capped at the entitlement |
 
-**Before/after learning (PR [#28](https://github.com/AamirAbatiyow/CalHacks26/pull/28): pending, open as a draft and not merged).** Each attack is decided twice through the module's decision path. Local clean reseed, 76 attacks, 27 of them in a storm-overclaim cluster.
+**Before/after learning (PR [#28](https://github.com/AamirAbatiyow/CalHacks26/pull/28), merged).** Each attack is decided twice through the module's decision path: "before" under policy v4 with the first System 1 model, "after" under the active policy and model. Local clean reseed at fleet scale, 71 attacks, 27 of them in a storm-overclaim cluster that claims the full fee for passes that lost 10–24% of their contact.
 
 | | Caught | Held for a human | Missed | Protected | Bad payouts |
 |---|---|---|---|---|---|
-| Before (v4, s1-v1) | 29 | 45 | 2 | $217.1K | $164.5K |
-| After at seed (v6, s1-v1) | 42 | 31 | 3 | $221.7K | $164.5K |
-| After one human ruling + v7 | 70 | 1 | 5 | $226.3K | $164.5K (+$16) |
+| Before (v4, s1-v1) | 31 | 40 | 0 | $3.82M | $0 |
+| After at seed (v6, s1-v1) | 44 | 26 | 1 | $3.86M | $87 |
+| After one human ruling + v7 | 67 | 1 | 3 | $3.90M | $247 |
 
-One ruling (ATK-258, paying the measured loss) proposed v7. In replay over 9,970 labeled decisions, v7 took escalations from 1,362 to 1,359, kept precision at 99.05% and had 0 regressions. Promoting it cleared 29 of the 30 held cluster attacks, which paid $920 instead of the full claims. The two new misses are a duplicate and a recovery claim ($15.99 in total). The bad payouts on both sides are dominated by two insider limit-raise attacks ($164.5K) that the role check lets through; policy learning does not change those.
+- **One ruling, many cleared.** A reviewer paid one cluster claim its measured loss. That proposed v7. In replay over 11,932 labeled decisions, v7 took escalations from 1,641 to 1,638, kept precision at 99.06% and had 0 regressions. Promoting it cleared **24 of the 25** held cluster attacks, paying $7,483 instead of the full claims and protecting another $38.8K. The 95% floor and the precision gate did not change.
+- **Separation of duties.** Before this fix, the after side had $1.645M in bad payouts, all from two admin insider attacks ($745K and $900K) that raised their own limits. Authority changes now need a request plus approval by a different admin who is not the user whose limit changes. Cedar forbids it (`sod-no-own-authority`, `sod-no-own-request`) and the module checks it too, in every policy version. Both attacks are now refused.
+- **Remaining misses.** The $247 in bad payouts comes from duplicate and recovery claims that the storm rule cannot tell apart from real ones. The page reports them.
+
+**Prior measurement.** Before the fleet multiplier and the separation-of-duties fix, the same comparison over 76 attacks read 29 / 45 / 2 before and 70 / 1 / 5 after v7, with $164.5K in insider bad payouts on both sides.
 
 **History of the score.** An early version reported 50/50 caught, but every attack used a nonexistent station, so one check caught everything. PR [#14](https://github.com/AamirAbatiyow/CalHacks26/pull/14) rebuilt the attacks on real seeded passes and measured an honest **29 of 52 (55.8%)**, listing the gaps it exposed. We kept the lower, real number.
 
@@ -346,7 +350,7 @@ Annualized from main's run: dispute cost ~$65M (12 x credits plus revenue at ris
 - **The failure model on `main` is a proxy.** The SatNOGS classifier is not yet wired into the module, and the elevation curve is modeled.
 - **Small ML sample.** 35 hours over two days is a single-season sample. The variant was chosen by comparing on the same folds, so its numbers are slightly optimistic. Unseen-station future-time precision rests on 2 calls. With a 3-hour label lag, held-out precision drops to 0.904.
 - **No auto-deny in the base policy.** Confident System 1 denials still go to a human; only learned deny rules auto-deny.
-- **Break It gaps it reports itself.** Insider limit raises by admins pass the role check; some duplicates and recovery claims get past the storm rule. The prompt-injection run was scored against the mock System 2.
+- **Break It gaps it reports itself.** Some duplicate and recovery claims get past the storm rule ($247 in bad payouts after v7). The prompt-injection run was scored against the mock System 2.
 - **Performance.** Evidence building scans passes and weather in full for each claim.
 - **Live-label weight.** One live label weighs 20 historical ones (`LIVE_LABEL_WEIGHT`), which is a judgment call.
 
@@ -410,7 +414,7 @@ Code-only updates that keep every table and column unchanged can be a plain publ
 server/reseed.sh ground-truth-aamir maincloud --yes   # or: server/reseed.sh ground-truth-aamir local --yes
 ```
 
-Restart the worker after a reseed if it does not reconnect on its own.
+Start the worker before reseeding and leave it running. It reconnects with backoff after the republish and retrains System 1 on the reseeded history, and `seed.sh` waits up to 60 s for that model before running Break It. Without a running worker, Break It falls back to a fixed stand-in score. The seed ends by running every Break It attack, so the page opens with the before/after comparison and the held cluster ready for the live decision. Then rebuild the web client: `(cd web && npm run generate && npm run build)`.
 
 ### Worker environment variables
 
@@ -475,6 +479,7 @@ Ground Truth is built on the idea that an AI should earn autonomy one provable c
 - `cedar-policy` v4 runs inside SpacetimeDB reducers as WASM, so authorization happens in the same transaction as the write it guards.
 - Learned rules are real Cedar text with `@id`, `@outcome`, `@confidence` and `@support` annotations, stored per policy version, linked to the human ruling that produced them, and cited by every decision they make.
 - Rule conditions are generated from typed values, so mined data cannot inject Cedar.
+- Separation of duties is Cedar too: an authority change needs a request and an approval from a different admin who is not the user whose limit changes (`sod-no-own-authority`, `sod-no-own-request`), evaluated in every policy version.
 - The governing rules are fixed in every version. You can watch the policy grow, but you cannot accidentally (or adversarially) turn off the gate.
 
 **Why it matters.** It answers the question every team asks before letting an AI touch money: "what exactly is it allowed to do, why did it do this, and how do we know the new rule did not make things worse?" Decision replay shows the path; the Audit tab shows the versions; Policies shows the replay.
@@ -500,7 +505,8 @@ Ground Truth is built on the idea that an AI should earn autonomy one provable c
 - **Break It** files real adversarial claims (inflated amounts just under thresholds, duplicates outside the window, plausible weather excuses, forged station logs, messy Unicode, insider limit raises, prompt injection) through the real decision path from separate identities.
 - It reports misses and bad payouts honestly: we replaced an inflated 50/50 with a measured 29/52 and listed the gaps.
 - Prompt injection: 11 of 12 caught, with defense in depth (screen, delimited untrusted input, citation re-verification, entitlement caps, Cedar).
-- Learning closes fraud gaps without loosening the gate: in PR [#28](https://github.com/AamirAbatiyow/CalHacks26/pull/28) (pending), one human ruling and v7 moved the attack cluster from 45 held to 1 held, paying measured losses instead of full claims.
+- Learning closes fraud gaps without loosening the gate: one human ruling and v7 cleared 24 of 25 held cluster attacks, paying measured losses instead of full claims (PR [#28](https://github.com/AamirAbatiyow/CalHacks26/pull/28)).
+- Authority itself is attack surface: separation of duties in Cedar refuses insiders raising their own limits, which removed $1.645M in bad payouts.
 
 ---
 
