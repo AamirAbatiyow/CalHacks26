@@ -1,0 +1,895 @@
+{
+  "data": {
+    "n_passes": 794,
+    "n_stations": 187,
+    "n_blocks": 1,
+    "status_counts": {
+      "good": 408,
+      "failed": 204,
+      "bad": 182
+    },
+    "blocks": [
+      "20260823T09_20260823T17"
+    ]
+  },
+  "results": {
+    "station": {
+      "E0_v2_baseline": {
+        "n_test": 794,
+        "auc": 0.7648709742964543,
+        "auc_fold_std": 0.023159483124958767,
+        "alphas": [
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.0)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.0)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.005, 0.01)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.0)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.01)"
+          }
+        ],
+        "note": "v2 recipe (hardware + fold-safe satellite TE) on the uniform data",
+        "esc17": {
+          "coverage": 0.7670025188916877,
+          "escalation_rate": 0.23299748110831234,
+          "accuracy_auto": 0.7586206896551724,
+          "precision_fail": 0.7580645161290323,
+          "precision_ok": 0.7591973244147158,
+          "recall_fail_auto": 0.7654723127035831,
+          "recall_fail_overall": 0.6088082901554405,
+          "n_fail_calls": 310,
+          "n_ok_calls": 299,
+          "confusion_auto": {
+            "tp": 235,
+            "fp": 75,
+            "tn": 227,
+            "fn": 72
+          },
+          "coverage_std": 0.10043361878994292,
+          "accuracy_auto_std": 0.032985080249583965,
+          "precision_fail_std": 0.059359848958779465,
+          "precision_ok_std": 0.09376570768906088,
+          "recall_fail_overall_std": 0.11533845872745367,
+          "false_ok_by_status": {
+            "bad": 46,
+            "failed": 26
+          }
+        },
+        "prec95": {
+          "coverage": 0.018891687657430732,
+          "escalation_rate": 0.9811083123425692,
+          "accuracy_auto": 0.8,
+          "precision_fail": 0.8461538461538461,
+          "precision_ok": 0.5,
+          "recall_fail_auto": 0.9166666666666666,
+          "recall_fail_overall": 0.02849740932642487,
+          "n_fail_calls": 13,
+          "n_ok_calls": 2,
+          "confusion_auto": {
+            "tp": 11,
+            "fp": 2,
+            "tn": 1,
+            "fn": 1
+          },
+          "coverage_std": 0.03467396792954844,
+          "accuracy_auto_std": 0.10714285714285715,
+          "precision_fail_std": 0.08333333333333331,
+          "precision_ok_std": 0.0,
+          "recall_fail_overall_std": 0.04377887869970986,
+          "false_ok_by_status": {
+            "bad": 1
+          }
+        }
+      },
+      "E1_time_kp": {
+        "n_test": 794,
+        "auc": 0.7692586101798231,
+        "auc_fold_std": 0.022011509873636106,
+        "alphas": [
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.0)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.005)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.005)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.0)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.0)"
+          }
+        ],
+        "note": "+ Kp and time of day (valid now that sampling is time-uniform)",
+        "esc17": {
+          "coverage": 0.77455919395466,
+          "escalation_rate": 0.22544080604534006,
+          "accuracy_auto": 0.7707317073170732,
+          "precision_fail": 0.7714285714285715,
+          "precision_ok": 0.77,
+          "recall_fail_auto": 0.7788461538461539,
+          "recall_fail_overall": 0.6295336787564767,
+          "n_fail_calls": 315,
+          "n_ok_calls": 300,
+          "confusion_auto": {
+            "tp": 243,
+            "fp": 72,
+            "tn": 231,
+            "fn": 69
+          },
+          "coverage_std": 0.07794999922809856,
+          "accuracy_auto_std": 0.023465954970803796,
+          "precision_fail_std": 0.07174836678593627,
+          "precision_ok_std": 0.08272178201144251,
+          "recall_fail_overall_std": 0.09624321210309847,
+          "false_ok_by_status": {
+            "bad": 42,
+            "failed": 27
+          }
+        },
+        "prec95": {
+          "coverage": 0.006297229219143577,
+          "escalation_rate": 0.9937027707808564,
+          "accuracy_auto": 0.8,
+          "precision_fail": 0.8,
+          "precision_ok": NaN,
+          "recall_fail_auto": 1.0,
+          "recall_fail_overall": 0.010362694300518135,
+          "n_fail_calls": 5,
+          "n_ok_calls": 0,
+          "confusion_auto": {
+            "tp": 4,
+            "fp": 1,
+            "tn": 0,
+            "fn": 0
+          },
+          "coverage_std": 0.009743354330081553,
+          "accuracy_auto_std": 0.125,
+          "precision_fail_std": 0.125,
+          "precision_ok_std": NaN,
+          "recall_fail_overall_std": 0.013212596268512651,
+          "false_ok_by_status": {}
+        }
+      },
+      "E2_station_health": {
+        "n_test": 794,
+        "auc": 0.8308188560398253,
+        "auc_fold_std": 0.03717747244063542,
+        "alphas": [
+          {
+            "esc17": "0.2",
+            "prec95": "(0.005, 0.01)"
+          },
+          {
+            "esc17": "0.2",
+            "prec95": "(0.0, 0.02)"
+          },
+          {
+            "esc17": "0.175",
+            "prec95": "(0.0, 0.02)"
+          },
+          {
+            "esc17": "0.2",
+            "prec95": "(0.0, 0.02)"
+          },
+          {
+            "esc17": "0.2",
+            "prec95": "(0.0, 0.02)"
+          }
+        ],
+        "note": "+ past-only station health (rolling outcomes, last alive, 24h uptime)",
+        "esc17": {
+          "coverage": 0.7997481108312342,
+          "escalation_rate": 0.20025188916876574,
+          "accuracy_auto": 0.8125984251968504,
+          "precision_fail": 0.8173374613003096,
+          "precision_ok": 0.8076923076923077,
+          "recall_fail_auto": 0.8148148148148148,
+          "recall_fail_overall": 0.6839378238341969,
+          "n_fail_calls": 323,
+          "n_ok_calls": 312,
+          "confusion_auto": {
+            "tp": 264,
+            "fp": 59,
+            "tn": 252,
+            "fn": 60
+          },
+          "coverage_std": 0.04671297039276284,
+          "accuracy_auto_std": 0.03437646018569016,
+          "precision_fail_std": 0.056220263428653196,
+          "precision_ok_std": 0.08950276785277954,
+          "recall_fail_overall_std": 0.12125122826926038,
+          "false_ok_by_status": {
+            "bad": 42,
+            "failed": 18
+          }
+        },
+        "prec95": {
+          "coverage": 0.15113350125944586,
+          "escalation_rate": 0.8488664987405542,
+          "accuracy_auto": 0.95,
+          "precision_fail": 0.9572649572649573,
+          "precision_ok": 0.6666666666666666,
+          "recall_fail_auto": 0.9911504424778761,
+          "recall_fail_overall": 0.29015544041450775,
+          "n_fail_calls": 117,
+          "n_ok_calls": 3,
+          "confusion_auto": {
+            "tp": 112,
+            "fp": 5,
+            "tn": 2,
+            "fn": 1
+          },
+          "coverage_std": 0.05338367245181019,
+          "accuracy_auto_std": 0.04883913155426762,
+          "precision_fail_std": 0.05246530005394583,
+          "precision_ok_std": 0.0,
+          "recall_fail_overall_std": 0.10489735692799243,
+          "false_ok_by_status": {
+            "bad": 1
+          }
+        }
+      },
+      "E3_coobs_txstatus": {
+        "n_test": 794,
+        "auc": 0.7610802092857868,
+        "auc_fold_std": 0.06782682720561105,
+        "alphas": [
+          {
+            "esc17": "0.25",
+            "prec95": "(0.01, 0.01)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.01)"
+          },
+          {
+            "esc17": "0.2",
+            "prec95": "(0.01, 0.01)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.01)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.01)"
+          }
+        ],
+        "note": "+ causal co-observation / satellite & transmitter history; replaces satellite TE",
+        "esc17": {
+          "coverage": 0.7909319899244333,
+          "escalation_rate": 0.20906801007556675,
+          "accuracy_auto": 0.7213375796178344,
+          "precision_fail": 0.7168141592920354,
+          "precision_ok": 0.726643598615917,
+          "recall_fail_auto": 0.7546583850931677,
+          "recall_fail_overall": 0.6295336787564767,
+          "n_fail_calls": 339,
+          "n_ok_calls": 289,
+          "confusion_auto": {
+            "tp": 243,
+            "fp": 96,
+            "tn": 210,
+            "fn": 79
+          },
+          "coverage_std": 0.06501418890808874,
+          "accuracy_auto_std": 0.05834622150055922,
+          "precision_fail_std": 0.06633351533285013,
+          "precision_ok_std": 0.11679868637124846,
+          "recall_fail_overall_std": 0.11191165246268887,
+          "false_ok_by_status": {
+            "bad": 46,
+            "failed": 33
+          }
+        },
+        "prec95": {
+          "coverage": 0.13224181360201512,
+          "escalation_rate": 0.8677581863979849,
+          "accuracy_auto": 0.9714285714285714,
+          "precision_fail": 0.989247311827957,
+          "precision_ok": 0.8333333333333334,
+          "recall_fail_auto": 0.9787234042553191,
+          "recall_fail_overall": 0.23834196891191708,
+          "n_fail_calls": 93,
+          "n_ok_calls": 12,
+          "confusion_auto": {
+            "tp": 92,
+            "fp": 1,
+            "tn": 10,
+            "fn": 2
+          },
+          "coverage_std": 0.08799124682083624,
+          "accuracy_auto_std": 0.060000136971134474,
+          "precision_fail_std": 0.05714285714285716,
+          "precision_ok_std": 0.0,
+          "recall_fail_overall_std": 0.12596431542523448,
+          "false_ok_by_status": {
+            "bad": 1,
+            "failed": 1
+          }
+        }
+      },
+      "E4_better_features": {
+        "n_test": 794,
+        "auc": 0.7612262521588946,
+        "auc_fold_std": 0.06682084960649619,
+        "alphas": [
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.01)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.01)"
+          },
+          {
+            "esc17": "0.2",
+            "prec95": "(0.01, 0.02)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.01)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.005, 0.01)"
+          }
+        ],
+        "note": "+ TLE age, band vs antenna, culmination/horizon margins, orbit, baud",
+        "esc17": {
+          "coverage": 0.7858942065491183,
+          "escalation_rate": 0.2141057934508816,
+          "accuracy_auto": 0.7243589743589743,
+          "precision_fail": 0.716012084592145,
+          "precision_ok": 0.7337883959044369,
+          "recall_fail_auto": 0.7523809523809524,
+          "recall_fail_overall": 0.6139896373056994,
+          "n_fail_calls": 331,
+          "n_ok_calls": 293,
+          "confusion_auto": {
+            "tp": 237,
+            "fp": 94,
+            "tn": 215,
+            "fn": 78
+          },
+          "coverage_std": 0.06796519525108621,
+          "accuracy_auto_std": 0.06102371733050347,
+          "precision_fail_std": 0.06538908206511185,
+          "precision_ok_std": 0.10413361114402224,
+          "recall_fail_overall_std": 0.127737670510752,
+          "false_ok_by_status": {
+            "bad": 52,
+            "failed": 26
+          }
+        },
+        "prec95": {
+          "coverage": 0.11083123425692695,
+          "escalation_rate": 0.889168765743073,
+          "accuracy_auto": 0.9772727272727273,
+          "precision_fail": 0.9879518072289156,
+          "precision_ok": 0.8,
+          "recall_fail_auto": 0.9879518072289156,
+          "recall_fail_overall": 0.21243523316062177,
+          "n_fail_calls": 83,
+          "n_ok_calls": 5,
+          "confusion_auto": {
+            "tp": 82,
+            "fp": 1,
+            "tn": 4,
+            "fn": 1
+          },
+          "coverage_std": 0.06427798062480784,
+          "accuracy_auto_std": 0.06153846153846154,
+          "precision_fail_std": 0.049999999999999996,
+          "precision_ok_std": 0.0,
+          "recall_fail_overall_std": 0.10499964140804621,
+          "false_ok_by_status": {
+            "failed": 1
+          }
+        }
+      },
+      "E5a_stacked": {
+        "n_test": 794,
+        "auc": 0.7544447830945848,
+        "auc_fold_std": 0.06265536209067038,
+        "alphas": [
+          {
+            "esc17": "0.25",
+            "prec95": "(0.005, 0.01)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.01)"
+          },
+          {
+            "esc17": "0.2",
+            "prec95": "(0.01, 0.02)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.01)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.02)"
+          }
+        ],
+        "note": "E4 features, CatBoost + XGBoost + LR with stacked LR meta-learner",
+        "esc17": {
+          "coverage": 0.8110831234256927,
+          "escalation_rate": 0.1889168765743073,
+          "accuracy_auto": 0.75,
+          "precision_fail": 0.7515151515151515,
+          "precision_ok": 0.7484076433121019,
+          "recall_fail_auto": 0.7584097859327217,
+          "recall_fail_overall": 0.6424870466321243,
+          "n_fail_calls": 330,
+          "n_ok_calls": 314,
+          "confusion_auto": {
+            "tp": 248,
+            "fp": 82,
+            "tn": 235,
+            "fn": 79
+          },
+          "coverage_std": 0.03828614095389641,
+          "accuracy_auto_std": 0.06354479996532428,
+          "precision_fail_std": 0.06470970884849876,
+          "precision_ok_std": 0.09240705944960707,
+          "recall_fail_overall_std": 0.11317900339068489,
+          "false_ok_by_status": {
+            "bad": 57,
+            "failed": 22
+          }
+        },
+        "prec95": {
+          "coverage": 0.11838790931989925,
+          "escalation_rate": 0.8816120906801007,
+          "accuracy_auto": 0.9574468085106383,
+          "precision_fail": 0.9879518072289156,
+          "precision_ok": 0.7272727272727273,
+          "recall_fail_auto": 0.9647058823529412,
+          "recall_fail_overall": 0.21243523316062177,
+          "n_fail_calls": 83,
+          "n_ok_calls": 11,
+          "confusion_auto": {
+            "tp": 82,
+            "fp": 1,
+            "tn": 8,
+            "fn": 3
+          },
+          "coverage_std": 0.07577277475830214,
+          "accuracy_auto_std": 0.09411764705882356,
+          "precision_fail_std": 0.04444444444444447,
+          "precision_ok_std": 0.1875,
+          "recall_fail_overall_std": 0.10906836274912436,
+          "false_ok_by_status": {
+            "bad": 3
+          }
+        }
+      },
+      "E5b_bayes_prior": {
+        "n_test": 794,
+        "auc": 0.7604896881032205,
+        "auc_fold_std": 0.06631499349782959,
+        "alphas": [
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.01)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.01)"
+          },
+          {
+            "esc17": "0.2",
+            "prec95": "(0.0, 0.01)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.01)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.01)"
+          }
+        ],
+        "note": "E4 + beta-binomial shrunk station / satellite failure priors",
+        "esc17": {
+          "coverage": 0.7808564231738035,
+          "escalation_rate": 0.21914357682619648,
+          "accuracy_auto": 0.7338709677419355,
+          "precision_fail": 0.7295597484276729,
+          "precision_ok": 0.7384105960264901,
+          "recall_fail_auto": 0.7459807073954984,
+          "recall_fail_overall": 0.6010362694300518,
+          "n_fail_calls": 318,
+          "n_ok_calls": 302,
+          "confusion_auto": {
+            "tp": 232,
+            "fp": 86,
+            "tn": 223,
+            "fn": 79
+          },
+          "coverage_std": 0.07773718480673057,
+          "accuracy_auto_std": 0.060236633105587654,
+          "precision_fail_std": 0.05832208224830266,
+          "precision_ok_std": 0.10560583457475484,
+          "recall_fail_overall_std": 0.1274663767550252,
+          "false_ok_by_status": {
+            "bad": 53,
+            "failed": 26
+          }
+        },
+        "prec95": {
+          "coverage": 0.10579345088161209,
+          "escalation_rate": 0.8942065491183879,
+          "accuracy_auto": 0.9880952380952381,
+          "precision_fail": 0.9880952380952381,
+          "precision_ok": NaN,
+          "recall_fail_auto": 1.0,
+          "recall_fail_overall": 0.21502590673575128,
+          "n_fail_calls": 84,
+          "n_ok_calls": 0,
+          "confusion_auto": {
+            "tp": 83,
+            "fp": 1,
+            "tn": 0,
+            "fn": 0
+          },
+          "coverage_std": 0.06571849856775044,
+          "accuracy_auto_std": 0.049999999999999996,
+          "precision_fail_std": 0.049999999999999996,
+          "precision_ok_std": NaN,
+          "recall_fail_overall_std": 0.10326047438321494,
+          "false_ok_by_status": {}
+        }
+      },
+      "E5c_group_mondrian": {
+        "n_test": 794,
+        "auc": 0.7604896881032205,
+        "auc_fold_std": 0.06631499349782959,
+        "alphas": [
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.01)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.01)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.02)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.01)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.02)"
+          }
+        ],
+        "note": "E5b + group-conditional conformal (station-history bucket x band)",
+        "esc17": {
+          "coverage": 0.7783375314861462,
+          "escalation_rate": 0.2216624685138539,
+          "accuracy_auto": 0.7249190938511327,
+          "precision_fail": 0.7217391304347827,
+          "precision_ok": 0.7289377289377289,
+          "recall_fail_auto": 0.7708978328173375,
+          "recall_fail_overall": 0.6450777202072538,
+          "n_fail_calls": 345,
+          "n_ok_calls": 273,
+          "confusion_auto": {
+            "tp": 249,
+            "fp": 96,
+            "tn": 199,
+            "fn": 74
+          },
+          "coverage_std": 0.0490560482212143,
+          "accuracy_auto_std": 0.06701643305194398,
+          "precision_fail_std": 0.0612365201502996,
+          "precision_ok_std": 0.11916910372653726,
+          "recall_fail_overall_std": 0.11335035861643132,
+          "false_ok_by_status": {
+            "bad": 49,
+            "failed": 25
+          }
+        },
+        "prec95": {
+          "coverage": 0.0491183879093199,
+          "escalation_rate": 0.9508816120906801,
+          "accuracy_auto": 0.9743589743589743,
+          "precision_fail": 0.9743589743589743,
+          "precision_ok": NaN,
+          "recall_fail_auto": 1.0,
+          "recall_fail_overall": 0.09844559585492228,
+          "n_fail_calls": 39,
+          "n_ok_calls": 0,
+          "confusion_auto": {
+            "tp": 38,
+            "fp": 1,
+            "tn": 0,
+            "fn": 0
+          },
+          "coverage_std": 0.03802100687265959,
+          "accuracy_auto_std": 0.049999999999999996,
+          "precision_fail_std": 0.049999999999999996,
+          "precision_ok_std": NaN,
+          "recall_fail_overall_std": 0.058773691140450855,
+          "false_ok_by_status": {}
+        }
+      },
+      "E6_two_stage": {
+        "n_test": 794,
+        "auc": 0.7600769582444377,
+        "auc_fold_std": 0.07654919891989437,
+        "alphas": [
+          {
+            "esc17": "(0.25, 0.25)",
+            "prec95": "((0.15, 0.005), (0.0, 0.01))"
+          },
+          {
+            "esc17": "(0.25, 0.25)",
+            "prec95": "((0.05, 0.02), (0.0, 0.05))"
+          },
+          {
+            "esc17": "(0.25, 0.25)",
+            "prec95": "((0.01, 0.005), (0.0, 0.05))"
+          },
+          {
+            "esc17": "(0.25, 0.25)",
+            "prec95": "((0.2, 0.005), (0.02, 0.02))"
+          },
+          {
+            "esc17": "(0.25, 0.25)",
+            "prec95": "((0.05, 0.01), (0.0, 0.02))"
+          }
+        ],
+        "note": "E5b features, separate no-data and bad-signal stages",
+        "esc17": {
+          "coverage": 0.7556675062972292,
+          "escalation_rate": 0.24433249370277077,
+          "accuracy_auto": 0.6466666666666666,
+          "precision_fail": 0.6318082788671024,
+          "precision_ok": 0.6950354609929078,
+          "recall_fail_auto": 0.8708708708708709,
+          "recall_fail_overall": 0.7512953367875648,
+          "n_fail_calls": 459,
+          "n_ok_calls": 141,
+          "confusion_auto": {
+            "tp": 290,
+            "fp": 169,
+            "tn": 98,
+            "fn": 43
+          },
+          "coverage_std": 0.07215870048373614,
+          "accuracy_auto_std": 0.04983100796919586,
+          "precision_fail_std": 0.09204204106439937,
+          "precision_ok_std": 0.12619662623534827,
+          "recall_fail_overall_std": 0.13355589142357846,
+          "false_ok_by_status": {
+            "bad": 28,
+            "failed": 15
+          },
+          "route_precision": {
+            "FAIL_NODATA_is_failed": 0.5133333333333333,
+            "FAIL_NODATA_is_any_fail": 0.6466666666666666,
+            "FAIL_BAD_is_any_fail": 0.6037735849056604,
+            "n_FAIL_NODATA": 300,
+            "n_FAIL_BAD": 159
+          }
+        },
+        "prec95": {
+          "coverage": 0.13602015113350127,
+          "escalation_rate": 0.8639798488664987,
+          "accuracy_auto": 0.9444444444444444,
+          "precision_fail": 0.9509803921568627,
+          "precision_ok": 0.8333333333333334,
+          "recall_fail_auto": 0.9897959183673469,
+          "recall_fail_overall": 0.25129533678756477,
+          "n_fail_calls": 102,
+          "n_ok_calls": 6,
+          "confusion_auto": {
+            "tp": 97,
+            "fp": 5,
+            "tn": 5,
+            "fn": 1
+          },
+          "coverage_std": 0.07300839326491051,
+          "accuracy_auto_std": 0.057992883159108125,
+          "precision_fail_std": 0.05564004539057005,
+          "precision_ok_std": 0.0,
+          "recall_fail_overall_std": 0.10949342864995891,
+          "false_ok_by_status": {
+            "bad": 1
+          },
+          "route_precision": {
+            "FAIL_NODATA_is_failed": 0.9772727272727273,
+            "FAIL_NODATA_is_any_fail": 0.9772727272727273,
+            "FAIL_BAD_is_any_fail": 0.7857142857142857,
+            "n_FAIL_NODATA": 88,
+            "n_FAIL_BAD": 14
+          }
+        }
+      },
+      "X1_concurrent_triage": {
+        "n_test": 794,
+        "auc": 0.8205895052321447,
+        "auc_fold_std": 0.04206932508611489,
+        "alphas": [
+          {
+            "esc17": "0.2",
+            "prec95": "(0.0, 0.005)"
+          },
+          {
+            "esc17": "0.175",
+            "prec95": "(0.0, 0.01)"
+          },
+          {
+            "esc17": "0.175",
+            "prec95": "(0.0, 0.01)"
+          },
+          {
+            "esc17": "0.2",
+            "prec95": "(0.0, 0.01)"
+          },
+          {
+            "esc17": "0.2",
+            "prec95": "(0.005, 0.01)"
+          }
+        ],
+        "note": "NON-CAUSAL: + other stations' outcomes for the same pass window; post-pass triage only",
+        "esc17": {
+          "coverage": 0.8198992443324937,
+          "escalation_rate": 0.1801007556675063,
+          "accuracy_auto": 0.8018433179723502,
+          "precision_fail": 0.7820895522388059,
+          "precision_ok": 0.8227848101265823,
+          "recall_fail_auto": 0.8238993710691824,
+          "recall_fail_overall": 0.6787564766839378,
+          "n_fail_calls": 335,
+          "n_ok_calls": 316,
+          "confusion_auto": {
+            "tp": 262,
+            "fp": 73,
+            "tn": 260,
+            "fn": 56
+          },
+          "coverage_std": 0.03296626972672899,
+          "accuracy_auto_std": 0.04333968711640848,
+          "precision_fail_std": 0.05668252005337632,
+          "precision_ok_std": 0.06982555219718257,
+          "recall_fail_overall_std": 0.07195495987675413,
+          "false_ok_by_status": {
+            "bad": 40,
+            "failed": 16
+          }
+        },
+        "prec95": {
+          "coverage": 0.06675062972292191,
+          "escalation_rate": 0.9332493702770781,
+          "accuracy_auto": 0.9622641509433962,
+          "precision_fail": 0.9607843137254902,
+          "precision_ok": 1.0,
+          "recall_fail_auto": 1.0,
+          "recall_fail_overall": 0.12694300518134716,
+          "n_fail_calls": 51,
+          "n_ok_calls": 2,
+          "confusion_auto": {
+            "tp": 49,
+            "fp": 2,
+            "tn": 2,
+            "fn": 0
+          },
+          "coverage_std": 0.014620529300846263,
+          "accuracy_auto_std": 0.05773154082006022,
+          "precision_fail_std": 0.05773154082006022,
+          "precision_ok_std": 0.0,
+          "recall_fail_overall_std": 0.04528306162921629,
+          "false_ok_by_status": {}
+        }
+      },
+      "E2c_station_health_causal": {
+        "n_test": 794,
+        "auc": 0.7473648785939246,
+        "auc_fold_std": 0.0762105253828327,
+        "alphas": [
+          {
+            "esc17": "0.25",
+            "prec95": "(0.005, 0.01)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.01)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.02)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.0, 0.01)"
+          },
+          {
+            "esc17": "0.25",
+            "prec95": "(0.005, 0.02)"
+          }
+        ],
+        "note": "E2 without satellite TE (TE uses same-block, partly future, outcomes)",
+        "esc17": {
+          "coverage": 0.7770780856423174,
+          "escalation_rate": 0.22292191435768263,
+          "accuracy_auto": 0.713128038897893,
+          "precision_fail": 0.7207207207207207,
+          "precision_ok": 0.704225352112676,
+          "recall_fail_auto": 0.7407407407407407,
+          "recall_fail_overall": 0.6217616580310881,
+          "n_fail_calls": 333,
+          "n_ok_calls": 284,
+          "confusion_auto": {
+            "tp": 240,
+            "fp": 93,
+            "tn": 200,
+            "fn": 84
+          },
+          "coverage_std": 0.07587483451919462,
+          "accuracy_auto_std": 0.06706141223740424,
+          "precision_fail_std": 0.09721749808324325,
+          "precision_ok_std": 0.11037782258919254,
+          "recall_fail_overall_std": 0.10104048579169167,
+          "false_ok_by_status": {
+            "bad": 52,
+            "failed": 32
+          }
+        },
+        "prec95": {
+          "coverage": 0.13224181360201512,
+          "escalation_rate": 0.8677581863979849,
+          "accuracy_auto": 0.9809523809523809,
+          "precision_fail": 0.99,
+          "precision_ok": 0.8,
+          "recall_fail_auto": 0.99,
+          "recall_fail_overall": 0.25647668393782386,
+          "n_fail_calls": 100,
+          "n_ok_calls": 5,
+          "confusion_auto": {
+            "tp": 99,
+            "fp": 1,
+            "tn": 4,
+            "fn": 1
+          },
+          "coverage_std": 0.08174220744312191,
+          "accuracy_auto_std": 0.04854678283322995,
+          "precision_fail_std": 0.049999999999999996,
+          "precision_ok_std": 0.25,
+          "recall_fail_overall_std": 0.13189765749730548,
+          "false_ok_by_status": {
+            "bad": 1
+          }
+        }
+      }
+    }
+  }
+}
