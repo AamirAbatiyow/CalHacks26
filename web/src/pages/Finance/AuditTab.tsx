@@ -3,10 +3,12 @@ import { Bot, Check, Clock, Hourglass, Play, User, X, type LucideIcon } from 'lu
 import type { DecisionRecord } from '../../types';
 import { openReplay } from '../../replay/useDecisionTrace';
 import { formatDollars } from '../../utils/money';
-import { C, SplitBar, StackedBars } from '../../ui/charts';
+import { C, SplitBar } from '../../ui/charts';
 import { CountUp, compactUsd } from '../../ui/CountUp';
 import { EmptyState } from '../../ui/EmptyState';
-import { dailyBuckets } from '../../ui/series';
+import { DataTable, type Column } from '../../ui/DataTable';
+import { useTechMode } from '../../hooks/useTechMode';
+import { plainReason } from '../../utils/plainReason';
 import type { Tone } from '../../ui/Chip';
 
 interface AuditTabProps {
@@ -54,10 +56,36 @@ function isHuman(outcome: string): boolean {
   return outcome === 'Escalated' || outcome === 'Approved' || outcome === 'Denied';
 }
 
-export function AuditTab({ decisions }: AuditTabProps) {
-  const sortedDecisions = useMemo(() => [...decisions].sort((a, b) => Number(b.createdAt - a.createdAt)), [decisions]);
+function makeColumns(tech: boolean): Column<DecisionRecord>[] {
+  return [
+  { key: 'time', label: 'Time', width: '150px', sort: d => Number(d.createdAt), render: d => <span className="ui-table-muted">{formatTimestamp(d.createdAt)}</span> },
+  { key: 'claim', label: 'Claim', width: '120px', sort: d => Number(d.passId ?? 0), render: d => (d.passId ? `Pass #${d.passId}` : d.stationId || '—') },
+  { key: 'decision', label: 'Decision', width: '140px', sort: d => d.decisionType, render: d => DECISION_LABELS[d.decisionType] ?? d.decisionType },
+  { key: 'reason', label: 'Reason', width: 'minmax(0, 1fr)', render: d => <span className="ui-table-muted">{tech ? d.reason : plainReason(d.reason)}</span> },
+  { key: 'amount', label: 'Amount', width: '90px', align: 'right', sort: d => Number(d.amountCents), render: d => <b className="audit-amount">{formatDollars(d.amountCents)}</b> },
+  {
+    key: 'outcome', label: 'Outcome', width: '110px', sort: d => d.outcome,
+    render: d => {
+      const meta = OUTCOME_META[d.outcome as OutcomeKey] ?? OUTCOME_META.Pending;
+      const Icon = meta.icon;
+      return <span className={`ui-chip tone-${meta.tone}`}><Icon size={11} aria-hidden />{meta.label}</span>;
+    },
+  },
+  {
+    key: 'by', label: 'By', width: '64px', sort: d => (isHuman(d.outcome) ? 1 : 0),
+    render: d => (isHuman(d.outcome)
+      ? <span className="audit-by"><User size={12} aria-hidden />Human</span>
+      : <span className="audit-by"><Bot size={12} aria-hidden />AI</span>),
+  },
+  { key: 'replay', label: '', width: '64px', render: () => <span className="replay-trigger audit-replay"><Play size={11} aria-hidden />Replay</span> },
+  ];
+}
 
-  const { counts, daily, autoShare, dollars } = useMemo(() => {
+export function AuditTab({ decisions }: AuditTabProps) {
+
+  const tech = useTechMode();
+  const columns = useMemo(() => makeColumns(tech), [tech]);
+  const { counts, autoShare, dollars } = useMemo(() => {
     const counts: Record<OutcomeKey, number> = { AutoApproved: 0, Approved: 0, Denied: 0, Escalated: 0, Pending: 0 };
     let dollars = 0;
     for (const d of decisions) {
@@ -65,12 +93,10 @@ export function AuditTab({ decisions }: AuditTabProps) {
       dollars += Math.abs(Number(d.amountCents));
     }
     const decided = counts.AutoApproved + counts.Approved + counts.Denied;
-    const daily = dailyBuckets(decisions, d => d.createdAt, OUTCOMES, d =>
-      (OUTCOMES as readonly string[]).includes(d.outcome) ? { key: d.outcome as OutcomeKey, amount: 1 } : null);
-    return { counts, daily, dollars, autoShare: decided > 0 ? (counts.AutoApproved / decided) * 100 : 0 };
+    return { counts, dollars, autoShare: decided > 0 ? (counts.AutoApproved / decided) * 100 : 0 };
   }, [decisions]);
 
-  if (sortedDecisions.length === 0) {
+  if (decisions.length === 0) {
     return <EmptyState art="graph" title="No decisions recorded yet" hint="Every AI and human decision lands here as it happens." />;
   }
 
@@ -104,61 +130,18 @@ export function AuditTab({ decisions }: AuditTabProps) {
         </div>
       </div>
 
-      <div className="fin-chart">
-        <div className="ui-section-title">Decisions per day by outcome</div>
-        <StackedBars
-          data={daily}
-          series={OUTCOMES.map(o => ({ key: o, label: OUTCOME_META[o].label, color: OUTCOME_META[o].color }))}
-          height={110}
-          format={v => `${v} decisions`}
-          label="Decisions per day over the last 30 days, stacked by outcome"
-        />
-      </div>
-
-      <table className="audit-table fin-table">
-        <thead>
-          <tr>
-            <th>Time</th>
-            <th>Claim</th>
-            <th>Decision</th>
-            <th style={{ textAlign: 'right' }}>Amount</th>
-            <th>Outcome</th>
-            <th aria-label="Actor" />
-            <th aria-label="Replay" />
-          </tr>
-        </thead>
-        <tbody>
-          {sortedDecisions.map((decision) => {
-            const meta = OUTCOME_META[decision.outcome as OutcomeKey] ?? OUTCOME_META.Pending;
-            const OutcomeIcon = meta.icon;
-            const human = isHuman(decision.outcome);
-            return (
-              <tr
-                key={decision.id.toString()}
-                className="audit-row"
-                tabIndex={0}
-                onClick={() => openReplay(`audit:${decision.id}`)}
-                onKeyDown={(e) => { if (e.key === 'Enter') openReplay(`audit:${decision.id}`); }}
-                title={`${CEDAR_RULES[decision.decisionType] ?? 'policy::default'} · policy ${decision.policyVersion} · model ${decision.modelVersion}\n${decision.reason}`}
-              >
-                <td className="fin-muted" style={{ whiteSpace: 'nowrap' }}>{formatTimestamp(decision.createdAt)}</td>
-                <td>{decision.passId ? `Pass #${decision.passId}` : decision.stationId || '—'}</td>
-                <td>{DECISION_LABELS[decision.decisionType] ?? decision.decisionType}</td>
-                <td style={{ textAlign: 'right', fontWeight: 500 }}>{formatDollars(decision.amountCents)}</td>
-                <td>
-                  <span className={`ui-chip tone-${meta.tone}`}><OutcomeIcon size={11} aria-hidden />{meta.label}</span>
-                </td>
-                <td className="fin-muted" title={human ? 'Human' : 'AI'}>
-                  {human ? <User size={13} aria-label="Human" /> : <Bot size={13} aria-label="AI" />}
-                </td>
-                <td className="audit-replay-cell">
-                  <span className="replay-trigger"><Play size={11} aria-hidden />Replay</span>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <DataTable
+        rows={decisions}
+        columns={columns}
+        rowKey={d => d.id.toString()}
+        defaultSort={{ key: 'time', dir: 'desc' }}
+        onRowClick={d => openReplay(`audit:${d.id}`)}
+        rowTitle={d => tech
+          ? `${CEDAR_RULES[d.decisionType] ?? 'policy::default'} · policy ${d.policyVersion} · model ${d.modelVersion}\n${d.reason}`
+          : plainReason(d.reason)}
+        label="Decision audit"
+        className="fin-table-v2 audit-table-v2"
+      />
     </div>
   );
 }

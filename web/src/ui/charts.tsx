@@ -280,3 +280,31 @@ export function TrendLine({ data, threshold, height = 90, format, label }: { dat
     </motion.div>
   );
 }
+
+interface LineSeriesProps<K extends string> {
+  data: Array<{ x: string } & Record<K, number>>;
+  series: { key: K; label: string; color: string; dashed?: boolean }[];
+  height?: number;
+  format: (v: number) => string;
+  label: string;
+}
+
+/** Two or three dollar series over time from a zero baseline, e.g. credits paid against money recovered. */
+export function LineSeries<K extends string>({ data, series, height = 200, format, label }: LineSeriesProps<K>) {
+  return (
+    <motion.div role="img" aria-label={label} style={{ height }} {...fadeIn}>
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
+          <XAxis dataKey="x" tick={{ fill: C.secondary, fontSize: 10 }} axisLine={{ stroke: C.grid }} tickLine={false} interval="preserveStartEnd" minTickGap={28} />
+          <YAxis domain={[0, 'auto']} tick={{ fill: C.secondary, fontSize: 10 }} axisLine={false} tickLine={false} width={52} tickFormatter={v => format(Number(v))} />
+          <ReferenceLine y={0} stroke={C.grid} />
+          <Tooltip cursor={{ stroke: C.muted, strokeWidth: 1 }} content={<ChartTooltip format={v => format(v)} />} />
+          {series.map(s => (
+            <Line key={s.key} type="monotone" dataKey={s.key} name={s.label} stroke={s.color} strokeWidth={1.75}
+              strokeDasharray={s.dashed ? '4 3' : undefined} dot={false} activeDot={{ r: 3, strokeWidth: 0 }} isAnimationActive={false} />
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
+    </motion.div>
+  );
+}

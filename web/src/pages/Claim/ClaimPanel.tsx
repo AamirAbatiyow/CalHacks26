@@ -4,6 +4,7 @@ import { CircleDollarSign, Cpu, FileCheck2, Mail, Play, ShieldCheck, SunMedium, 
 import { ClaimGate, DataIntegrityStatus } from '../../types';
 import type { Claim, ClaimDecision, ClaimEvidence, ClaimOutcome, ClaimReason, ClaimWeather } from '../../types';
 import { openReplay } from '../../replay/useDecisionTrace';
+import { useTechMode } from '../../hooks/useTechMode';
 import { FlowGraph, COMPACT_NODE_W, type GraphNode, type GraphEdge } from '../../ui/FlowGraph';
 import { Drawer, Fact } from '../../ui/Drawer';
 import { Chip } from '../../ui/Chip';
@@ -24,6 +25,7 @@ interface ClaimPanelProps {
 /** The claim's evidence feeding System 1 and the credit, as one small graph with dollars beside it. */
 export function ClaimPanel({ claim, evidence, decision, outcome, weather, reasons, policyKnown }: ClaimPanelProps) {
   const [openNode, setOpenNode] = useState<string | null>(null);
+  const tech = useTechMode();
   const claimed = Number(claim.amountClaimedCents);
   const loss = Number(evidence.estimatedLossCents);
   const unverified = Number(evidence.missingEvidenceCents);
@@ -49,6 +51,21 @@ export function ClaimPanel({ claim, evidence, decision, outcome, weather, reason
     .sort((a, b) => Math.abs(b.shapValue) - Math.abs(a.shapValue))
     .map(r => ({ name: r.feature, value: r.shapValue, detail: r.detail }));
 
+  const shortReason = reasons
+    .filter(r => r.shapValue > 0)
+    .sort((a, b) => b.shapValue - a.shapValue)
+    .slice(0, 2)
+    .map(r => r.feature)
+    .join(' · ');
+
+  const creditStat = (
+    <div className="claim-credit">
+      <span className="ui-stat-label">Credit</span>
+      <span className="ui-stat-value"><CountUp value={credit} format={wholeUsd} /></span>
+      <Chip tone={auto ? 'pass' : 'warn'}>{auto ? 'Auto-decided' : 'Sent to a reviewer'}</Chip>
+    </div>
+  );
+
   const drawerTitle: Record<string, string> = {
     integrity: 'Data integrity', weather: 'Space weather', loss: 'Estimated loss', unverified: 'Unverified share', s1: 'System 1', credit: 'Decision',
   };
@@ -64,17 +81,20 @@ export function ClaimPanel({ claim, evidence, decision, outcome, weather, reason
       </motion.div>
 
       <section className="claim-block">
-        <div className="claim-gauge-row">
-          <Gauge value={decision.confidencePercent} size={128}>
-            <span className="claim-gauge-value">{decision.confidencePercent}%</span>
-            <span className="ui-stat-sub">confidence</span>
-          </Gauge>
-          <div className="claim-credit">
-            <span className="ui-stat-label">Credit</span>
-            <span className="ui-stat-value"><CountUp value={credit} format={wholeUsd} /></span>
-            <Chip tone={auto ? 'pass' : 'warn'}>{auto ? 'Auto-decided' : 'Escalated'}</Chip>
+        {tech ? (
+          <div className="claim-gauge-row">
+            <Gauge value={decision.confidencePercent} size={128}>
+              <span className="claim-gauge-value">{decision.confidencePercent}%</span>
+              <span className="ui-stat-sub">confidence</span>
+            </Gauge>
+            {creditStat}
           </div>
-        </div>
+        ) : (
+          <div className="claim-credit-row">
+            {creditStat}
+            {shortReason && <p className="claim-reason">{shortReason}</p>}
+          </div>
+        )}
       </section>
 
       <section className="claim-block">
@@ -94,6 +114,7 @@ export function ClaimPanel({ claim, evidence, decision, outcome, weather, reason
         </div>
       </section>
 
+      {tech && (<>
       <section className="claim-block">
         <div className="ui-section-title">Evidence to decision</div>
         <FlowGraph nodes={nodes} edges={edges} height={250} nodeWidth={COMPACT_NODE_W} rankSep={28}
@@ -107,6 +128,7 @@ export function ClaimPanel({ claim, evidence, decision, outcome, weather, reason
           <DivergingBars data={shap} label="SHAP contribution of each feature to the confidence" />
         </section>
       )}
+      </>)}
 
       <div className="claim-foot">
         <div className="ui-chips">

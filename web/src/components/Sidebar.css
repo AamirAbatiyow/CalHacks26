@@ -28,6 +28,12 @@
   flex-direction: column;
   gap: 4px;
   width: 100%;
+  flex: 1;
+  padding-bottom: 12px;
+}
+
+.sidebar-item-foot {
+  margin-top: auto;
 }
 
 .sidebar-item {

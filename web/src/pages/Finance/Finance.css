@@ -395,3 +395,36 @@
 .audit-row:focus-visible .audit-replay-cell .replay-trigger {
   opacity: 1;
 }
+
+.fin-chart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.fin-chart-head .ui-section-title {
+  margin-bottom: 0;
+}
+
+.audit-table-v2 .audit-replay {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.audit-table-v2 .ui-table-row:hover .audit-replay,
+.audit-table-v2 .ui-table-row:focus-visible .audit-replay {
+  opacity: 1;
+}
+
+.audit-by {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-secondary);
+}
+
+.audit-amount {
+  font-weight: 500;
+}

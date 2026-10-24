@@ -15,6 +15,8 @@ import { Chip } from '../../ui/Chip';
 import { Meter } from '../../ui/charts';
 import { CountUp, compactUsd } from '../../ui/CountUp';
 import { EmptyState } from '../../ui/EmptyState';
+import { DataTable, type Column } from '../../ui/DataTable';
+import { useTechMode } from '../../hooks/useTechMode';
 import { SkeletonGraph, SkeletonRows } from '../../ui/Skeleton';
 import './Policies.css';
 
@@ -112,19 +114,21 @@ function ReplayBar({ replay, onPlayPause, onSpeedChange, onSeek }: ReplayBarProp
   );
 }
 
-function ReplayTiles({ replay, onPromote }: { replay: PolicyReplay; onPromote: () => void }) {
+function ReplayTiles({ replay, onPromote, tech }: { replay: PolicyReplay; onPromote: () => void; tech: boolean }) {
   const regressed = replay.precisionAfter < replay.precisionBefore;
   const impact = Number(replay.dollarImpactCents);
   const blocked = replay.status === ReplayStatus.Blocked;
   return (
     <motion.div className="ui-tiles" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-      <div className="ui-tile">
-        <span className="ui-stat-label">Precision</span>
-        <span className={`ui-stat-value ${regressed ? 'tone-warn' : ''}`}>
-          {replay.precisionBefore.toFixed(1)}% <span className="policy-arrow">→</span> {replay.precisionAfter.toFixed(1)}%
-        </span>
-        <span className="ui-stat-sub">{pts(replay.precisionBefore, replay.precisionAfter)}</span>
-      </div>
+      {tech && (
+        <div className="ui-tile">
+          <span className="ui-stat-label">Precision</span>
+          <span className={`ui-stat-value ${regressed ? 'tone-warn' : ''}`}>
+            {replay.precisionBefore.toFixed(1)}% <span className="policy-arrow">→</span> {replay.precisionAfter.toFixed(1)}%
+          </span>
+          <span className="ui-stat-sub">{pts(replay.precisionBefore, replay.precisionAfter)}</span>
+        </div>
+      )}
       <div className="ui-tile">
         <span className="ui-stat-label">Decisions changed</span>
         <span className="ui-stat-value"><CountUp value={replay.decisionsChanged} format={n => Math.round(n).toLocaleString()} /></span>
@@ -139,7 +143,7 @@ function ReplayTiles({ replay, onPromote }: { replay: PolicyReplay; onPromote: (
       </div>
       <div className="ui-tile policy-tile-action">
         {blocked ? (
-          <Chip tone="block" icon={Ban} title={replay.blockReason}>Blocked: {replay.blockReason}</Chip>
+          <Chip tone="block" icon={Ban} title={tech ? replay.blockReason : undefined}>{tech ? `Blocked: ${replay.blockReason}` : 'Blocked by replay'}</Chip>
         ) : replay.status === ReplayStatus.Completed ? (
           <button className="promote-btn" onClick={onPromote}><CheckCircle2 size={13} /> Promote to current</button>
         ) : (
@@ -160,41 +164,50 @@ interface RuleListProps {
 }
 
 function RuleList({ rules, changed, onToggleRule, onOpen, onCreateVersion, canEdit }: RuleListProps) {
+  const columns = useMemo<Column<CedarRule>[]>(() => [
+    {
+      key: 'name', label: 'Rule', width: 'minmax(0, 1fr)', sort: r => r.name,
+      render: r => (
+        <span className={`rule-cell ${r.enabled ? '' : 'disabled'}`}>
+          <ScrollText size={13} className="rule-icon" aria-hidden />
+          <span className="rule-name">{r.name}</span>
+          {changed.has(r.id) && <Chip tone="warn" icon={GitBranch}>Changed</Chip>}
+        </span>
+      ),
+    },
+    { key: 'description', label: 'What it does', width: 'minmax(0, 1.4fr)', sort: r => r.description, render: r => <span className="ui-table-muted">{r.description}</span> },
+    {
+      key: 'enabled', label: 'Status', width: '70px', align: 'right', sort: r => (r.enabled ? 1 : 0),
+      render: r => canEdit ? (
+        <button
+          className={`toggle-btn ${r.enabled ? 'enabled' : ''}`}
+          role="switch"
+          aria-checked={r.enabled}
+          aria-label={`${r.name} ${r.enabled ? 'on' : 'off'}`}
+          onClick={(e) => { e.stopPropagation(); onToggleRule(r.id); }}
+        >
+          <motion.span className="toggle-knob" layout transition={{ type: 'spring', stiffness: 600, damping: 35 }} />
+        </button>
+      ) : <Chip>{r.enabled ? 'On' : 'Off'}</Chip>,
+    },
+  ], [changed, canEdit, onToggleRule]);
+
   return (
     <section className="policy-section">
       <div className="policy-section-head">
-        <span className="ui-section-title">Cedar rules</span>
+        <span className="ui-section-title">Rules</span>
         {canEdit && (
           <button className="create-version-btn" onClick={onCreateVersion}><FilePlus2 size={13} /> New version</button>
         )}
       </div>
-      <div className="rules-list">
-        {rules.map(rule => (
-          <div
-            key={rule.id}
-            className={`rule-item ui-row-hover ${!rule.enabled ? 'disabled' : ''}`}
-            onClick={() => onOpen(rule.id)}
-            title={rule.description}
-          >
-            <ScrollText size={13} className="rule-icon" aria-hidden />
-            <span className="rule-name">{rule.name}</span>
-            {changed.has(rule.id) && <Chip tone="warn" icon={GitBranch}>Changed</Chip>}
-            {canEdit ? (
-              <button
-                className={`toggle-btn ${rule.enabled ? 'enabled' : ''}`}
-                role="switch"
-                aria-checked={rule.enabled}
-                aria-label={`${rule.name} ${rule.enabled ? 'on' : 'off'}`}
-                onClick={(e) => { e.stopPropagation(); onToggleRule(rule.id); }}
-              >
-                <motion.span className="toggle-knob" layout transition={{ type: 'spring', stiffness: 600, damping: 35 }} />
-              </button>
-            ) : (
-              <Chip>{rule.enabled ? 'On' : 'Off'}</Chip>
-            )}
-          </div>
-        ))}
-      </div>
+      <DataTable
+        rows={rules}
+        columns={columns}
+        rowKey={r => r.id}
+        onRowClick={r => onOpen(r.id)}
+        label="Policy rules"
+        className="rules-table"
+      />
     </section>
   );
 }
@@ -222,6 +235,7 @@ export default function Policies() {
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
   const [appliedLinkId, setAppliedLinkId] = useState<string | null>(null);
   const [open, setOpen] = useState<Open | null>(null);
+  const tech = useTechMode();
 
   useEffect(() => {
     if (policyVersions.length === 0) return;
@@ -378,7 +392,7 @@ export default function Policies() {
         </div>
 
         <div className="policies-content">
-          <section className="policy-section">
+          {tech && <section className="policy-section">
             <div className="policy-section-head">
               <span className="ui-section-title">Rule lineage</span>
               <span className="ui-legend">
@@ -399,14 +413,14 @@ export default function Policies() {
                 label="Rule lineage: human decisions feed patterns, patterns become Cedar rules, rules are replayed on history"
               />
             )}
-          </section>
+          </section>}
 
           {showReplay && activeReplay && (
             <section className="policy-section">
               <div className="policy-section-head">
                 <span className="ui-section-title">Replay v{selectedVersion?.version} vs v{currentVersion?.version}</span>
               </div>
-              <ReplayTiles replay={activeReplay} onPromote={handlePromote} />
+              <ReplayTiles replay={activeReplay} onPromote={handlePromote} tech={tech} />
             </section>
           )}
 
@@ -441,6 +455,7 @@ export default function Policies() {
         selectedVersion={selectedVersion}
         currentVersion={currentVersion}
         replay={activeReplay}
+        tech={tech}
       />
     </div>
   );
@@ -455,9 +470,10 @@ interface PolicyDrawerProps {
   selectedVersion?: PolicyVersion;
   currentVersion?: PolicyVersion;
   replay?: PolicyReplay;
+  tech: boolean;
 }
 
-function PolicyDrawer({ open, onClose, labelStats, cedarRules, changedRules, selectedVersion, currentVersion, replay }: PolicyDrawerProps) {
+function PolicyDrawer({ open, onClose, labelStats, cedarRules, changedRules, selectedVersion, currentVersion, replay, tech }: PolicyDrawerProps) {
   let eyebrow = '';
   let title = '';
   let body: React.ReactNode = null;
@@ -523,7 +539,7 @@ function PolicyDrawer({ open, onClose, labelStats, cedarRules, changedRules, sel
           <div key={r.id} className="policy-drawer-rule">
             <div className="policy-drawer-rule-name">{r.name}</div>
             <p className="ui-quote">{r.description}</p>
-            <pre className="policy-code">{r.cedarCode}</pre>
+            {tech && <pre className="policy-code">{r.cedarCode}</pre>}
           </div>
         ))}
       </>
@@ -543,12 +559,12 @@ function PolicyDrawer({ open, onClose, labelStats, cedarRules, changedRules, sel
   } else if (open?.kind === 'cedar') {
     const r = cedarRules.find(x => x.id === open.id);
     if (r) {
-      eyebrow = 'Cedar rule';
+      eyebrow = tech ? 'Cedar rule' : 'Rule';
       title = r.name;
       body = (
         <>
           <p className="ui-quote">{r.description}</p>
-          <pre className="policy-code">{r.cedarCode}</pre>
+          {tech && <pre className="policy-code">{r.cedarCode}</pre>}
         </>
       );
     }

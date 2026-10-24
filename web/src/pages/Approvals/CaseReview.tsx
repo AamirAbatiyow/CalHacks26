@@ -27,6 +27,8 @@ import {
   type DecisionData,
 } from '../../hooks/useDecisions';
 import { openReplay } from '../../replay/useDecisionTrace';
+import { useTechMode } from '../../hooks/useTechMode';
+import { plainEscalation } from '../../utils/plainReason';
 import { FlowGraph, type GraphEdge, type GraphNode } from '../../ui/FlowGraph';
 import { Drawer, Fact } from '../../ui/Drawer';
 import { Chip } from '../../ui/Chip';
@@ -107,6 +109,7 @@ export function CaseReview({ row, data }: { row: DecisionCaseRow; data: Decision
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [openNode, setOpenNode] = useState<string | null>(null);
+  const tech = useTechMode();
 
   useEffect(() => {
     const suggested = s2 && tag(s2.verdict) === 'Approve' ? Number(s2.creditCents) : Number(row.entitledCreditCents);
@@ -136,8 +139,15 @@ export function CaseReview({ row, data }: { row: DecisionCaseRow; data: Decision
         ? { id: 's2', title: 'System 2', icon: Bot, value: `${s2.confidencePct.toFixed(0)}%`, tone: s2.confidencePct >= AUTO_PCT ? 'pass' : 'warn', hint: `${tag(s2.verdict)} · reads every source` }
         : { id: 's2', title: 'System 2', icon: Bot, value: 'Not run', ghost: true, hint: flagged ? 'Guard stopped the case before System 2' : undefined },
       { id: 'gate', title: 'Re-verify · Cedar', icon: ShieldCheck, value: guard ? 'Failed' : escalated ? 'Escalate' : 'Allow', tone: gateTone, hint: row.escalationReason || undefined },
-      { id: 'verdict', title: escalated ? 'Human review' : 'Verdict', icon: escalated ? UserCheck : Gavel, value: verdictText, tone: escalated ? 'warn' : tag(row.finalVerdict) === 'Approve' ? 'pass' : 'block', emphasis: true },
+      { id: 'verdict', title: escalated ? 'Your decision' : 'Verdict', icon: escalated ? UserCheck : Gavel, value: verdictText, tone: escalated ? 'warn' : tag(row.finalVerdict) === 'Approve' ? 'pass' : 'block', emphasis: true },
     ];
+    if (!tech) {
+      const sources = ['telemetry', 'weather', 'station', 'contract', 'message'];
+      return {
+        nodes: nodes.filter(n => sources.includes(n.id) || n.id === 'verdict'),
+        edges: sources.map(id => ({ from: id, to: 'verdict' })),
+      };
+    }
     const structured = ['telemetry', 'weather', 'station', 'contract', 'ml'];
     const edges: GraphEdge[] = [
       ...structured.map(id => ({ from: id, to: 's1' })),
@@ -147,7 +157,7 @@ export function CaseReview({ row, data }: { row: DecisionCaseRow; data: Decision
       { from: 'gate', to: 'verdict', tone: gateTone },
     ];
     return { nodes, edges };
-  }, [s, s1, s2, guard, screen, message, escalated, row]);
+  }, [s, s1, s2, guard, screen, message, escalated, row, tech]);
 
   if (!s || !graph) return <div className="cr-empty">Case snapshot unavailable.</div>;
 
@@ -241,7 +251,7 @@ export function CaseReview({ row, data }: { row: DecisionCaseRow; data: Decision
         <pre>{message.body}</pre>
         {screen && (
           <div className="ui-chips">
-            <Chip tone={screen.flagged ? 'block' : 'pass'} icon={screen.flagged ? MessageSquareWarning : Check}>Screen {screen.flagged ? 'flagged' : 'passed'} · {screen.score}</Chip>
+            <Chip tone={screen.flagged ? 'block' : 'pass'} icon={screen.flagged ? MessageSquareWarning : Check}>Screen {screen.flagged ? 'flagged' : 'passed'}{tech ? ` · ${screen.score}` : ''}</Chip>
             {screen.reasons.map(r => <Chip key={r} tone="block">{r}</Chip>)}
           </div>
         )}
@@ -276,7 +286,7 @@ export function CaseReview({ row, data }: { row: DecisionCaseRow; data: Decision
     verdict: {
       eyebrow: row.claimRef, title: escalated ? 'Awaiting human review' : 'Verdict',
       body: (<>
-        {row.summary && (<div><div className="ui-section-title">System 2 case summary</div><p>{row.summary}</p></div>)}
+        {row.summary && (<div><div className="ui-section-title">{tech ? 'System 2 case summary' : 'Case summary'}</div><p>{row.summary}</p></div>)}
         <Fact label="Claimed" value={usd(row.amountClaimedCents)} />
         <Fact label="Entitled" value={usd(row.entitledCreditCents)} />
         {!escalated && <Fact label="Credited" value={usd(row.finalCreditCents)} />}
@@ -296,7 +306,7 @@ export function CaseReview({ row, data }: { row: DecisionCaseRow; data: Decision
           </div>
           <div className="ui-chips">
             <Chip>{CLAIM_TYPE_LABELS[tag(row.claimType)] ?? tag(row.claimType)}</Chip>
-            {escalated && <Chip tone="warn" title={row.escalationReason}>{escalationChip(row.escalationReason)}</Chip>}
+            {escalated && <Chip tone="warn" title={tech ? row.escalationReason : undefined}>{tech ? escalationChip(row.escalationReason) : plainEscalation(row.escalationReason)}</Chip>}
             {decided && <Chip tone="accent" icon={UserCheck}>Human decided</Chip>}
           </div>
         </div>
@@ -311,7 +321,7 @@ export function CaseReview({ row, data }: { row: DecisionCaseRow; data: Decision
           key={String(row.id)}
           nodes={graph.nodes}
           edges={graph.edges}
-          height={420}
+          height={tech ? 420 : 340}
           selectedId={openNode}
           onSelect={setOpenNode}
           rankSep={56}
@@ -325,14 +335,14 @@ export function CaseReview({ row, data }: { row: DecisionCaseRow; data: Decision
             <Chip tone={tag(row.finalVerdict) === 'Approve' ? 'pass' : 'block'} icon={UserCheck}>
               {label?.reviewer ?? 'Human'} · {tag(row.finalVerdict)} {usd(row.finalCreditCents)}
             </Chip>
-            {retrained
+            {tech && (retrained
               ? <Chip tone={tag(retrained.status) === 'Rejected' ? 'warn' : 'accent'} icon={RotateCcw} title={retrained.note}>
                   s1-v{retrained.version} {tag(retrained.status) === 'Rejected' ? 'rejected' : 'live'} · {retrained.latencyMs.toFixed(0)} ms
                 </Chip>
-              : <Chip icon={RotateCcw}>Retraining…</Chip>}
+              : <Chip icon={RotateCcw}>Retraining…</Chip>)}
             {similar && (
               <Chip tone={tag(similar.status) === 'AutoDecided' ? 'pass' : 'warn'} icon={Building2}
-                title={tag(similar.status) === 'Escalated' ? similar.escalationReason : `${SYSTEM_LABELS[tag(similar.decidedBy)] ?? ''} · ${similar.modelVersion} · policy ${similar.policyVersion}`}>
+                title={!tech ? undefined : tag(similar.status) === 'Escalated' ? similar.escalationReason : `${SYSTEM_LABELS[tag(similar.decidedBy)] ?? ''} · ${similar.modelVersion} · policy ${similar.policyVersion}`}>
                 {similar.claimRef} {tag(similar.status) === 'AutoDecided' ? `auto ${tag(similar.finalVerdict)} ${usd(similar.finalCreditCents)}` : tag(similar.status) === 'Escalated' ? 'escalated' : 'deciding…'}
               </Chip>
             )}
