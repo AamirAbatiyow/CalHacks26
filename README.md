@@ -155,6 +155,8 @@ All AI-driven decisions (disputes, credits, pass classifications) are logged to 
 | `seed_station` | Add a ground station |
 | `seed_satellite` | Add a satellite |
 | `seed_pass` | Add a pass |
+| `seed_passes` | Add a batch of passes (used by `seed.sh` for the generated history) |
+| `settle_pass_history` | Settle the generated history: credits, recoveries, disputes and denials, gated by confidence |
 | `seed_space_weather` | Add space weather data |
 | `set_playback_speed` | Set simulation speed (1x/4x/16x) |
 | `set_playback_playing` | Play/pause simulation |
@@ -206,6 +208,62 @@ Toggle visibility of:
 
 Seeded credits, recoveries and claims are percentages of the revenue of the pass they refer to, and seeded invoices are one per station totalling billed pass revenue, so the Ledger invoices sum to Billed this month at seed time.
 
+There are no dollar approval caps anywhere. The confidence gate is the only gate: confidence of 95% or more auto-decides, anything lower escalates to Approvals. Every auto-approval writes its ledger credit. The $300 in Review cost saved is the cost of a human review, not a cap.
+
+## Seeded volume
+
+The seed models an operator the size of KSAT, priced at AWS Ground Station on-demand rates. Only the inputs below are hand-written; every pass, price, station revenue, credit, dispute and KPI is derived from them by `seed.sh`.
+
+### Reference points
+
+| Fact | Value | Source |
+|------|-------|--------|
+| KSAT ground stations | 28 | KSAT 2025 annual report |
+| KSAT antennas | ~375 | KSAT 2025 annual report |
+| KSAT contacts | ~2.1M/year (~175K/month) | KSAT 2025 annual report |
+| KSAT revenue | NOK 2.36B (~$220M) | KSAT 2025 annual report |
+| Narrowband price | $15 per minute | AWS Ground Station on-demand |
+| Wideband price | $25 per minute | AWS Ground Station on-demand |
+
+### Inputs (`server/fixtures/`)
+
+| Input | File | Value |
+|-------|------|-------|
+| Stations | `stations.json` | 28 stations with 322 antennas in total (SvalSat 100, Tromso 40, TrollSat 12, Hartebeesthoek 12, the rest 2 to 10). No revenue figures: each station's monthly revenue is the sum of its billed passes |
+| Satellites | `satellites.json` | 169 satellites with real CelesTrak TLEs: the 30 curated demo satellites plus Planet (40), Spire (30, narrowband), ICEYE (40), Satellogic (15), Capella (9) and Umbra (5). Each satellite has a `band` that sets its price |
+| Contracts | `contracts.json` | Six enterprise contracts, one per customer, each covering a constellation with a daily contact quota per satellite (10 to 12). Together they ask for about 1,580 contacts per day |
+| Pricing | `contracts.json` `pricing` | $15/min narrowband, $25/min wideband, billed per started minute |
+| History | `contracts.json` | 30 days of history plus 24 hours of scheduled passes |
+| Drops | `contracts.json` | 1.5% of contacts drop; 6% at stations above 60° latitude during Kp ≥ 5 storms |
+| Settlement | `contracts.json` `settlement` | Passes settle 72 hours after they end. Of dropped passes, 60% are credited in full, 25% are recovered (re-downlinked) and the rest are denied. 2% of completed passes are disputed; 65% of those are credited 25% to 50% of the pass, the rest denied, and recent ones stay open. 65% of decisions carry confidence ≥ 95% and auto-decide; the rest go through human review |
+| Escalated claims | `claims.json` | Six Approvals claims, each tied to 20 to 120 of the customer's most recent open passes and sized as a percentage of those passes' revenue |
+
+### How passes are generated
+
+`server/scripts/generate-passes.mjs` propagates every contracted satellite with SGP4 (satellite.js) against every station, keeps contacts above 10° elevation lasting at least 4 minutes, and books them highest-elevation first, subject to the satellite's daily quota, a 5-minute slew gap between its contacts and each station's antenna count. Each pass is priced at its band's rate per started minute. The curated passes in `passes.json` (used by Break It and the Overview) and the Claim page's NOAA-20 pass are added on top. `seed.sh` loads the result in batches through `seed_passes`, then `settle_pass_history` writes the dispute and credit history above.
+
+### Resulting figures (fresh seed)
+
+| Figure | Value |
+|--------|-------|
+| Passes | 48,954 (about 47,000 billed in the trailing 30 days, roughly a quarter of KSAT's monthly contacts) |
+| Billed this month | $8.05M (about $97M a year, in line with KSAT's ~$220M total revenue) |
+| Revenue at risk | $85.7K |
+| Credits paid | $98.3K |
+| Recovered | $27.2K |
+| Leakage avoided | $99.3K |
+| Review cost saved | $168.7K (592 auto-approved decisions x $285) |
+
+The annual figures are 12 times the trailing-30-day KPIs:
+
+| Annual figure | Formula | Value |
+|---------------|---------|-------|
+| Dispute cost | 12 x (Credits paid + Revenue at risk) | ~$2.2M |
+| Leakage avoided | 12 x Leakage avoided | ~$1.2M |
+| Review cost saved | 12 x Review cost saved | ~$2.0M |
+
+Exact figures move slightly with the seed time, because pass geometry and the trailing 30-day window depend on `now`.
+
 ## Development
 
 ### Generate TypeScript Bindings
@@ -232,7 +290,7 @@ spacetime logs ground-truth --server local -f
 
 ## Mock Data Note
 
-All financial data (KPIs, revenue figures) is mock data for demonstration purposes. In production, these would connect to actual billing systems.
+All financial data is simulated from the seed inputs described in [Seeded volume](#seeded-volume). In production, the passes, contracts and ledger would come from real scheduling and billing systems.
 
 ## License
 
