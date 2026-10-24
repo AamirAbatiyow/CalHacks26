@@ -33,3 +33,6 @@ __pycache__/
 *.pyc
 # Large data files - regenerate with ml/fetch_labeled.py
 data/raw/satnogs_observations_labeled.json
+data/raw/satnogs_window/
+data/raw/kp_gfz.json
+data/raw/satnogs_db_transmitters.json

@@ -30,8 +30,9 @@ NUMERIC_FEATURES = [
     "station_lon",
 ]
 
+# No station_id: as a categorical it lets the model memorize stations, which
+# looks good on a random split and fails on stations it has not seen.
 CATEGORICAL_FEATURES = [
-    "station_id",
     "flare_class",
     "transmitter_mode",
 ]

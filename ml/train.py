@@ -20,7 +20,7 @@ import numpy as np
 import pandas as pd
 import joblib
 import lightgbm as lgb
-from sklearn.model_selection import train_test_split, StratifiedKFold
+from sklearn.model_selection import train_test_split, GroupShuffleSplit
 from sklearn.metrics import (
     roc_auc_score,
     average_precision_score,
@@ -70,9 +70,10 @@ def train_model(
     feature_names: list,
     n_folds: int = 5,
     early_stopping_rounds: int = 50,
+    groups: Optional[pd.Series] = None,
 ) -> Tuple[lgb.Booster, Dict[str, Any]]:
     """
-    Train LightGBM model with cross-validation.
+    Train LightGBM model with a held-out test split.
     
     Args:
         X: Feature matrix
@@ -80,15 +81,24 @@ def train_model(
         feature_names: List of feature names
         n_folds: Number of CV folds
         early_stopping_rounds: Early stopping patience
+        groups: Optional station ids; when given, test stations are disjoint
+            from training stations
         
     Returns:
         Tuple of (trained model, metrics dict)
     """
     logger.info(f"Training model on {len(X)} samples with {len(feature_names)} features")
     
-    # Split for validation
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, stratify=y, random_state=42
+    if groups is not None:
+        tr, te = next(GroupShuffleSplit(1, test_size=0.2, random_state=42).split(X, y, groups))
+        X_train, X_test, y_train, y_test = X.iloc[tr], X.iloc[te], y.iloc[tr], y.iloc[te]
+    else:
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, stratify=y, random_state=42
+        )
+    # Early stopping uses a slice of the training data; the test split is only scored.
+    X_fit, X_val, y_fit, y_val = train_test_split(
+        X_train, y_train, test_size=0.2, stratify=y_train, random_state=7
     )
     
     # LightGBM parameters optimized for binary classification
@@ -110,14 +120,14 @@ def train_model(
     
     # Create datasets
     train_data = lgb.Dataset(
-        X_train, 
-        label=y_train,
+        X_fit, 
+        label=y_fit,
         feature_name=feature_names,
-        categorical_feature=[f for f in feature_names if X_train[f].dtype.name == "category"]
+        categorical_feature=[f for f in feature_names if X_fit[f].dtype.name == "category"]
     )
     valid_data = lgb.Dataset(
-        X_test, 
-        label=y_test,
+        X_val, 
+        label=y_val,
         feature_name=feature_names,
         reference=train_data
     )
@@ -294,8 +304,9 @@ def train_and_save(
     X, feature_names = prepare_features(df)
     y = get_target(df)
     
-    # Train model
-    model, metrics = train_model(X, y, feature_names)
+    groups = df["station_id"].reset_index(drop=True) if "station_id" in df.columns else None
+    model, metrics = train_model(X.reset_index(drop=True), y.reset_index(drop=True),
+                                 feature_names, groups=groups)
     
     # Compute SHAP values
     shap_values, expected_value = compute_shap_values(model, X, feature_names)
@@ -338,11 +349,152 @@ def train_and_save(
     return results
 
 
+HELDOUT_VARIANT = "physical+online1h+isotonic"
+HELDOUT_SOURCES = ("v110_census", "window_census")
+
+
+def load_heldout_training_data(sources=HELDOUT_SOURCES) -> pd.DataFrame:
+    """Labeled passes without the v1.1.0 class-window bias, with online features."""
+    from .heldout_eval import load_dataset
+    frames = []
+    for name in sources:
+        try:
+            df = load_dataset(name)
+        except FileNotFoundError:
+            continue
+        if len(df):
+            frames.append(df.assign(source=name))
+    if not frames:
+        raise ValueError(f"No training data found for sources {sources}")
+    df = pd.concat(frames, ignore_index=True)
+    df = df.drop_duplicates("pass_id", keep="last").sort_values("t").reset_index(drop=True)
+    return df
+
+
+def train_heldout_and_save(
+    version: str,
+    output_dir: Optional[Path] = None,
+    sources=HELDOUT_SOURCES,
+    df: Optional[pd.DataFrame] = None,
+) -> Dict[str, Any]:
+    """Train without station identity and calibrate the gate on held-out stations."""
+    from sklearn.isotonic import IsotonicRegression
+    from . import heldout_eval as he
+    from .gate import build_gate
+
+    output_dir = output_dir or MODEL_DIR
+    output_dir.mkdir(parents=True, exist_ok=True)
+    if df is None:
+        df = load_heldout_training_data(sources)
+    variant = he.feature_variants(df)[HELDOUT_VARIANT]
+    logger.info("Training %s on %d passes from %d stations", HELDOUT_VARIANT, len(df),
+                df["station_id"].nunique())
+
+    evals = {kind: he.evaluate(df, variant, kind) for kind in ("station", "time", "random")}
+
+    oof = np.zeros(len(df))
+    for tr, te in he._splitter("station", df, 5, 42):
+        bst, cats = he._fit(df.iloc[tr], variant)
+        oof[te] = he._predict(bst, cats, df.iloc[tr], df.iloc[te], variant)
+    y = df["y"].values
+    calibrator = IsotonicRegression(out_of_bounds="clip", y_min=0, y_max=1).fit(oof, y)
+    cal_oof = calibrator.predict(oof)
+
+    points = []
+    for t in he.PRECISION_TARGETS:
+        nested = evals["station"]["at_precision_target"][f"{t:.2f}"]
+        points.append({
+            "target": t,
+            "threshold": he.threshold_for_precision(cal_oof, y, t),
+            "heldout_precision": nested["precision"],
+            "heldout_precision_95ci": nested["precision_95ci"],
+            "heldout_recall": nested["recall"],
+        })
+    gate = build_gate(points)
+
+    booster, cats = he._fit(df, variant)
+    X_all = he._design(df, variant, cats, None)
+    X_sample = X_all.sample(n=min(500, len(X_all)), random_state=42)
+    explainer = shap.TreeExplainer(booster)
+    shap_values = explainer.shap_values(X_sample)
+
+    booster.save_model(str(output_dir / f"model_{version}.lgb"))
+    joblib.dump(booster, output_dir / f"model_{version}.joblib")
+    joblib.dump(calibrator, output_dir / f"calibrator_{version}.joblib")
+    np.save(output_dir / f"shap_sample_{version}.npy", shap_values)
+
+    def headline(r):
+        keys = ("auc_roc", "auc_pr", "precision", "recall", "f1", "accuracy",
+                "confusion_matrix", "base_rate", "n")
+        return {k: r[k] for k in keys} | {"at_precision_target": r["at_precision_target"]}
+
+    metrics = {
+        "variant": HELDOUT_VARIANT,
+        "data": {
+            "sources": sorted(df["source"].unique().tolist()),
+            "n": int(len(df)),
+            "n_stations": int(df["station_id"].nunique()),
+            "status_counts": df["status"].value_counts().to_dict(),
+            "time_range": [str(df["t"].min()), str(df["t"].max())],
+        },
+        "heldout_station": headline(evals["station"]),
+        "time_split": headline(evals["time"]),
+        "random_split": headline(evals["random"]),
+        "feature_importance_gain": evals["station"]["feature_importance_gain"],
+        "gate": gate,
+    }
+    with open(output_dir / f"metrics_{version}.json", "w") as f:
+        json.dump(metrics, f, indent=2, default=str)
+    he.plot_pr_curves([evals[k] for k in ("station", "time", "random")],
+                      output_dir / f"pr_curve_{version}.png",
+                      f"{version} held-out precision-recall")
+
+    st = evals["station"]
+    config = {
+        "version": version,
+        "pipeline": "heldout",
+        "variant": HELDOUT_VARIANT,
+        "numeric_features": variant.numeric,
+        "categorical_features": variant.categorical,
+        "categories": cats,
+        "feature_names": booster.feature_name(),
+        "online_lag_hours": 1,
+        "shap_expected_value": float(np.ravel(explainer.expected_value)[0]),
+        "created_at": datetime.utcnow().isoformat() + "Z",
+        "gate": gate,
+        "metrics_summary": {
+            "evaluation": "GroupKFold by station (5 folds), thresholds nested",
+            "auc_roc": st["auc_roc"],
+            "auc_pr": st["auc_pr"],
+            "brier_score": float(brier_score_loss(y, st["_scores"])),
+            "ece": compute_calibration_metrics(y, st["_scores"])["ece"],
+        },
+    }
+    with open(output_dir / f"config_{version}.json", "w") as f:
+        json.dump(config, f, indent=2, default=str)
+
+    print("\n" + "=" * 60)
+    print(f"{version}: {len(df)} passes, {df['station_id'].nunique()} stations")
+    for kind in ("station", "time", "random"):
+        r = evals[kind]
+        p95 = r["at_precision_target"]["0.95"]
+        print(f"  {kind:8s} AUC {r['auc_roc']:.3f}  @0.95 target: precision "
+              f"{p95['precision'] if p95['precision'] is None else round(p95['precision'], 3)} "
+              f"recall {p95['recall']:.3f}")
+    print(f"  gate auto threshold: {gate['auto_threshold']}")
+    print("=" * 60)
+    return {"version": version, "metrics": metrics, "config": config}
+
+
 def main():
     parser = argparse.ArgumentParser(description="Train pass-failure prediction model")
     parser.add_argument(
+        "--pipeline", choices=["heldout", "legacy"], default="heldout",
+        help="heldout: v1.2+ station-safe model and gate; legacy: v1.1 pipeline"
+    )
+    parser.add_argument(
         "--samples", type=int, default=3000,
-        help="Minimum training samples (augment with synthetic if needed)"
+        help="Legacy pipeline: minimum training samples (augment with synthetic if needed)"
     )
     parser.add_argument(
         "--output-dir", type=str, default=None,
@@ -356,6 +508,9 @@ def main():
     args = parser.parse_args()
     
     output_dir = Path(args.output_dir) if args.output_dir else None
+
+    if args.pipeline == "heldout":
+        return train_heldout_and_save(args.version or "v1.2.0", output_dir)
     
     results = train_and_save(
         min_samples=args.samples,

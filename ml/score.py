@@ -19,6 +19,8 @@ import joblib
 import shap
 
 from .features import prepare_features, get_feature_display_name, engineer_features
+from . import datasets as ds
+from .gate import gate_decision
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -34,15 +36,22 @@ class PassPrediction:
     estimated_loss_cents: int
     shap_contributions: Dict[str, float]
     model_version: str
+    gate_confidence_percent: Optional[int] = None
+    gate_route: Optional[str] = None
     
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        d = {
             "pass_id": self.pass_id,
             "failure_probability": round(self.failure_probability, 4),
             "estimated_loss_cents": self.estimated_loss_cents,
             "shap_contributions": self.shap_contributions,
             "model_version": self.model_version,
         }
+        if self.gate_confidence_percent is not None:
+            # Feed to confidence_gate::process_claim_decision as confidence_percent.
+            d["gate_confidence_percent"] = self.gate_confidence_percent
+            d["gate_route"] = self.gate_route
+        return d
     
     def to_spacetimedb_json(self) -> str:
         """Format for SpacetimeDB reducer call."""
@@ -65,6 +74,7 @@ class PassFailureModel:
         self.model = None
         self.config = None
         self.explainer = None
+        self.calibrator = None
         
         self._load_model()
     
@@ -93,6 +103,9 @@ class PassFailureModel:
             model_path = self.model_dir / f"model_{self.version}.lgb"
         
         self.model = joblib.load(model_path)
+        calibrator_path = self.model_dir / f"calibrator_{self.version}.joblib"
+        if calibrator_path.exists():
+            self.calibrator = joblib.load(calibrator_path)
         
         # Create SHAP explainer
         self.explainer = shap.TreeExplainer(self.model)
@@ -107,10 +120,32 @@ class PassFailureModel:
     def shap_expected_value(self) -> float:
         return self.config["shap_expected_value"]
     
+    @property
+    def is_heldout_pipeline(self) -> bool:
+        return self.config.get("pipeline") == "heldout"
+
+    def _prepare(self, X: pd.DataFrame) -> Tuple[pd.DataFrame, List[str]]:
+        if not self.is_heldout_pipeline:
+            return prepare_features(X, self.feature_names)
+        # Station-state inputs (recent_*_lag1h) come from the caller's record of the
+        # station's earlier passes (see datasets.station_recent_state); missing -> NaN.
+        df = ds.add_physical_features(X.reset_index(drop=True))
+        cfg = self.config
+        out = pd.DataFrame(index=df.index)
+        for c in cfg["numeric_features"]:
+            out[c] = pd.to_numeric(df[c], errors="coerce") if c in df.columns else np.nan
+        for c in cfg["categorical_features"]:
+            values = df[c].fillna("NA").astype(str) if c in df.columns else ["NA"] * len(df)
+            out[c] = pd.Categorical(values, categories=cfg["categories"][c])
+        return out[self.feature_names], self.feature_names
+
+    def _calibrate(self, raw: np.ndarray) -> np.ndarray:
+        return self.calibrator.predict(raw) if self.calibrator is not None else raw
+
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
         """Predict failure probabilities."""
-        X_prepared, _ = prepare_features(X, self.feature_names)
-        return self.model.predict(X_prepared)
+        X_prepared, _ = self._prepare(X)
+        return self._calibrate(self.model.predict(X_prepared))
     
     def predict_with_shap(
         self,
@@ -130,10 +165,10 @@ class PassFailureModel:
             List of PassPrediction objects
         """
         # Prepare features
-        X_prepared, features = prepare_features(X, self.feature_names)
+        X_prepared, features = self._prepare(X)
         
         # Get predictions
-        probs = self.model.predict(X_prepared)
+        probs = self._calibrate(self.model.predict(X_prepared))
         
         # Get SHAP values
         shap_values = self.explainer.shap_values(X_prepared)
@@ -166,12 +201,15 @@ class PassFailureModel:
             revenue = revenue_cents[i] if i < len(revenue_cents) else 300000
             loss_cents = int(prob * revenue)
             
+            gate = gate_decision(prob, self.config.get("gate")) if self.is_heldout_pipeline else None
             results.append(PassPrediction(
                 pass_id=pass_ids[i],
                 failure_probability=prob,
                 estimated_loss_cents=loss_cents,
                 shap_contributions=contributions,
                 model_version=self.version,
+                gate_confidence_percent=gate["confidence_percent"] if gate else None,
+                gate_route=gate["route"] if gate else None,
             ))
         
         return results
@@ -187,7 +225,7 @@ class PassFailureModel:
             DataFrame with predictions and SHAP contributions
         """
         pass_ids = passes_df.get("pass_id", passes_df.index).tolist()
-        revenue = passes_df.get("revenue_cents", [300000] * len(passes_df)).tolist()
+        revenue = list(passes_df["revenue_cents"]) if "revenue_cents" in passes_df else [300000] * len(passes_df)
         
         predictions = self.predict_with_shap(passes_df, pass_ids, revenue)
         
@@ -198,6 +236,8 @@ class PassFailureModel:
                 "failure_probability": pred.failure_probability,
                 "estimated_loss_cents": pred.estimated_loss_cents,
                 "model_version": pred.model_version,
+                "gate_confidence_percent": pred.gate_confidence_percent,
+                "gate_route": pred.gate_route,
             }
             # Add top 3 SHAP factors
             for i, (factor, contrib) in enumerate(list(pred.shap_contributions.items())[:3]):
@@ -230,7 +270,7 @@ def score_from_json(passes_json: str, model_version: Optional[str] = None) -> st
     model = PassFailureModel(version=model_version)
     
     pass_ids = df.get("pass_id", df.index).tolist()
-    revenue = df.get("revenue_cents", [300000] * len(df)).tolist()
+    revenue = list(df["revenue_cents"]) if "revenue_cents" in df else [300000] * len(df)
     
     predictions = model.predict_with_shap(df, pass_ids, revenue)
     
