@@ -2,15 +2,19 @@
 //!
 //! Synthetic but structured like a real review desk. Claim volume per station and
 //! month is the station's pass count (monthly revenue / average pass fee) times
-//! the dispute rate. Reviewers follow consistent practices in some situations
+//! the claim rate the pass generator assumes (drops plus disputes). Reviewers follow consistent practices in some situations
 //! (minable patterns), disagree in others (contradiction zones), and occasionally
 //! decide against the evidence for reasons the record does not capture (noise).
 
 use crate::contracts::CustomerContract;
 use crate::evidence::{Features, APPROVE, DENY, PARTIAL};
 
-/// Share of passes that become a customer claim.
-pub const DISPUTE_RATE: f64 = 0.012;
+/// Share of passes that become a customer claim: the pass generator's drop rate
+/// plus its dispute rate (fixtures/contracts.json), so both seeds agree.
+pub fn claim_rate() -> f64 {
+    let v: serde_json::Value = serde_json::from_str(include_str!("../../fixtures/contracts.json")).expect("contracts.json");
+    v["drop_rate"].as_f64().unwrap_or(0.015) + v["settlement"]["dispute_per_mille"].as_f64().unwrap_or(20.0) / 1000.0
+}
 pub const HISTORY_DAYS: i64 = 182;
 /// Share of decisions in the consistent zones that go against the usual practice.
 pub const NOISE_RATE: f64 = 0.01;
@@ -329,10 +333,11 @@ pub fn generate(stations: &[StationVolume], contracts: &[CustomerContract]) -> V
     if established.is_empty() {
         return Vec::new();
     }
+    let rate = claim_rate();
     let mut out = Vec::new();
     for station in stations {
         let fee = station.avg_pass_fee_cents.max(1);
-        let per_month = (station.monthly_revenue_cents as f64 / fee as f64 * DISPUTE_RATE).round() as i64;
+        let per_month = (station.monthly_revenue_cents as f64 / fee as f64 * rate).round() as i64;
         for month in 0..6i64 {
             for i in 0..per_month {
                 let mut rng = Rng::new(hash(&[str_hash(&station.station_id), month as u64, i as u64]));
@@ -352,27 +357,25 @@ pub mod tests {
     use super::*;
     use crate::contracts::fixture_contracts;
 
+    /// Volumes the pass generator would produce: the contracted daily contacts
+    /// spread over the fixture stations at the default pass fee.
     pub fn fixture_volumes() -> Vec<StationVolume> {
         let stations: serde_json::Value = serde_json::from_str(include_str!("../../fixtures/stations.json")).unwrap();
-        let passes: serde_json::Value = serde_json::from_str(include_str!("../../fixtures/passes.json")).unwrap();
-        stations
+        let config: serde_json::Value = serde_json::from_str(include_str!("../../fixtures/contracts.json")).unwrap();
+        let contacts_per_day: f64 = config["contracts"]
             .as_array()
             .unwrap()
             .iter()
-            .map(|s| {
-                let id = s["id"].as_str().unwrap().to_string();
-                let fees: Vec<i64> = passes
-                    .as_array()
-                    .unwrap()
-                    .iter()
-                    .filter(|p| p["station_id"] == s["id"])
-                    .map(|p| p["revenue_cents"].as_i64().unwrap())
-                    .collect();
-                StationVolume {
-                    avg_pass_fee_cents: if fees.is_empty() { DEFAULT_PASS_FEE_CENTS } else { fees.iter().sum::<i64>() / fees.len() as i64 },
-                    monthly_revenue_cents: s["monthly_revenue_cents"].as_i64().unwrap(),
-                    station_id: id,
-                }
+            .map(|c| c["norad_ids"].as_array().unwrap().len() as f64 * c["contacts_per_satellite_per_day"].as_f64().unwrap())
+            .sum();
+        let stations = stations.as_array().unwrap();
+        let per_station = contacts_per_day * 30.0 / stations.len() as f64;
+        stations
+            .iter()
+            .map(|s| StationVolume {
+                station_id: s["id"].as_str().unwrap().to_string(),
+                monthly_revenue_cents: (per_station * DEFAULT_PASS_FEE_CENTS as f64) as i64,
+                avg_pass_fee_cents: DEFAULT_PASS_FEE_CENTS,
             })
             .collect()
     }
@@ -387,7 +390,7 @@ pub mod tests {
         let history = fixture_history();
         let expected: f64 = volumes
             .iter()
-            .map(|v| (v.monthly_revenue_cents as f64 / v.avg_pass_fee_cents as f64 * DISPUTE_RATE).round() * 6.0)
+            .map(|v| (v.monthly_revenue_cents as f64 / v.avg_pass_fee_cents as f64 * claim_rate()).round() * 6.0)
             .sum();
         assert_eq!(history.len() as f64, expected + 3.0);
         let revenue: i64 = volumes.iter().map(|v| v.monthly_revenue_cents * 6).sum();
@@ -423,8 +426,9 @@ pub mod tests {
     }
 }
 
-/// Fallback pass fee when a station has no passes yet.
-pub const DEFAULT_PASS_FEE_CENTS: i64 = 470_000;
+/// Fallback pass fee when a station has no passes yet: a 10-minute contact at
+/// the $20/min midpoint of the fixture's narrowband and wideband rates.
+pub const DEFAULT_PASS_FEE_CENTS: i64 = 20_000;
 
 // ---------------------------------------------------------------- seeding
 

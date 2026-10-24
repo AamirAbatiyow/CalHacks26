@@ -520,3 +520,8 @@
 .case-detail .btn-approve {
   text-transform: capitalize;
 }
+
+.cd-shap li em {
+  font-style: normal;
+  color: var(--color-muted);
+}

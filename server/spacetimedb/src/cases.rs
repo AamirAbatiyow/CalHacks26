@@ -448,6 +448,7 @@ fn analyze(ctx: &ReducerContext, intake: Intake) -> ClaimCase {
             policy_version: policy_version.clone(),
             model_version: a.model_version.clone(),
             created_at: ctx.timestamp,
+            pass_ids: vec![pass.id],
         });
         case.escalation_id = Some(row.id);
     }

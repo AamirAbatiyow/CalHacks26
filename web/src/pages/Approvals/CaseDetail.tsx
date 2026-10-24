@@ -77,8 +77,8 @@ function PassTimeline({ c, contract, maintenance }: { c: ClaimCase; contract?: C
       {contract && <line className="min-el" x1={0} x2={W} y1={y(contract.minElevationDeg)} y2={y(contract.minElevationDeg)} />}
       <polyline className="elev" points={points} />
       <line className="los" x1={losX} x2={losX} y1={top} y2={H - bottom} />
-      <text x={2} y={H - 4}>AOS {fmtTime(start)}</text>
-      <text x={losX} y={H - 4} textAnchor="middle">LOS {fmtTime(los)}</text>
+      <text x={2} y={H - 4}>AOS {fmtTime(start)}{losX <= 70 ? ` · LOS ${fmtTime(los)}` : ''}</text>
+      {losX > 70 && losX < W - 50 && <text x={losX} y={H - 4} textAnchor="middle">LOS {fmtTime(los)}</text>}
       <text x={W - 2} y={H - 4} textAnchor="end">{fmtTime(end)}</text>
       {contract && <text x={W - 2} y={y(contract.minElevationDeg) - 3} textAnchor="end">min {contract.minElevationDeg}°</text>}
     </svg>
@@ -301,7 +301,7 @@ export default function CaseDetail({ c, contract, decisions, onDecided }: Props)
           <ul className="cd-shap">
             {ev.shap.slice(0, 6).map(s => (
               <li key={String(s.id)}>
-                <span>{s.detail}</span>
+                <span>{s.feature} <em>{s.detail}</em></span>
                 <span className="bar"><i className={s.value >= 0 ? 'pos' : 'neg'} style={{ width: `${Math.min(100, Math.abs(s.value) * 40)}%` }} /></span>
                 <span>{s.value >= 0 ? '+' : ''}{s.value.toFixed(2)}</span>
               </li>
@@ -309,7 +309,7 @@ export default function CaseDetail({ c, contract, decisions, onDecided }: Props)
           </ul>
         </Section>
 
-        <Section title="Cedar rules" aside={`policy ${c.policyVersion}`}>
+        <Section title="Cedar rules" aside={`policy ${c.policyVersion}`} wide>
           <ul className="cd-rules">
             {ev.rules.map(r => (
               <li key={String(r.id)} className={r.status}>

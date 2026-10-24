@@ -236,16 +236,26 @@ fn proxy_terms(f: &Features) -> Vec<(&'static str, String, f64, f64, f64)> {
         3.0
     };
     let band = f.weather_band();
+    // Indicator features are labeled by the state the claim is actually in, so a
+    // positive contribution from an absent risk reads as such.
+    let flag = |on: bool, yes: &'static str, no: &'static str| (if on { yes } else { no }, on as i32 as f64);
+    let (excluded, excluded_x) = flag(band == "excluded", "Space weather excluded", "Space weather not excluded");
+    let (near, near_x) = flag(band == "near_threshold", "Space weather near exclusion", "Space weather not near exclusion");
+    let (notified, notified_x) = flag(f.maintenance == "notified", "Notified maintenance", "No notified maintenance");
+    let (outage, outage_x) = flag(f.maintenance == "unplanned", "Unplanned station outage", "No unplanned outage");
+    let (low, low_x) = flag(f.elevation_band() != "ok", "Below contract min elevation", "Above contract min elevation");
+    let (failed, failed_x) = flag(f.integrity == "fail", "Data integrity failed", "Data integrity not failed");
+    let (pending, pending_x) = flag(f.integrity == "pending", "Data integrity pending", "Data integrity settled");
     vec![
         ("Telemetry loss", format!("{}% of contact without downlink", f.lost_pct), lost, 2.0, 0.55),
-        ("Space weather excluded", format!("Kp {:.1} vs contract exclusion {:.1}", f.kp, f.kp_exclusion), (band == "excluded") as i32 as f64, -8.5, 0.12),
-        ("Space weather near exclusion", format!("Kp {:.1}, {:.1} below exclusion", f.kp, (f.kp_exclusion - f.kp).max(0.0)), (band == "near_threshold") as i32 as f64, -1.5, 0.02),
-        ("Notified maintenance", format!("{}h notice, contract needs {}h", f.notice_hours, f.required_notice_hours), (f.maintenance == "notified") as i32 as f64, -8.5, 0.06),
-        ("Unplanned station outage", "maintenance log".to_string(), (f.maintenance == "unplanned") as i32 as f64, 1.5, 0.01),
-        ("Below contract min elevation", format!("{:.1}° max vs {:.0}° minimum", f.max_elevation_deg, f.min_elevation_deg), (f.elevation_band() != "ok") as i32 as f64, -6.0, 0.04),
-        ("Data integrity failed", "checksum and frame counts".to_string(), (f.integrity == "fail") as i32 as f64, -7.0, 0.03),
-        ("Data integrity pending", "verification not complete".to_string(), (f.integrity == "pending") as i32 as f64, -1.0, 0.05),
-        ("Claim over contract credit", format!("{} claimed vs {} contract credit", dollars(f.claimed_cents), dollars(f.contract_credit_cents())), (ratio - 1.0).clamp(0.0, 3.0), -0.8, 0.15),
+        (excluded, format!("Kp {:.1} vs contract exclusion {:.1}", f.kp, f.kp_exclusion), excluded_x, -8.5, 0.12),
+        (near, format!("Kp {:.1}, {:.1} below exclusion", f.kp, (f.kp_exclusion - f.kp).max(0.0)), near_x, -1.5, 0.02),
+        (notified, if f.maintenance == "none" { "none logged".to_string() } else { format!("{}h notice, contract needs {}h", f.notice_hours, f.required_notice_hours) }, notified_x, -8.5, 0.06),
+        (outage, "maintenance log".to_string(), outage_x, 1.5, 0.01),
+        (low, format!("{:.1}° max vs {:.0}° minimum", f.max_elevation_deg, f.min_elevation_deg), low_x, -6.0, 0.04),
+        (failed, "checksum and frame counts".to_string(), failed_x, -7.0, 0.03),
+        (pending, format!("integrity {}", f.integrity), pending_x, -1.0, 0.05),
+        ("Claim vs contract credit", format!("{} claimed vs {} contract credit", dollars(f.claimed_cents), dollars(f.contract_credit_cents())), (ratio - 1.0).clamp(0.0, 3.0), -0.8, 0.15),
     ]
 }
 
