@@ -1,5 +1,8 @@
 use spacetimedb::{ReducerContext, SpacetimeType, Table, Timestamp};
 
+use crate::authority::cedar_policy_store;
+use crate::learning;
+
 #[derive(SpacetimeType, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PolicyStatus {
     Proposed,
@@ -108,6 +111,8 @@ pub fn seed_cedar_rule(
     });
 }
 
+/// Measures a replay of every labeled decision under the proposed Cedar text.
+/// The scrubber only reveals progress; the metrics are final from the start.
 #[spacetimedb::reducer]
 pub fn start_replay(
     ctx: &ReducerContext,
@@ -118,56 +123,57 @@ pub fn start_replay(
     for existing in ctx.db.policy_replay().proposed_version_id().filter(&proposed_version_id) {
         ctx.db.policy_replay().id().delete(existing.id);
     }
-
+    let text = |v: &str| ctx.db.cedar_policy_store().version().find(v.to_string()).map(|p| p.policy_text);
+    let (metrics, block_reason) = match (text(&current_version_id), text(&proposed_version_id)) {
+        (Some(before), Some(after)) => match (learning::parse_policies(&before), learning::parse_policies(&after)) {
+            (Ok(before), Ok(after)) => {
+                let labeled = learning::all_labeled(ctx);
+                let m = learning::replay(&labeled, &before, &after);
+                let reason = match labeled.first() {
+                    Some(l) if learning::lowers_confidence_floor(&after, &l.features) => "auto-decides below the 95% confidence floor".to_string(),
+                    _ if m.regressed() => format!("precision regression ({:.2}% to {:.2}%)", m.precision_before(), m.precision_after()),
+                    _ => String::new(),
+                };
+                (m, reason)
+            }
+            (_, Err(e)) | (Err(e), _) => (learning::ReplayMetrics::default(), format!("Cedar parse error: {}", e)),
+        },
+        _ => (learning::ReplayMetrics::default(), "no Cedar text stored for this version".to_string()),
+    };
+    let total = if metrics.cases > 0 { metrics.cases } else { total_claims };
     ctx.db.policy_replay().insert(PolicyReplay {
         id: 0,
         proposed_version_id,
         current_version_id,
         status: ReplayStatus::Running,
-        total_claims,
+        total_claims: total,
         current_claim: 0,
-        precision_before: 98.1,
-        precision_after: 98.1,
-        decisions_changed: 0,
-        dollar_impact_cents: 0,
-        block_reason: String::new(),
+        precision_before: metrics.precision_before(),
+        precision_after: metrics.precision_after(),
+        decisions_changed: metrics.resolved,
+        dollar_impact_cents: metrics.dollar_impact_cents,
+        block_reason,
         created_at: ctx.timestamp,
         is_playing: true,
         speed_multiplier: 4.0,
     });
 }
 
-/// Replay state with the scrubber at `claim`; reaching the end stops playback.
+/// Replay state with the scrubber at `claim`; reaching the end stops playback
+/// and reveals the measured verdict.
 fn replay_at_claim(replay: PolicyReplay, claim: u32) -> PolicyReplay {
     let new_claim = claim.min(replay.total_claims);
-    let progress = if replay.total_claims == 0 {
-        1.0
+    let status = if new_claim < replay.total_claims {
+        ReplayStatus::Running
+    } else if replay.block_reason.is_empty() {
+        ReplayStatus::Completed
     } else {
-        new_claim as f32 / replay.total_claims as f32
+        ReplayStatus::Blocked
     };
-
-    let precision_after = 98.1 - (progress * 1.7);
-    let decisions_changed = (progress * 37.0) as u32;
-    let dollar_impact = (progress * 5420000.0) as i64;
-
-    let (new_status, block_reason) = if new_claim >= replay.total_claims {
-        if precision_after < replay.precision_before {
-            (ReplayStatus::Blocked, "precision regression".to_string())
-        } else {
-            (ReplayStatus::Completed, String::new())
-        }
-    } else {
-        (ReplayStatus::Running, String::new())
-    };
-
     PolicyReplay {
         current_claim: new_claim,
-        precision_after,
-        decisions_changed,
-        dollar_impact_cents: dollar_impact,
-        is_playing: replay.is_playing && new_status == ReplayStatus::Running,
-        status: new_status,
-        block_reason,
+        is_playing: replay.is_playing && status == ReplayStatus::Running,
+        status,
         ..replay
     }
 }
@@ -288,6 +294,7 @@ pub fn promote_policy_version(ctx: &ReducerContext, version_id: String) {
             ..version
         });
         crate::authority::activate_policy_version(ctx, &version_id, "Promoted on the Policies page");
+        crate::learning::on_promoted(ctx, &version_id);
     }
 }
 
@@ -341,26 +348,41 @@ pub fn seed_initial_policies(ctx: &ReducerContext) {
     });
 
     let rules = [
-        ("AI confidence threshold", "Auto-approve when AI confidence is at or above 95%; anything lower escalates",
-         r#"permit(
-  principal,
-  action == Action::"auto_approve",
+        ("Auto-decide at 95% confidence", "The AI decides on its own only at 95% confidence or higher; there is no dollar cap",
+         r#"@id("auto-decide-95")
+permit(
+  principal == GroundTruth::Actor::"ai_analyst",
+  action == GroundTruth::Action::"auto_approve",
   resource
 ) when {
-  context.ai_confidence >= 0.95
+  context.confidence_percent >= 95
 };"#),
-        ("Escalate repeated disputes", "Escalate if customer has 3+ disputes in 30 days",
+        ("Escalate below 95%", "Anything below 95% confidence goes to a human approver",
          r#"permit(
-  principal,
-  action == Action::"escalate",
+  principal == GroundTruth::Actor::"ai_analyst",
+  action == GroundTruth::Action::"escalate",
   resource
-) when {
-  principal.dispute_count_30d >= 3
-};"#),
+);"#),
+        ("AI cannot edit policies", "Policy changes need a human; learned rules are proposals until promoted",
+         r#"forbid(
+  principal == GroundTruth::Actor::"ai_analyst",
+  action == GroundTruth::Action::"edit_policy",
+  resource
+);"#),
+        ("Human approver authority", "Human approvers decide escalated claims",
+         r#"permit(
+  principal == GroundTruth::Actor::"human_approver",
+  action in [
+    GroundTruth::Action::"approve",
+    GroundTruth::Action::"deny",
+    GroundTruth::Action::"approve_escalation"
+  ],
+  resource
+);"#),
     ];
 
     for version_id in ["v1", "v2", "v3", "v4", "v5"] {
-        let rule_count = if version_id == "v1" { 1 } else { 2 };
+        let rule_count = match version_id { "v1" => 1, "v2" => 2, "v3" => 3, _ => 4 };
 
         for (i, (name, desc, code)) in rules.iter().enumerate().take(rule_count) {
             ctx.db.cedar_rule().insert(CedarRule {
@@ -376,19 +398,19 @@ pub fn seed_initial_policies(ctx: &ReducerContext) {
     }
 
     ctx.db.cedar_rule().insert(CedarRule {
-        id: "v5-r3".to_string(),
+        id: "v5-r5".to_string(),
         policy_version_id: "v5".to_string(),
         name: "Lower AI threshold".to_string(),
-        description: "Auto-approve when AI confidence exceeds 90% (proposed change)".to_string(),
+        description: "Auto-decide at 90% confidence (proposed change)".to_string(),
         cedar_code: r#"permit(
-  principal,
-  action == Action::"auto_approve",
+  principal == GroundTruth::Actor::"ai_analyst",
+  action == GroundTruth::Action::"auto_approve",
   resource
 ) when {
-  context.ai_confidence >= 0.90
+  context.confidence_percent >= 90
 };"#.to_string(),
         enabled: true,
-        order_index: 2,
+        order_index: 4,
     });
 
     ctx.db.policy_replay().insert(PolicyReplay {

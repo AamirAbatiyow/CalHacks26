@@ -1,0 +1,99 @@
+[
+  {
+    "case_id": "CLM-20001",
+    "customer_id": "northpoint",
+    "weather": "clear",
+    "lost_pct": 100,
+    "claimed_pct_of_fee": 100,
+    "integrity": "pass",
+    "maintenance": "none",
+    "channel": "portal",
+    "author": "Northpoint Orbital NOC",
+    "message": "The contact dropped two minutes after AOS and never reacquired. Requesting the service credit under §7.2."
+  },
+  {
+    "case_id": "CLM-20002",
+    "customer_id": "polar-data",
+    "weather": "near",
+    "lost_pct": 100,
+    "claimed_pct_of_fee": 100,
+    "integrity": "pass",
+    "maintenance": "none",
+    "channel": "email",
+    "author": "Ingrid Solberg, Polar Data Systems",
+    "message": "Our pass dropped during last night's geomagnetic storm and we received nothing. NOAA was reporting strong aurora. We expect full credit for the pass under our SLA."
+  },
+  {
+    "case_id": "CLM-20003",
+    "customer_id": "aether",
+    "weather": "near",
+    "lost_pct": 95,
+    "claimed_pct_of_fee": 100,
+    "integrity": "pass",
+    "maintenance": "none",
+    "channel": "ticket",
+    "author": "Aether Dynamics mission ops",
+    "message": "Downlink failed shortly after acquisition while the storm was ongoing. Only a few frames came through. Please apply the Schedule B credit."
+  },
+  {
+    "case_id": "CLM-20004",
+    "customer_id": "kestrel",
+    "weather": "clear",
+    "lost_pct": 45,
+    "claimed_pct_of_fee": 60,
+    "integrity": "pass",
+    "maintenance": "short_notice",
+    "notice_hours": 30,
+    "channel": "email",
+    "author": "Kestrel Earth Imaging",
+    "message": "We were told about the antenna work the afternoon before. Nearly half of our contact was lost. We did not agree to that window."
+  },
+  {
+    "case_id": "CLM-20005",
+    "customer_id": "nexus",
+    "weather": "clear",
+    "lost_pct": 18,
+    "claimed_pct_of_fee": 100,
+    "integrity": "pending",
+    "maintenance": "none",
+    "channel": "ticket",
+    "author": "Nexus Corp ground segment",
+    "message": "Files from this pass are corrupted end to end, so effectively nothing usable arrived. We are requesting a full refund of the pass fee."
+  },
+  {
+    "case_id": "CLM-20006",
+    "customer_id": "helix",
+    "weather": "clear",
+    "lost_pct": 50,
+    "claimed_pct_of_fee": 50,
+    "integrity": "pass",
+    "maintenance": "none",
+    "channel": "portal",
+    "author": "Helix Orbital",
+    "message": "First claim on our new account: about half the contact had no downlink. Please advise on the credit."
+  },
+  {
+    "case_id": "CLM-20007",
+    "customer_id": "skynet",
+    "weather": "excluded",
+    "lost_pct": 70,
+    "claimed_pct_of_fee": 70,
+    "integrity": "pass",
+    "maintenance": "none",
+    "channel": "email",
+    "author": "SkyNet Communications",
+    "message": "Contact degraded badly during the solar storm. Requesting credit for the lost minutes."
+  },
+  {
+    "case_id": "CLM-20008",
+    "customer_id": "orbital-sci",
+    "weather": "clear",
+    "lost_pct": 30,
+    "claimed_pct_of_fee": 100,
+    "integrity": "pass",
+    "maintenance": "none",
+    "channel": "email",
+    "author": "Orbital Sciences Inc",
+    "message": "We lost the end of the pass and with it the whole science dump. Requesting a full refund of the pass fee."
+  }
+]
