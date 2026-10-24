@@ -10,6 +10,14 @@ pub enum PassStatus {
 }
 
 #[derive(SpacetimeType, Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ClaimStatus {
+    Pending,
+    Approved,
+    Denied,
+    Edited,
+}
+
+#[derive(SpacetimeType, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum FlareClass {
     None,
     C,
@@ -116,6 +124,22 @@ pub struct DecisionRecord {
     pub reason: String,
     pub policy_version: String,
     pub model_version: String,
+}
+
+#[spacetimedb::table(accessor = claim, public)]
+pub struct Claim {
+    #[primary_key]
+    #[auto_inc]
+    pub id: u64,
+    pub customer_name: String,
+    pub amount_claimed_cents: i64,
+    pub proposed_amount_cents: i64,
+    pub confidence_pct: u8,
+    pub escalation_reason: String,
+    pub status: ClaimStatus,
+    pub policy_version: String,
+    pub model_version: String,
+    pub created_at: Timestamp,
 }
 
 #[spacetimedb::table(accessor = sim_tick_schedule, scheduled(sim_tick), public)]
@@ -355,6 +379,114 @@ pub fn record_decision(
         policy_version,
         model_version,
     });
+}
+
+#[spacetimedb::reducer]
+pub fn seed_claim(
+    ctx: &ReducerContext,
+    customer_name: String,
+    amount_claimed_cents: i64,
+    proposed_amount_cents: i64,
+    confidence_pct: u8,
+    escalation_reason: String,
+    policy_version: String,
+    model_version: String,
+) {
+    ctx.db.claim().insert(Claim {
+        id: 0,
+        customer_name,
+        amount_claimed_cents,
+        proposed_amount_cents,
+        confidence_pct,
+        escalation_reason,
+        status: ClaimStatus::Pending,
+        policy_version,
+        model_version,
+        created_at: ctx.timestamp,
+    });
+}
+
+#[spacetimedb::reducer]
+pub fn approve_claim(
+    ctx: &ReducerContext,
+    claim_id: u64,
+    policy_version: String,
+    model_version: String,
+) {
+    if let Some(claim) = ctx.db.claim().id().find(claim_id) {
+        ctx.db.claim().id().update(Claim {
+            status: ClaimStatus::Approved,
+            ..claim.clone()
+        });
+        ctx.db.decision_record().insert(DecisionRecord {
+            id: 0,
+            created_at: ctx.timestamp,
+            decision_type: DecisionType::CreditIssued,
+            outcome: DecisionOutcome::Approved,
+            pass_id: None,
+            station_id: None,
+            amount_cents: claim.proposed_amount_cents,
+            reason: format!("Approved escalated claim for {}", claim.customer_name),
+            policy_version,
+            model_version,
+        });
+    }
+}
+
+#[spacetimedb::reducer]
+pub fn deny_claim(
+    ctx: &ReducerContext,
+    claim_id: u64,
+    policy_version: String,
+    model_version: String,
+) {
+    if let Some(claim) = ctx.db.claim().id().find(claim_id) {
+        ctx.db.claim().id().update(Claim {
+            status: ClaimStatus::Denied,
+            ..claim.clone()
+        });
+        ctx.db.decision_record().insert(DecisionRecord {
+            id: 0,
+            created_at: ctx.timestamp,
+            decision_type: DecisionType::DisputeResolved,
+            outcome: DecisionOutcome::Denied,
+            pass_id: None,
+            station_id: None,
+            amount_cents: 0,
+            reason: format!("Denied escalated claim for {}", claim.customer_name),
+            policy_version,
+            model_version,
+        });
+    }
+}
+
+#[spacetimedb::reducer]
+pub fn edit_claim(
+    ctx: &ReducerContext,
+    claim_id: u64,
+    new_amount_cents: i64,
+    policy_version: String,
+    model_version: String,
+) {
+    if let Some(claim) = ctx.db.claim().id().find(claim_id) {
+        ctx.db.claim().id().update(Claim {
+            status: ClaimStatus::Edited,
+            proposed_amount_cents: new_amount_cents,
+            ..claim.clone()
+        });
+        ctx.db.decision_record().insert(DecisionRecord {
+            id: 0,
+            created_at: ctx.timestamp,
+            decision_type: DecisionType::CreditIssued,
+            outcome: DecisionOutcome::Approved,
+            pass_id: None,
+            station_id: None,
+            amount_cents: new_amount_cents,
+            reason: format!("Edited and approved claim for {} (adjusted to {} cents)", claim.customer_name, new_amount_cents),
+            policy_version,
+            model_version,
+        });
+    }
 }
 
 #[spacetimedb::reducer(client_connected)]

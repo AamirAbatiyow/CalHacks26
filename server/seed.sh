@@ -66,4 +66,18 @@ jq -c '.[]' "$FIXTURES_DIR/space_weather.json" | while read -r weather; do
   spacetime call "$MODULE" seed_space_weather --server "$SERVER" -- "$timestamp_micros" "$kp" "$flare" "$dst" || true
 done
 
+# Seed claims (escalated for human review)
+echo "Seeding claims..."
+jq -c '.[]' "$FIXTURES_DIR/claims.json" | while read -r claim; do
+  customer_name=$(echo "$claim" | jq -r '.customer_name')
+  amount_claimed=$(echo "$claim" | jq -r '.amount_claimed_cents')
+  proposed_amount=$(echo "$claim" | jq -r '.proposed_amount_cents')
+  confidence=$(echo "$claim" | jq -r '.confidence_pct')
+  reason=$(echo "$claim" | jq -r '.escalation_reason')
+  policy=$(echo "$claim" | jq -r '.policy_version')
+  model=$(echo "$claim" | jq -r '.model_version')
+  
+  spacetime call "$MODULE" seed_claim --server "$SERVER" -- "\"$customer_name\"" "$amount_claimed" "$proposed_amount" "$confidence" "\"$reason\"" "\"$policy\"" "\"$model\"" || true
+done
+
 echo "Seeding complete!"

@@ -6,10 +6,20 @@ import type {
   SpaceWeather,
   SimClock,
   Kpi,
+  Claim,
   PlaybackSpeed,
 } from '../types';
-import { PassStatus, FlareClass } from '../types';
+import { PassStatus, FlareClass, ClaimStatus } from '../types';
 import { SPACETIMEDB_HOST, SPACETIMEDB_MODULE } from '../config';
+
+function mapClaimStatus(status: string): ClaimStatus {
+  switch (status) {
+    case 'Approved': return ClaimStatus.Approved;
+    case 'Denied': return ClaimStatus.Denied;
+    case 'Edited': return ClaimStatus.Edited;
+    default: return ClaimStatus.Pending;
+  }
+}
 
 function mapPassStatus(status: string): PassStatus {
   switch (status) {
@@ -43,6 +53,7 @@ export function useSpacetimeDB() {
   const [spaceWeather, setSpaceWeather] = useState<SpaceWeather[]>([]);
   const [simClock, setSimClock] = useState<SimClock | null>(null);
   const [kpi, setKpi] = useState<Kpi | null>(null);
+  const [claims, setClaims] = useState<Claim[]>([]);
   
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
@@ -67,6 +78,7 @@ export function useSpacetimeDB() {
               'SELECT * FROM space_weather',
               'SELECT * FROM sim_clock',
               'SELECT * FROM kpi',
+              'SELECT * FROM claim',
             ],
           },
         }));
@@ -174,6 +186,26 @@ export function useSpacetimeDB() {
                     });
                   }
                   break;
+
+                case 'claim':
+                  setClaims(prev => {
+                    const deleteIds = new Set(deletes.map((d: {id: number}) => BigInt(d.id)));
+                    const filtered = prev.filter(c => !deleteIds.has(c.id));
+                    const newClaims = inserts.map((row: Record<string, unknown>) => ({
+                      id: BigInt((row.id as number) || 0),
+                      customerName: row.customer_name as string,
+                      amountClaimedCents: BigInt((row.amount_claimed_cents as number) || 0),
+                      proposedAmountCents: BigInt((row.proposed_amount_cents as number) || 0),
+                      confidencePct: row.confidence_pct as number,
+                      escalationReason: row.escalation_reason as string,
+                      status: mapClaimStatus(row.status as string),
+                      policyVersion: row.policy_version as string,
+                      modelVersion: row.model_version as string,
+                      createdAt: BigInt(((row.created_at as {microseconds?: number})?.microseconds) || Date.now() * 1000),
+                    }));
+                    return [...filtered, ...newClaims];
+                  });
+                  break;
               }
             }
           }
@@ -235,6 +267,18 @@ export function useSpacetimeDB() {
     callReducer('go_live', []);
   }, [callReducer]);
 
+  const approveClaim = useCallback((claimId: bigint, policyVersion: string, modelVersion: string) => {
+    callReducer('approve_claim', [Number(claimId), policyVersion, modelVersion]);
+  }, [callReducer]);
+
+  const denyClaim = useCallback((claimId: bigint, policyVersion: string, modelVersion: string) => {
+    callReducer('deny_claim', [Number(claimId), policyVersion, modelVersion]);
+  }, [callReducer]);
+
+  const editClaim = useCallback((claimId: bigint, newAmountCents: bigint, policyVersion: string, modelVersion: string) => {
+    callReducer('edit_claim', [Number(claimId), Number(newAmountCents), policyVersion, modelVersion]);
+  }, [callReducer]);
+
   return {
     connected,
     stations,
@@ -243,9 +287,13 @@ export function useSpacetimeDB() {
     spaceWeather,
     simClock,
     kpi,
+    claims,
     setPlaybackPlaying,
     setPlaybackSpeedDb,
     seekToTime,
     goLive,
+    approveClaim,
+    denyClaim,
+    editClaim,
   };
 }

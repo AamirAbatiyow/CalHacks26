@@ -1,0 +1,22 @@
+.breakit-page {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.breakit-page .page-placeholder {
+  text-align: center;
+  color: var(--color-secondary);
+}
+
+.breakit-page .page-placeholder h2 {
+  font-size: var(--font-heading-md);
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: var(--color-primary);
+}
+
+.breakit-page .page-placeholder p {
+  font-size: var(--font-metadata);
+}

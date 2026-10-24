@@ -1,0 +1,56 @@
+[
+  {
+    "customer_name": "Polar Data Systems",
+    "amount_claimed_cents": 4200000,
+    "proposed_amount_cents": 4200000,
+    "confidence_pct": 88,
+    "escalation_reason": "Transaction exceeds standard daily threshold. Manual verification of satellite bandwidth allocation required.",
+    "policy_version": "v4",
+    "model_version": "v2"
+  },
+  {
+    "customer_name": "Aether Dynamics",
+    "amount_claimed_cents": 1250000,
+    "proposed_amount_cents": 1250000,
+    "confidence_pct": 95,
+    "escalation_reason": "Confidence 95%",
+    "policy_version": "v4",
+    "model_version": "v2"
+  },
+  {
+    "customer_name": "Nexus Corp",
+    "amount_claimed_cents": 2800000,
+    "proposed_amount_cents": 2800000,
+    "confidence_pct": 65,
+    "escalation_reason": "Above $25K limit",
+    "policy_version": "v4",
+    "model_version": "v2"
+  },
+  {
+    "customer_name": "Vanguard LLC",
+    "amount_claimed_cents": 500000,
+    "proposed_amount_cents": 500000,
+    "confidence_pct": 99,
+    "escalation_reason": "Low risk",
+    "policy_version": "v4",
+    "model_version": "v2"
+  },
+  {
+    "customer_name": "Orbital Sciences Inc",
+    "amount_claimed_cents": 7500000,
+    "proposed_amount_cents": 6200000,
+    "confidence_pct": 72,
+    "escalation_reason": "Claim amount exceeds $50K. Low confidence in bandwidth usage data.",
+    "policy_version": "v4",
+    "model_version": "v2"
+  },
+  {
+    "customer_name": "SkyNet Communications",
+    "amount_claimed_cents": 3100000,
+    "proposed_amount_cents": 3100000,
+    "confidence_pct": 45,
+    "escalation_reason": "Confidence below threshold. Multiple pass failures during solar event.",
+    "policy_version": "v4",
+    "model_version": "v2"
+  }
+]
