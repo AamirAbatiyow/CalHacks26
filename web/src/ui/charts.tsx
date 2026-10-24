@@ -6,6 +6,8 @@ import {
   Bar,
   BarChart,
   Cell,
+  Line,
+  LineChart,
   Pie,
   PieChart,
   ReferenceLine,
@@ -247,5 +249,26 @@ export function SplitBar({ parts, label }: { parts: { label: string; value: numb
         />
       ))}
     </div>
+  );
+}
+
+/** Metric across versions (e.g. precision per model). Lines carry no area, so the y axis hugs the data; a reference line marks the threshold. */
+export function TrendLine({ data, threshold, height = 90, format, label }: { data: { x: string; y: number }[]; threshold?: number; height?: number; format: (v: number) => string; label: string }) {
+  const ys = data.map(d => d.y).concat(threshold ?? []);
+  const lo = Math.min(...ys);
+  const hi = Math.max(...ys);
+  const pad = Math.max(0.2, (hi - lo) * 0.25);
+  return (
+    <motion.div className="ui-trend" role="img" aria-label={label} style={{ height }} {...fadeIn}>
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+          <XAxis dataKey="x" tick={{ fill: C.secondary, fontSize: 10 }} axisLine={{ stroke: C.grid }} tickLine={false} />
+          <YAxis domain={[lo - pad, hi + pad]} tick={{ fill: C.secondary, fontSize: 10 }} axisLine={false} tickLine={false} width={44} tickFormatter={v => format(Number(v))} />
+          {threshold !== undefined && <ReferenceLine y={threshold} stroke={C.amber} strokeDasharray="3 3" strokeOpacity={0.6} />}
+          <Tooltip cursor={{ stroke: C.muted, strokeWidth: 1 }} content={<ChartTooltip format={v => format(v)} />} />
+          <Line type="monotone" dataKey="y" name={label} stroke={C.accent} strokeWidth={1.5} dot={{ r: 2.5, fill: C.accent, strokeWidth: 0 }} isAnimationActive={false} />
+        </LineChart>
+      </ResponsiveContainer>
+    </motion.div>
   );
 }
