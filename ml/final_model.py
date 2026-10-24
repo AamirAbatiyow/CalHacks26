@@ -287,8 +287,13 @@ class GatedModel:
 
 
 def fit_gated(train: pd.DataFrame, variant: str, rule: str = DEFAULT_RULE, inner_folds: int = 4, seed: int = 0,
-              extra_targets: Sequence[float] = (0.90, 0.98), ok_side: bool = True) -> GatedModel:
-    """Inner station-grouped OOF -> isotonic + thresholds for every rule; final booster on all of `train`."""
+              extra_targets: Sequence[float] = (0.90, 0.98), ok_side: bool = True,
+              threshold_mask: Optional[np.ndarray] = None) -> GatedModel:
+    """Inner station-grouped OOF -> isotonic + thresholds for every rule; final booster on all of `train`.
+
+    `threshold_mask` restricts threshold picking to the passes that reach this
+    gate (e.g. those not already decided by earlier policies).
+    """
     y = train["y"].to_numpy()
     folds = station_folds(train["ground_station"].to_numpy(), inner_folds, seed + 101)
     oof, oof_base = np.zeros(len(train)), np.zeros(len(train))
@@ -299,14 +304,15 @@ def fit_gated(train: pd.DataFrame, variant: str, rule: str = DEFAULT_RULE, inner
         b = Booster(variant).fit(train[tr])
         oof[va], oof_base[va] = b.raw(train[va]), b.raw_base(train[va])
     iso = IsotonicRegression(out_of_bounds="clip", y_min=0.0, y_max=1.0).fit(oof_base, y)
+    sel = np.ones(len(train), bool) if threshold_mask is None else np.asarray(threshold_mask, bool)
     rules = {}
     for r in RULES:
-        t_fail, _ = rule_thresholds(oof, y, r, ok_side=False)
-        _, t_ok = rule_thresholds(oof_base, y, r, ok_side)
+        t_fail, _ = rule_thresholds(oof[sel], y[sel], r, ok_side=False)
+        _, t_ok = rule_thresholds(oof_base[sel], y[sel], r, ok_side)
         rules[r] = (t_fail, t_ok)
     t_fail, t_ok = rules[rule]
     kind, _, z = RULES[rule]
-    targets = {f"{t:.2f}": pick_threshold(oof, y, t, kind, z=z) for t in extra_targets}
+    targets = {f"{t:.2f}": pick_threshold(oof[sel], y[sel], t, kind, z=z) for t in extra_targets}
     targets["0.95"] = t_fail
     booster = Booster(variant).fit(train)
     inner = {"oof_auc": float(roc_auc_score(y, oof_base)) if 0 < y.mean() < 1 else None,
