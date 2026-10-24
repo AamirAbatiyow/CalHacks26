@@ -134,7 +134,7 @@ SPACETIMEDB_MODULE=ground-truth
 | `pass` | Scheduled/active/completed passes |
 | `space_weather` | Kp index, flare events, Dst index |
 | `sim_clock` | Simulation time control |
-| `kpi` | Financial KPIs; credits paid and recovered are kept equal to the ledger totals |
+| `kpi` | Financial KPIs, all derived from other tables by `sync_kpis` (see below); never written by hand |
 | `escalated_claim` | Approvals queue: claims the confidence gate escalated for human review |
 | `decision_record` | Audit log for AI decisions with `policy_version` and `model_version` |
 
@@ -159,7 +159,6 @@ All AI-driven decisions (disputes, credits, pass classifications) are logged to 
 | `seek_to_time` | Jump to specific time |
 | `go_live` | Return to live time |
 | `record_decision` | Log an AI decision with policy/model versions |
-| `update_kpi` | Update financial KPIs |
 | `seed_finance_history` | Seed audit decisions and ledger entries against already-seeded passes |
 | `seed_escalated_claim` | Add a claim to the Approvals queue (only if the confidence gate escalates it) |
 | `approve_escalated_claim` / `deny_escalated_claim` / `edit_escalated_claim` | Human decisions on escalated claims |
@@ -186,6 +185,21 @@ Toggle visibility of:
 - Revenue at risk (amber highlight)
 - Credits paid
 - Recovered
+
+### How the KPIs are computed
+
+`server/spacetimedb/src/kpis.rs` recomputes the single `kpi` row every sim tick and after ledger writes, seeding and Approvals decisions. The Overview strip and the Finance summary both render that row.
+
+| KPI | Formula |
+|-----|---------|
+| Billed this month | Revenue of every non-scheduled pass that started in the trailing 30 days (dropped passes included) |
+| Revenue at risk | Per pass, the larger of: full revenue of a dropped pass, or the amount of a pending decision or open SLA dispute, capped at that pass's revenue. Only passes with no credit, recovery or final decision yet |
+| Credits paid | Sum of `Credit` ledger entries |
+| Recovered | Sum of `Recovery` ledger entries |
+| Leakage avoided | Recovered + denied claim amounts (capped at pass revenue) + denied SLA disputes + the unpaid part of human-reviewed escalations |
+| Review cost saved | Auto-approved decisions x ($300 human review - $15 Ground Truth) |
+
+Seeded credits, recoveries and claims are percentages of the revenue of the pass they refer to, and seeded invoices are one per station totalling billed pass revenue, so the Ledger invoices sum to Billed this month at seed time.
 
 ## Development
 
