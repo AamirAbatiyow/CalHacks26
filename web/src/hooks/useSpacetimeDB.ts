@@ -85,9 +85,6 @@ export function useSpacetimeDB() {
         
         // Build the connection using the typed builder from generated bindings
         const builder = DbConnection.builder();
-        console.log('Builder created:', builder);
-        console.log('Builder prototype:', Object.getPrototypeOf(builder));
-        console.log('Builder methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(builder)));
         
         const conn = builder
           .withUri(SPACETIMEDB_HOST)
@@ -123,6 +120,8 @@ export function useSpacetimeDB() {
             if (err) setError(String(err));
           })
           .onConnectError((_ctx, err) => {
+            // StrictMode's simulated unmount closes the first socket mid-handshake.
+            if (disposed) return;
             console.error('Connection error:', err);
             setConnectionState('error');
             setError(String(err));
@@ -350,9 +349,11 @@ export function useSpacetimeDB() {
       }
     };
     
+    let disposed = false;
     connect();
     
     return () => {
+      disposed = true;
       if (subscriptionRef.current) {
         subscriptionRef.current.unsubscribe();
       }

@@ -166,6 +166,7 @@ pub fn advance_replay(ctx: &ReducerContext, replay_id: u64, claims_to_advance: u
             precision_after,
             decisions_changed,
             dollar_impact_cents: dollar_impact,
+            is_playing: new_status == ReplayStatus::Running,
             status: new_status,
             block_reason,
             ..replay

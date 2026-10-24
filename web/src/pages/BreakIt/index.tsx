@@ -152,7 +152,7 @@ export default function BreakIt() {
 
     const sessionRuns = attackRuns
       .filter(r => r.runId === latestSession.id && r.result !== AttackResult.Pending)
-      .sort((a, b) => Number(a.timestamp - b.timestamp));
+      .sort((a, b) => Number(a.timestamp - b.timestamp) || Number(a.id - b.id));
 
     for (const run of sessionRuns) {
       if (run.result === AttackResult.Missed) {
@@ -170,7 +170,7 @@ export default function BreakIt() {
 
     return attackRuns
       .filter(r => r.runId === latestSession.id)
-      .sort((a, b) => Number(a.timestamp - b.timestamp))
+      .sort((a, b) => Number(a.timestamp - b.timestamp) || Number(a.id - b.id))
       .map(r => ({
         timestamp: r.timestamp,
         message: r.result === AttackResult.Missed 

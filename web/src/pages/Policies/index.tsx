@@ -64,8 +64,9 @@ interface ReplayBarProps {
 }
 
 function ReplayBar({ replay, onPlayPause, onSpeedChange }: ReplayBarProps) {
-  const progress = (replay.currentClaim / replay.totalClaims) * 100;
+  const progress = replay.totalClaims > 0 ? (replay.currentClaim / replay.totalClaims) * 100 : 0;
   const speeds = [1, 4, 16];
+  const playing = replay.isPlaying && replay.status === ReplayStatus.Running;
 
   const eventTicks = useMemo(() => {
     const ticks = [];
@@ -86,8 +87,8 @@ function ReplayBar({ replay, onPlayPause, onSpeedChange }: ReplayBarProps) {
         <button className="control-btn" title="Skip to start">
           ⏮
         </button>
-        <button className="control-btn play-btn" onClick={onPlayPause} title={replay.isPlaying ? 'Pause' : 'Play'}>
-          {replay.isPlaying ? '⏸' : '▶'}
+        <button className="control-btn play-btn" onClick={onPlayPause} title={playing ? 'Pause' : 'Play'}>
+          {playing ? '⏸' : '▶'}
         </button>
         <button className="control-btn" title="Skip to end">
           ⏭
