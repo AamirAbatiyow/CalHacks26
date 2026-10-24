@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useTable } from '../../hooks/useTable';
 import { INJECTION_RUN_TIMEOUT_S, useWorkerStatus } from '../../hooks/useDecisions';
+import { useTechMode } from '../../hooks/useTechMode';
 import { useBreakItDB } from './useBreakItDB';
 import {
   AttackType,
@@ -66,13 +67,16 @@ interface AttackTileProps {
   blocked?: boolean;
   status?: RowStatus | null;
   index: number;
+  tech: boolean;
 }
 
-function AttackTile({ attackType, result, onRun, onOpen, isRunning, blocked, status, index }: AttackTileProps) {
+function AttackTile({ attackType, result, onRun, onOpen, isRunning, blocked, status, index, tech }: AttackTileProps) {
   const Icon = ATTACK_ICONS[attackType];
   const missed = result ? result.total - result.caught : 0;
   const tone = status ? 'status' : !result ? 'idle' : missed > 0 ? 'missed' : 'caught';
   const StatusIcon = status?.tone === 'pending' ? Hourglass : WifiOff;
+  const statusText = status && !tech ? (status.tone === 'pending' ? 'Running' : 'Unavailable') : status?.text;
+  const hint = tech ? status?.hint : undefined;
 
   return (
     <motion.div
@@ -94,7 +98,7 @@ function AttackTile({ attackType, result, onRun, onOpen, isRunning, blocked, sta
           className="breakit-run-btn"
           onClick={e => { e.stopPropagation(); onRun(); }}
           disabled={isRunning || blocked}
-          title={blocked ? status?.hint : `Run ${ATTACK_TYPE_LABELS[attackType]}`}
+          title={blocked ? (hint ?? 'Unavailable right now') : `Run ${ATTACK_TYPE_LABELS[attackType]}`}
           aria-label={`Run ${ATTACK_TYPE_LABELS[attackType]}`}
         >
           <Play size={11} />
@@ -103,7 +107,7 @@ function AttackTile({ attackType, result, onRun, onOpen, isRunning, blocked, sta
 
       {status ? (
         <div className="breakit-tile-status">
-          <Chip tone={status.tone === 'pending' ? 'accent' : 'warn'} icon={StatusIcon} title={status.hint}>{status.text}</Chip>
+          <Chip tone={status.tone === 'pending' ? 'accent' : 'warn'} icon={StatusIcon} title={hint}>{statusText}</Chip>
         </div>
       ) : result ? (
         <>
@@ -111,11 +115,13 @@ function AttackTile({ attackType, result, onRun, onOpen, isRunning, blocked, sta
             <span className="breakit-tile-caught">{result.caught}</span>
             <span className="breakit-tile-total">/ {result.total}</span>
           </div>
-          <div className="breakit-dots" aria-hidden>
-            {result.runs.map(r => (
-              <span key={String(r.id)} className={`breakit-dot ${r.result === AttackResult.Caught ? 'caught' : 'missed'}`} />
-            ))}
-          </div>
+          {tech && (
+            <div className="breakit-dots" aria-hidden>
+              {result.runs.map(r => (
+                <span key={String(r.id)} className={`breakit-dot ${r.result === AttackResult.Caught ? 'caught' : 'missed'}`} />
+              ))}
+            </div>
+          )}
           <div className="breakit-tile-dollars">
             {result.missedCents > 0
               ? <span className="missed">{compactUsd(result.missedCents)} paid out</span>
@@ -125,7 +131,7 @@ function AttackTile({ attackType, result, onRun, onOpen, isRunning, blocked, sta
       ) : (
         <div className="breakit-tile-idle">Not run</div>
       )}
-      {status?.hint && <div className="breakit-tile-hint">{status.hint}</div>}
+      {hint && <div className="breakit-tile-hint">{hint}</div>}
     </motion.div>
   );
 }
@@ -145,6 +151,7 @@ export default function BreakIt() {
   const { online: workerOnline, silenceS: workerSilenceS, now } = useWorkerStatus();
   const [injectionError, setInjectionError] = useState<string | null>(null);
   const [openType, setOpenType] = useState<AttackType | null>(null);
+  const tech = useTechMode();
 
   useEffect(() => {
     if (connected && fixtures.length === 0) {
@@ -257,7 +264,7 @@ export default function BreakIt() {
             <span className="ui-stat-label">Bad payouts</span>
             <span className={`ui-stat-value ${badCents > 0 ? 'tone-warn' : ''}`}>{loading ? <Skeleton width={80} height={20} /> : <CountUp value={badCents} format={compactUsd} />}</span>
           </div>
-          <div className="ui-tile breakit-tile-split">
+          {tech && <div className="ui-tile breakit-tile-split">
             <span className="ui-stat-label">Attack dollars</span>
             <SplitBar
               label={`${compactUsd(protectedCents)} protected, ${compactUsd(badCents)} paid out`}
@@ -270,7 +277,7 @@ export default function BreakIt() {
               <span className="ui-legend-item"><span className="ui-legend-swatch" style={{ background: C.green }} />Protected</span>
               <span className="ui-legend-item"><span className="ui-legend-swatch hatched" style={{ color: C.red }} />Paid out</span>
             </span>
-          </div>
+          </div>}
         </div>
 
         <div className="breakit-section-head">
@@ -297,10 +304,12 @@ export default function BreakIt() {
               isRunning={isRunning}
               blocked={attackType === 'PromptInjection' && !workerOnline}
               status={attackType === 'PromptInjection' ? injectionStatus : null}
+              tech={tech}
             />
           ))}
         </div>
 
+        {tech && <>
         <div className="breakit-section-head">
           <span className="ui-section-title">Run timeline</span>
           {scored.length > 0 && <span className="ui-legend">
@@ -324,6 +333,10 @@ export default function BreakIt() {
               />
             ))}
           </div>
+        )}
+        </>}
+        {!tech && scored.length === 0 && (
+          <EmptyState art="shield" compact title="No attacks run yet" hint="Run all to throw every fixture at the pipeline." />
         )}
       </div>
 
