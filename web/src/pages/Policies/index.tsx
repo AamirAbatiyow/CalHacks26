@@ -20,6 +20,7 @@ import { useTechMode } from '../../hooks/useTechMode';
 import { SkeletonGraph, SkeletonRows } from '../../ui/Skeleton';
 import { useAuditDecisions, useProposals } from '../../hooks/useCases';
 import { HistoryView, ProposalPanel } from './Learning';
+import { VersionTrend } from './VersionTrend';
 import './Policies.css';
 
 const HISTORY = 'history';
@@ -420,6 +421,8 @@ export default function Policies() {
         </div>
 
         <div className="policies-content">
+          {!loading && <VersionTrend proposals={proposals} onSelect={setSelectedVersionId} />}
+
           {selectedVersionId === HISTORY && <HistoryView decisions={decisions} />}
 
           {selectedProposal && <ProposalPanel proposal={selectedProposal} decisions={decisions} />}
