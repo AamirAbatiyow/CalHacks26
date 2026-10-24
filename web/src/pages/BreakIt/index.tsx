@@ -45,16 +45,22 @@ function StatBox({ label, value, subValue }: StatBoxProps) {
   );
 }
 
+interface TypeTally {
+  caught: number;
+  total: number;
+}
+
 interface AttackRowProps {
   attackType: AttackType;
-  result: AttackResult | null;
+  result: TypeTally | null;
   onRun: () => void;
   isRunning: boolean;
 }
 
 function AttackRow({ attackType, result, onRun, isRunning }: AttackRowProps) {
-  const resultClass = result === AttackResult.Missed ? 'missed' : result === AttackResult.Caught ? 'caught' : '';
-  const resultText = result === AttackResult.Missed ? 'Missed' : result === AttackResult.Caught ? 'Caught' : '';
+  const missed = result ? result.total - result.caught : 0;
+  const resultClass = !result ? '' : missed > 0 ? 'missed' : 'caught';
+  const resultText = result ? `${result.caught}/${result.total} caught` : '';
 
   return (
     <div className="breakit-attack-row">
@@ -120,48 +126,23 @@ export default function BreakIt() {
 
   const latestSession = useMemo(() => {
     if (sessions.length === 0) return null;
-    return sessions.reduce((latest, s) => 
-      s.startedAt > latest.startedAt ? s : latest
-    );
-  }, [sessions]);
-
-  const aggregateStats = useMemo(() => {
-    const completedSessions = sessions.filter(s => s.completedAt !== null);
-    if (completedSessions.length === 0) {
-      return { caught: 0, total: 0, dollarsProtected: BigInt(0), badPayouts: BigInt(0) };
-    }
-    
-    return completedSessions.reduce(
-      (acc, s) => ({
-        caught: acc.caught + s.caught,
-        total: acc.total + s.totalAttacks,
-        dollarsProtected: acc.dollarsProtected + s.dollarsProtectedCents,
-        badPayouts: acc.badPayouts + s.badPayoutsCents,
-      }),
-      { caught: 0, total: 0, dollarsProtected: BigInt(0), badPayouts: BigInt(0) }
-    );
+    return sessions.reduce((latest, s) => (s.id > latest.id ? s : latest));
   }, [sessions]);
 
   const attackTypeResults = useMemo(() => {
-    const results: Record<AttackType, AttackResult | null> = {} as Record<AttackType, AttackResult | null>;
+    const results = {} as Record<AttackType, TypeTally | null>;
     for (const t of ATTACK_TYPES_ORDER) {
       results[t] = null;
     }
-
     if (!latestSession) return results;
 
-    const sessionRuns = attackRuns
-      .filter(r => r.runId === latestSession.id && r.result !== AttackResult.Pending)
-      .sort((a, b) => Number(a.timestamp - b.timestamp) || Number(a.id - b.id));
-
-    for (const run of sessionRuns) {
-      if (run.result === AttackResult.Missed) {
-        results[run.attackType] = AttackResult.Missed;
-      } else if (run.result === AttackResult.Caught && results[run.attackType] !== AttackResult.Missed) {
-        results[run.attackType] = AttackResult.Caught;
-      }
+    for (const run of attackRuns) {
+      if (run.runId !== latestSession.id || run.result === AttackResult.Pending) continue;
+      const tally = results[run.attackType] ?? { caught: 0, total: 0 };
+      tally.total += 1;
+      if (run.result === AttackResult.Caught) tally.caught += 1;
+      results[run.attackType] = tally;
     }
-
     return results;
   }, [attackRuns, latestSession]);
 
@@ -173,9 +154,7 @@ export default function BreakIt() {
       .sort((a, b) => Number(a.timestamp - b.timestamp) || Number(a.id - b.id))
       .map(r => ({
         timestamp: r.timestamp,
-        message: r.result === AttackResult.Missed 
-          ? r.logMessage.replace(' MISSED', '') 
-          : r.logMessage,
+        message: r.logMessage.replace(/: (MISSED|caught) - /, ': '),
         isMissed: r.result === AttackResult.Missed,
       }));
   }, [attackRuns, latestSession]);
@@ -184,11 +163,6 @@ export default function BreakIt() {
 
   const isRunning = latestSession !== null && latestSession.completedAt === null;
 
-  const handleRunAll = () => {
-    clearRuns();
-    setTimeout(() => runAllAttacks(), 100);
-  };
-
   return (
     <div className="breakit-page">
       <div className="breakit-content">
@@ -196,16 +170,16 @@ export default function BreakIt() {
           <div className="breakit-stats-row">
             <StatBox 
               label="Caught" 
-              value={`${aggregateStats.caught}`}
-              subValue={` / ${aggregateStats.total}`}
+              value={`${latestSession?.caught ?? 0}`}
+              subValue={` / ${latestSession?.totalAttacks ?? 0}`}
             />
             <StatBox 
               label="Dollars protected" 
-              value={formatDollars(aggregateStats.dollarsProtected)} 
+              value={formatDollars(latestSession?.dollarsProtectedCents ?? 0n)} 
             />
             <StatBox 
               label="Bad payouts" 
-              value={formatDollars(aggregateStats.badPayouts)} 
+              value={formatDollars(latestSession?.badPayoutsCents ?? 0n)} 
             />
           </div>
 
@@ -224,7 +198,7 @@ export default function BreakIt() {
           <div className="breakit-actions">
             <button 
               className="breakit-run-all-btn"
-              onClick={handleRunAll}
+              onClick={runAllAttacks}
               disabled={isRunning || !connected}
             >
               Run all {fixtures.length}
