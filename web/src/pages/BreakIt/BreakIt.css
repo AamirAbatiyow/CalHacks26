@@ -556,3 +556,148 @@
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+.ba {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.ba .breakit-section-head {
+  margin-bottom: 0;
+}
+
+.ba-sub {
+  font-size: var(--font-metadata);
+  color: var(--color-secondary);
+  margin: 0 0 4px;
+  max-width: 820px;
+  line-height: 1.5;
+}
+
+.ba-row {
+  display: grid;
+  grid-template-columns: 150px 1fr 220px;
+  align-items: center;
+  gap: 16px;
+}
+
+.ba-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--font-metadata);
+}
+
+.ba-label b {
+  font-weight: 500;
+  color: var(--color-primary);
+}
+
+.ba-versions {
+  color: var(--color-secondary);
+  font-size: 11px;
+}
+
+.ba-versions a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.ba-bar {
+  display: flex;
+  gap: 2px;
+  height: 28px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.ba-seg {
+  flex-basis: 0;
+  min-width: 66px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  color: #000;
+  font-weight: 500;
+}
+
+.ba-seg.caught {
+  background: var(--color-green);
+}
+
+.ba-seg.escalated {
+  background: var(--color-amber);
+}
+
+.ba-seg.missed {
+  background: var(--color-red);
+  color: #fff;
+}
+
+.ba-money {
+  display: flex;
+  gap: 20px;
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+  color: var(--color-primary);
+}
+
+.ba-money span {
+  display: flex;
+  flex-direction: column;
+}
+
+.ba-money small {
+  font-size: 10px;
+  color: var(--color-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ba-money .bad {
+  color: var(--color-amber);
+}
+
+.ba-table {
+  width: 100%;
+  max-width: 820px;
+  border-collapse: collapse;
+  font-size: var(--font-metadata);
+  margin-top: 6px;
+}
+
+.ba-table th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--color-secondary);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 4px 0;
+  border-bottom: 1px solid #1c1c1c;
+}
+
+.ba-table td {
+  padding: 5px 0;
+  border-bottom: 1px solid #141414;
+  color: #c8c8c8;
+}
+
+.ba-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.ba-table .up {
+  color: var(--color-green);
+}
+
+.ba-table .bad {
+  color: var(--color-red);
+}

@@ -22,6 +22,7 @@ import { CountUp, compactUsd, wholeUsd } from '../../ui/CountUp';
 import { EmptyState } from '../../ui/EmptyState';
 import { Skeleton } from '../../ui/Skeleton';
 import { AttackDetail, InjectionDetail } from './AttackDetail';
+import { BeforeAfter } from './BeforeAfter';
 import { attackTitle, attackTypeOf, outcomeTone, usd, useAttackEvals, type AttackEvalRow } from './useAttackEvals';
 import './BreakIt.css';
 
@@ -313,6 +314,8 @@ export default function BreakIt() {
             </span>
           </div>}
         </div>
+
+        <BeforeAfter before={evals.before} after={evals.after} />
 
         <div className="breakit-section-head">
           <span className="ui-section-title">Attacks</span>
