@@ -229,7 +229,7 @@ def build_dataset(obs: Optional[pd.DataFrame] = None, stations_path: Path = STAT
     df["sat_apogee_km"] = a * (1 + ecc) - re
     df["sat_bstar"] = df["tle1"].map(_bstar)
     ly = df["tle1"].map(_tle_launch_year)
-    df["sat_age_years"] = df["start_ts"].dt.year + df["start_ts"].dt.dayofyear / 365.25 - ly.astype(float)
+    df["sat_age_years"] = df["start_ts"].dt.year + df["start_ts"].dt.day_of_year / 365.25 - ly.astype(float)
 
     mid = df["start_ts"] + (df["end_ts"] - df["start_ts"]) / 2
     ts = mid.map(lambda x: x.timestamp())
@@ -270,13 +270,13 @@ def add_history_features(train: pd.DataFrame, test: pd.DataFrame, lag_hours: flo
     lag = pd.Timedelta(hours=lag_hours)
     for name, (key, window_days) in HISTORY_KEYS.items():
         tk = _key_series(train, key)
-        events = pd.DataFrame({"k": tk.values, "t": (train["end_ts"]).values,
+        events = pd.DataFrame({"k": tk.values, "t": train["end_ts"].dt.tz_convert(None).to_numpy(),
                                "ok": 1 - train["label_fail"].values}).sort_values("t")
         groups = {k: (g["t"].values, np.concatenate([[0], np.cumsum(g["ok"].values)]))
                   for k, g in events.groupby("k")}
         for part in (train, test):
             pk = _key_series(part, key).values
-            qt = (part["start_ts"] - lag).values
+            qt = (part["start_ts"] - lag).dt.tz_convert(None).to_numpy()
             q0 = (qt - pd.Timedelta(days=window_days).to_timedelta64()) if window_days else None
             n = np.zeros(len(part))
             s = np.zeros(len(part))
