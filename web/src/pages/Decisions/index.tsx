@@ -14,7 +14,7 @@ import { Chip, type Tone } from '../../ui/Chip';
 import { Meter, TrendLine } from '../../ui/charts';
 import { CountUp, compactUsd, usd } from '../../ui/CountUp';
 import { EmptyState } from '../../ui/EmptyState';
-import { escalationChip } from '../Approvals/CaseReview';
+import { escalationChip } from '../Claims/CaseReview';
 import { useTechMode } from '../../hooks/useTechMode';
 import { plainEscalation, plainReason } from '../../utils/plainReason';
 import { DataTable, type Column } from '../../ui/DataTable';
@@ -166,7 +166,7 @@ export default function DecisionsPage() {
       { id: 's2', title: 'System 2', icon: Bot, value: String(s2Ran), sub: 'reads all sources', hint: 'Below 95%, System 2 reads every source, including the customer message' },
       { id: 'cedar', title: 'Cedar', icon: ShieldCheck, value: String(auto), sub: guard > 0 ? `${guard} guarded` : 'final say', hint: 'Cedar policy has the final say on every automatic decision' },
       { id: 'auto', title: 'Auto', icon: Zap, value: compactUsd(autoCents), sub: `${auto} claims`, tone: 'pass', emphasis: true },
-      { id: 'human', title: 'Approvals', icon: Inbox, value: String(escalated), sub: '< 95% · evidence', tone: escalated > 0 ? 'warn' : 'neutral', emphasis: escalated > 0 },
+      { id: 'human', title: 'Claims review', icon: Inbox, value: String(escalated), sub: '< 95% · evidence', tone: escalated > 0 ? 'warn' : 'neutral', emphasis: escalated > 0 },
     ];
     const edges: GraphEdge[] = [
       { from: 'claims', to: 's1' },
@@ -220,7 +220,7 @@ export default function DecisionsPage() {
           <section className="dz-section">
             <div className="dz-section-head">
               <span className="ui-section-title">Pipeline</span>
-              <span className="dz-info" title="System 1 auto-decides at 95% confidence or higher (Cedar has the final say); otherwise System 2 reads every source, including the customer message, and below 95% the claim goes to Approvals with the full evidence package.">
+              <span className="dz-info" title="System 1 auto-decides at 95% confidence or higher (Cedar has the final say); otherwise System 2 reads every source, including the customer message, and below 95% the claim goes to the Claims queue with the full evidence package.">
                 <Info size={12} />
               </span>
             </div>
