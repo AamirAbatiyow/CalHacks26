@@ -244,17 +244,19 @@
   flex-direction: column;
 }
 
-.rule-item {
+.rule-cell {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 4px;
-  border-bottom: 1px solid #141414;
-  cursor: pointer;
+  gap: 8px;
+  min-width: 0;
 }
 
-.rule-item.disabled .rule-name,
-.rule-item.disabled .rule-icon {
+.rule-cell.disabled .rule-name,
+.rule-cell.disabled .rule-icon {
+  opacity: 0.45;
+}
+
+.rule-icon {
   opacity: 0.45;
 }
 
