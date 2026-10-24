@@ -1,0 +1,42 @@
+{
+  "stats": {
+    "satnogs_observations": 325,
+    "satnogs_stations": 4537,
+    "unique_satellites": 107,
+    "satnogs_db_satellites": 107,
+    "satnogs_db_transmitters": 5121,
+    "celestrak_satellites": 107,
+    "celestrak_with_tle": 107,
+    "swpc_kp_records": 58,
+    "swpc_flare_events": 1,
+    "curated_ksat_stations": 10,
+    "curated_aws_stations": 11,
+    "weather_stations": 100,
+    "weather_hourly_records": 74400,
+    "processed_stations": 4558,
+    "processed_satellites": 107,
+    "processed_passes": 325,
+    "processed_kp_records": 58,
+    "processed_flare_events": 1,
+    "processed_weather_stations": 100,
+    "training_rows": 325,
+    "training_columns": 28,
+    "class_balance": {
+      "nan": 226,
+      "1.0": 58,
+      "0.0": 41
+    },
+    "date_ranges": {
+      "observations": {
+        "start": "2026-10-24T06:59:17Z",
+        "end": "2026-10-24T08:11:04Z"
+      },
+      "space_weather": {
+        "start": "2026-10-17T00:00:00",
+        "end": "2026-10-24T03:00:00"
+      }
+    }
+  },
+  "errors": [],
+  "duration_seconds": 394.699266
+}
