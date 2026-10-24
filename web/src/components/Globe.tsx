@@ -41,6 +41,7 @@ function selectionKey(s: GlobeSelection | null): string | null {
 
 export function Globe({ stations, satellites, passes, spaceWeather, currentTime, layers }: GlobeProps) {
   const [selected, setSelected] = useState<GlobeSelection | null>(null);
+  const [hovering, setHovering] = useState(false);
   const pickables = useRef<Map<string, Pickable>>(new Map());
   const hoveredKey = useRef<string | null>(null);
   const selectedKey = useRef<string | null>(null);
@@ -62,8 +63,9 @@ export function Globe({ stations, satellites, passes, spaceWeather, currentTime,
     card.style.transform = `translate(${Math.max(0, x)}px, ${Math.max(0, y)}px)`;
   };
 
-  // Spin until something is selected, so the card stays next to its marker.
-  const { containerRef, scene } = useGlobeScene({ autoRotate: selected === null }, positionCard);
+  // Hold still while a marker is under the pointer (so it can be clicked) or
+  // selected (so the card stays next to it).
+  const { containerRef, scene } = useGlobeScene({ autoRotate: selected === null && !hovering }, positionCard);
   const layerGroups = useRef<Record<'storm' | 'stations' | 'satellites' | 'links', THREE.Group> | null>(null);
 
   useEffect(() => {
@@ -128,6 +130,7 @@ export function Globe({ stations, satellites, passes, spaceWeather, currentTime,
       if (prev) applyHighlight(prev);
       if (p) applyHighlight(p);
       el.style.cursor = p ? 'pointer' : '';
+      setHovering(p !== null);
     };
     const onMove = (e: MouseEvent) => {
       if (e.buttons) return;
