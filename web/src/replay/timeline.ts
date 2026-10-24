@@ -14,6 +14,8 @@ export const REST = 0.55;
 export const EDGE = 0.4;
 export const SECONDS_PER_STAGE = 1.9;
 export const SPEEDS = [0.5, 1, 2, 4] as const;
+/** Playback never advances more than one frame's worth after a stall, so a busy tab does not skip stages. */
+const MAX_FRAME_MS = 100;
 export type ReplaySpeed = (typeof SPEEDS)[number];
 
 export const restPoint = (i: number) => i + REST;
@@ -38,12 +40,14 @@ export function useTimeline(count: number) {
   const [playing, setPlaying] = useState(true);
   const [speed, setSpeed] = useState<ReplaySpeed>(1);
   const [active, setActive] = useState(0);
+  const [framed, setFramed] = useState(0);
   const [done, setDone] = useState(false);
   const [run, setRun] = useState(0);
   const controls = useRef<AnimationPlaybackControls | null>(null);
 
   useMotionValueEvent(t, 'change', v => {
     setActive(Math.max(0, Math.min(count - 1, Math.floor(v + 1e-6))));
+    setFramed(Math.max(0, Math.min(count - 1, Math.floor(v + EDGE + 1e-6))));
     setDone(v >= end - 1e-3);
   });
 
@@ -55,13 +59,18 @@ export function useTimeline(count: number) {
   useEffect(() => {
     if (!playing) return;
     if (t.get() >= end - 1e-3) t.set(0);
-    const remaining = end - t.get();
-    const c = animate(t, end, { duration: (remaining * SECONDS_PER_STAGE) / speed, ease: 'linear' });
-    controls.current = c;
-    c.then(() => {
-      if (t.get() >= end - 1e-3) setPlaying(false);
-    });
-    return () => c.stop();
+    let frame = 0;
+    let last = performance.now();
+    const tick = (now: number) => {
+      const dt = Math.min(now - last, MAX_FRAME_MS) / 1000;
+      last = now;
+      const next = Math.min(end, t.get() + (dt * speed) / SECONDS_PER_STAGE);
+      t.set(next);
+      if (next >= end) setPlaying(false);
+      else frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
   }, [playing, speed, end, run, t]);
 
   const goTo = useCallback((target: number) => {
@@ -103,5 +112,5 @@ export function useTimeline(count: number) {
     }
   }, [playing, stop]);
 
-  return { t, end, active, done, playing, speed, setSpeed, togglePlay, stepForward, stepBack, seekStage, replay };
+  return { t, end, active, framed, done, playing, speed, setSpeed, togglePlay, stepForward, stepBack, seekStage, replay };
 }

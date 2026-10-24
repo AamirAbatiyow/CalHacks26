@@ -21,7 +21,7 @@ import './DecisionReplay.css';
 const nodeTypes = { stage: StageNodeComponent };
 const edgeTypes = { pulse: PulseEdgeComponent };
 
-/** Stages kept in frame while the camera follows the active one. */
+/** Stages kept in frame while the camera follows the path; it moves on as the pulse leaves for the next stage. */
 const FOLLOW_WINDOW = 5;
 /** The finished path is framed whole only if it stays legible at this zoom. */
 const MIN_OVERVIEW_ZOOM = 0.8;
@@ -50,8 +50,9 @@ function ReplayCanvas({ trace, timeline }: { trace: DecisionTrace; timeline: Tim
     s.nodeLookup.forEach(n => { if (n.measured.width) count++; });
     return count;
   });
+  const panZoomReady = useStore(s => s.panZoom !== null);
   const canvasWidth = useStore(s => s.width);
-  const { active, done } = timeline;
+  const { framed, done, speed } = timeline;
 
   const overviewFits = useMemo(() => {
     const left = Math.min(...nodes.map(n => n.position.x));
@@ -60,18 +61,30 @@ function ReplayCanvas({ trace, timeline }: { trace: DecisionTrace; timeline: Tim
   }, [nodes, canvasWidth]);
 
   useEffect(() => {
-    if (measured < nodes.length) return;
+    if (!panZoomReady || measured < nodes.length) return;
     const overview = done && overviewFits;
-    const from = overview ? 0 : Math.max(0, active - FOLLOW_WINDOW + 1);
-    const framed = nodes.slice(from, active + 1).map(n => ({ id: n.id }));
-    flow.fitView({
-      nodes: framed,
+    const from = overview ? 0 : Math.max(0, framed - FOLLOW_WINDOW + 1);
+    const inFrame = nodes.slice(from, framed + 1).map(n => ({ id: n.id }));
+    const options = {
+      nodes: inFrame,
       padding: overview ? OVERVIEW_PADDING : FOLLOW_PADDING,
       maxZoom: 1.1,
       minZoom: 0.5,
-      duration: overview ? 900 : 700,
-    });
-  }, [measured, active, done, overviewFits, nodes, flow]);
+      duration: overview ? 900 : 700 / Math.max(1, speed),
+    };
+    let frame = 0;
+    let cancelled = false;
+    const attempt = (tries: number) => {
+      flow.fitView(options).then(ok => {
+        if (!ok && !cancelled && tries > 0) frame = requestAnimationFrame(() => attempt(tries - 1));
+      });
+    };
+    attempt(30);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+    };
+  }, [panZoomReady, measured, framed, done, speed, overviewFits, nodes, flow]);
 
   return (
     <ReactFlow
