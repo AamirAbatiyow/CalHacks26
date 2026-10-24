@@ -18,7 +18,7 @@ jq -c '.[]' "$FIXTURES_DIR/stations.json" | while read -r station; do
   alt=$(echo "$station" | jq -r '.altitude_m')
   revenue=$(echo "$station" | jq -r '.monthly_revenue_cents')
   
-  spacetime call "$MODULE" seed_station "\"$id\"" "\"$name\"" "$lat" "$lon" "$alt" "$revenue" --server "$SERVER" || true
+  spacetime call "$MODULE" seed_station --server "$SERVER" -- "\"$id\"" "\"$name\"" "$lat" "$lon" "$alt" "$revenue" || true
 done
 
 # Seed satellites
@@ -30,7 +30,7 @@ jq -c '.[]' "$FIXTURES_DIR/satellites.json" | while read -r sat; do
   tle2=$(echo "$sat" | jq -r '.tle_line2')
   operator=$(echo "$sat" | jq -r '.operator')
   
-  spacetime call "$MODULE" seed_satellite "$norad_id" "\"$name\"" "\"$tle1\"" "\"$tle2\"" "\"$operator\"" --server "$SERVER" || true
+  spacetime call "$MODULE" seed_satellite --server "$SERVER" -- "$norad_id" "\"$name\"" "\"$tle1\"" "\"$tle2\"" "\"$operator\"" || true
 done
 
 # Get current time in microseconds for pass offsets
@@ -50,7 +50,7 @@ jq -c '.[]' "$FIXTURES_DIR/passes.json" | while read -r pass; do
   start_micros=$((NOW_MICROS + offset_mins * 60 * 1000000))
   end_micros=$((start_micros + duration_mins * 60 * 1000000))
   
-  spacetime call "$MODULE" seed_pass "$sat_id" "\"$station_id\"" "$start_micros" "$end_micros" "$status" "$max_el" "$revenue" --server "$SERVER" || true
+  spacetime call "$MODULE" seed_pass --server "$SERVER" -- "$sat_id" "\"$station_id\"" "$start_micros" "$end_micros" "$status" "$max_el" "$revenue" || true
 done
 
 # Seed space weather
@@ -63,7 +63,7 @@ jq -c '.[]' "$FIXTURES_DIR/space_weather.json" | while read -r weather; do
   
   timestamp_micros=$((NOW_MICROS + offset_mins * 60 * 1000000))
   
-  spacetime call "$MODULE" seed_space_weather "$timestamp_micros" "$kp" "$flare" "$dst" --server "$SERVER" || true
+  spacetime call "$MODULE" seed_space_weather --server "$SERVER" -- "$timestamp_micros" "$kp" "$flare" "$dst" || true
 done
 
 echo "Seeding complete!"
