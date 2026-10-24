@@ -100,7 +100,7 @@ jq -c '.[]' "$FIXTURES_DIR/claims.json" | while read -r claim; do
     "$(echo "$claim" | jq '.model_version')" || true
 done
 
-# Break It: answer-key fixtures plus one completed run
+# Break It: attack fixtures plus one measured run
 echo "Seeding attack fixtures..."
 "$SPACETIME" call "$MODULE" seed_attack_fixtures --server "$SERVER" || true
 "$SPACETIME" call "$MODULE" run_all_attacks --server "$SERVER" || true

@@ -30,6 +30,7 @@ export function useBreakItDB() {
     amountCents: row.amountCents,
     timestamp: micros(row.timestamp),
     logMessage: row.logMessage,
+    attackerIdentity: row.attackerIdentity ?? null,
   })), [runRows]);
 
   const sessions = useMemo<AttackRunSession[]>(() => sessionRows.map(row => ({
@@ -47,8 +48,8 @@ export function useBreakItDB() {
     id: row.id,
     attackType: mapAttackType(row.attackType),
     amountCents: row.amountCents,
-    shouldCatch: row.shouldCatch,
     description: row.description,
+    attackParams: row.attackParams,
   })), [fixtureRows]);
 
   const seedFixtures = useCallback(() => {
