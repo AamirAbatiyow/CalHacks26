@@ -125,6 +125,26 @@ SPACETIMEDB_SERVER=maincloud  # or 'local' for local development
 SPACETIMEDB_MODULE=ground-truth
 ```
 
+#### Republishing and reseeding the production database (`ground-truth-aamir`)
+
+Schema changes (new tables such as `attack_eval` and `attack_clearance`) need a clear-and-reseed. Run these from the repo root:
+
+```bash
+# 1. Start the worker first so it trains System 1 on the seeded history; the seed waits up to 60s
+#    for that model before running Break It. The worker reconnects on its own when the database
+#    is republished, so leave it running.
+(cd worker && npm install && npm run generate && STDB_HOST=wss://maincloud.spacetimedb.com STDB_MODULE=ground-truth-aamir npm start)
+
+# 2. In another terminal, republish with a clear (-c deletes all data) and reseed.
+spacetime publish ground-truth-aamir --server maincloud -p server/spacetimedb -c -y
+SPACETIMEDB_SERVER=maincloud SPACETIMEDB_MODULE=ground-truth-aamir bash server/seed.sh
+
+# 3. Rebuild the web client against the new schema.
+(cd web && npm run generate && npm run build)
+```
+
+The seed ends by running every Break It attack, so the page opens with the before and after comparison and the held storm-overclaim cluster ready for the live decision. To reset the live moment without a full reseed, run `spacetime call ground-truth-aamir --server maincloud seed_attack_fixtures` and then `run_all_attacks`; a promoted v7 stays promoted, so after a promotion only a clear-and-reseed brings the cluster back to held.
+
 ## SpacetimeDB Tables
 
 | Table | Description |
