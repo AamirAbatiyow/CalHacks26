@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-export const PAGE_IDS = ['overview', 'claims', 'approvals', 'decisions', 'customers', 'finance', 'ledger', 'audit', 'policies', 'breakit'] as const;
+export const PAGE_IDS = ['overview', 'claims', 'approvals', 'decisions', 'customers', 'finance', 'ledger', 'audit', 'policies', 'breakit', 'settings'] as const;
 export type PageId = (typeof PAGE_IDS)[number];
 
 function readHash(): PageId {

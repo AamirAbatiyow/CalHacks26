@@ -13,6 +13,7 @@ import FinancePage from './pages/Finance';
 import PoliciesPage from './pages/Policies';
 import BreakItPage from './pages/BreakIt';
 import DecisionsPage from './pages/Decisions';
+import SettingsPage from './pages/Settings';
 import { DecisionReplayHost } from './replay/DecisionReplay';
 import type { LayerState, PlaybackSpeed } from './types';
 import './App.css';
@@ -105,6 +106,8 @@ function App() {
         return <PoliciesPage />;
       case 'breakit':
         return <BreakItPage />;
+      case 'settings':
+        return <SettingsPage />;
       default:
         return null;
     }

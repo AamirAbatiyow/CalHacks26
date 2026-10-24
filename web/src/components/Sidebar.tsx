@@ -5,6 +5,7 @@ import {
   Inbox,
   Network,
   ScrollText,
+  Settings,
   ShieldAlert,
   SlidersHorizontal,
   Users,
@@ -37,6 +38,7 @@ const navItems: NavItem[] = [
   { id: 'audit', label: 'Audit', icon: ScrollText, enabled: true },
   { id: 'policies', label: 'Policies', icon: SlidersHorizontal, enabled: true },
   { id: 'breakit', label: 'Break It', icon: ShieldAlert, enabled: true },
+  { id: 'settings', label: 'Settings', icon: Settings, enabled: true },
 ];
 
 interface SidebarProps {
@@ -60,7 +62,7 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
           return (
             <button
               key={item.id}
-              className={`sidebar-item ${active ? 'active' : ''} ${!item.enabled ? 'disabled' : ''}`}
+              className={`sidebar-item ${active ? 'active' : ''} ${!item.enabled ? 'disabled' : ''} ${item.id === 'settings' ? 'sidebar-item-foot' : ''}`}
               onClick={() => item.enabled && onNavigate(item.id)}
               disabled={!item.enabled}
               title={item.label}
