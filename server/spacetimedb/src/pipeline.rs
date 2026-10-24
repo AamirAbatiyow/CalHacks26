@@ -110,7 +110,7 @@ impl Step {
         self
     }
     pub fn confidence(mut self, pct: f64) -> Self {
-        self.confidence_pct = Some((pct * 10.0).round() / 10.0);
+        self.confidence_pct = Some(pct);
         self
     }
     pub fn amount(mut self, cents: i64) -> Self {

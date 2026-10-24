@@ -802,6 +802,10 @@ fn finalize(
     if status == CaseStatus::AutoDecided {
         let approved = verdict == Verdict::Approve;
         let version = if system == DecidingSystem::LearnedRule { policy_version } else { model_version };
+        let decider = match policy_version.split_once('+') {
+            Some((_, rule)) if system == DecidingSystem::LearnedRule => format!("Learned rule {}", rule),
+            _ => system_name.to_string(),
+        };
         let note = if !approved {
             "auto-decided · no credit".to_string()
         } else if updated.final_credit_cents >= updated.amount_claimed_cents {
@@ -809,7 +813,7 @@ fn finalize(
         } else {
             format!("auto-decided · {} of {} claimed", usd(updated.final_credit_cents), usd(updated.amount_claimed_cents))
         };
-        pipeline::record(ctx, updated.id, &updated.claim_ref, Step::new(Stage::Decided, system_name, if approved { "Approved" } else { "Denied" })
+        pipeline::record(ctx, updated.id, &updated.claim_ref, Step::new(Stage::Decided, decider, if approved { "Approved" } else { "Denied" })
             .version(version)
             .amount(updated.final_credit_cents)
             .note(note));
