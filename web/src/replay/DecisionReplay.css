@@ -1,0 +1,571 @@
+.replay-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(6px);
+}
+
+.replay-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  border: 1px solid var(--color-muted);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.replay-loading {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 24px;
+  color: var(--color-secondary);
+  font-size: var(--font-metadata);
+}
+
+/* Header */
+
+.replay-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 16px 20px 14px 24px;
+  border-bottom: 1px solid var(--color-muted);
+}
+
+.replay-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.replay-eyebrow {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-secondary);
+}
+
+.replay-title {
+  font-size: var(--font-heading-md);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.replay-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-metadata);
+  color: var(--color-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.replay-amount {
+  color: var(--color-primary);
+}
+
+.replay-sep {
+  color: var(--color-muted);
+}
+
+.replay-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.replay-route {
+  padding: 3px 8px;
+  border: 1px solid var(--color-muted);
+  border-radius: 3px;
+  font-size: 11px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.replay-route.tone-warn {
+  border-color: rgba(245, 158, 11, 0.45);
+  color: var(--color-amber);
+}
+
+.replay-source {
+  font-size: 11px;
+  color: var(--color-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.replay-close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--color-secondary);
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.replay-close:hover {
+  color: var(--color-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Canvas */
+
+.replay-canvas {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.replay-canvas .react-flow {
+  --xy-background-color: var(--color-bg);
+  background: var(--color-bg);
+}
+
+.replay-canvas .react-flow__node {
+  cursor: default;
+}
+
+.replay-canvas .react-flow__node:hover {
+  z-index: 20 !important;
+}
+
+.replay-canvas .react-flow__edges {
+  overflow: visible;
+}
+
+/* Stage node */
+
+.stage-node {
+  position: relative;
+  color: var(--color-primary);
+  --stage-stroke: var(--color-muted);
+}
+
+.stage-frame {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.stage-frame rect {
+  fill: none;
+  stroke: var(--stage-stroke);
+  stroke-width: 1;
+  transition: stroke 0.35s ease;
+}
+
+.stage-node.is-active {
+  --stage-stroke: var(--color-accent);
+}
+
+.stage-node.tone-warn {
+  --stage-stroke: rgba(245, 158, 11, 0.6);
+}
+
+.stage-node.tone-block {
+  --stage-stroke: rgba(239, 68, 68, 0.65);
+}
+
+.stage-node.tone-warn.is-active {
+  --stage-stroke: var(--color-amber);
+}
+
+.stage-node.tone-block.is-active {
+  --stage-stroke: var(--color-red);
+}
+
+.stage-body {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 11px 12px;
+  border-radius: 5px;
+  background: #050505;
+  transition: box-shadow 0.4s ease, background 0.4s ease;
+  will-change: opacity, transform;
+}
+
+.stage-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 12px;
+  margin-bottom: 7px;
+}
+
+.stage-title {
+  flex-shrink: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-secondary);
+  white-space: nowrap;
+}
+
+.stage-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-muted);
+  transition: background 0.35s ease;
+}
+
+.stage-node.is-active .stage-dot {
+  background: var(--color-accent);
+}
+
+.stage-node.tone-warn .stage-dot {
+  background: var(--color-amber);
+}
+
+.stage-node.tone-block .stage-dot {
+  background: var(--color-red);
+}
+
+.stage-version {
+  min-width: 0;
+  max-width: 64px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  color: var(--color-secondary);
+}
+
+.stage-headline {
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 18px;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.stage-node.tone-warn .stage-headline {
+  color: var(--color-amber);
+}
+
+.stage-node.tone-block .stage-headline {
+  color: var(--color-red);
+}
+
+.stage-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--color-muted);
+  text-underline-offset: 3px;
+}
+
+.stage-link:hover {
+  text-decoration-color: var(--color-primary);
+}
+
+.stage-caption {
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 15px;
+  color: var(--color-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+
+.stage-caption + .stage-caption {
+  margin-top: 0;
+}
+
+.stage-system {
+  margin-top: auto;
+  padding-top: 2px;
+  font-size: 10px;
+  line-height: 13px;
+  color: var(--color-secondary);
+}
+
+.stage-checks {
+  list-style: none;
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stage-checks li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--color-primary);
+  white-space: nowrap;
+}
+
+.stage-checks li.fail {
+  color: var(--color-amber);
+}
+
+.check-mark {
+  width: 10px;
+  font-size: 10px;
+  color: var(--color-secondary);
+}
+
+.stage-checks li.fail .check-mark {
+  color: var(--color-amber);
+}
+
+.stage-note {
+  margin-top: 6px;
+  padding-left: 8px;
+  border-left: 1px solid var(--color-muted);
+  font-size: 11px;
+  line-height: 14px;
+  color: #b4b4b4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.stage-handle {
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  min-width: 0;
+  min-height: 0;
+  border: none;
+  pointer-events: none;
+}
+
+/* Branch not taken: a faint stub under the node */
+
+.stage-stub {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.stub-line {
+  width: 0;
+  height: 14px;
+  border-left: 1px dashed #2e2e2e;
+}
+
+.stub-label {
+  margin-top: 3px;
+  font-size: 10px;
+  color: #4a4a4a;
+  white-space: nowrap;
+}
+
+/* Edges */
+
+.pulse-edge-track {
+  fill: none;
+  stroke: #3a3a3a;
+  stroke-width: 1;
+}
+
+.pulse-edge-trail {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 1;
+}
+
+.pulse-edge-head {
+  fill: var(--color-accent);
+}
+
+/* Playback bar */
+
+.replay-bar-strip {
+  background: var(--color-bg);
+}
+
+.replay-progress {
+  background: var(--color-secondary);
+}
+
+.replay-tick {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 10px;
+  padding: 0;
+  transform: translateX(-50%);
+  background: var(--color-muted);
+  border-radius: 1px;
+  transition: background 0.2s ease;
+}
+
+.replay-tick::before {
+  content: '';
+  position: absolute;
+  inset: -6px -6px;
+}
+
+.replay-tick.reached {
+  background: var(--color-primary);
+}
+
+.replay-tick.reached.tone-warn {
+  background: var(--color-amber);
+}
+
+.replay-tick.reached.tone-block {
+  background: var(--color-red);
+}
+
+.replay-path-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: pre;
+}
+
+.replay-bar-strip .timestamp-value {
+  min-width: 150px;
+  text-align: right;
+}
+
+/* Entry points on other pages */
+
+.replay-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-metadata);
+  color: var(--color-secondary);
+  transition: color 0.15s ease;
+}
+
+.replay-trigger:hover {
+  color: var(--color-primary);
+}
+
+.replay-trigger-glyph {
+  font-size: 9px;
+}
+
+/* Final stage: soft glow so the outcome reads first */
+
+.stage-node.is-final .stage-body {
+  background: radial-gradient(120% 140% at 0% 0%, rgba(77, 163, 255, 0.12) 0%, #050505 62%);
+  box-shadow: 0 0 28px rgba(77, 163, 255, 0.16);
+}
+
+.stage-node.is-final.tone-warn .stage-body {
+  background: radial-gradient(120% 140% at 0% 0%, rgba(245, 158, 11, 0.13) 0%, #050505 62%);
+  box-shadow: 0 0 28px rgba(245, 158, 11, 0.15);
+}
+
+.stage-node.is-final.tone-block .stage-body {
+  background: radial-gradient(120% 140% at 0% 0%, rgba(239, 68, 68, 0.13) 0%, #050505 62%);
+  box-shadow: 0 0 28px rgba(239, 68, 68, 0.15);
+}
+
+/* Re-verify checks as dots; labels are in the hover card */
+
+.stage-check-dots {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.stage-check-dot {
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-accent);
+}
+
+.stage-check-dot.fail {
+  background: var(--color-amber);
+}
+
+/* Hover card: caption, rationale and checks */
+
+.stage-hover {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  width: 240px;
+  padding: 10px 12px;
+  transform: translate(-50%, 4px);
+  background: rgba(8, 8, 8, 0.97);
+  border: 1px solid var(--color-muted);
+  border-radius: 5px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.stage-node:hover .stage-hover {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.stage-hover-system {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-secondary);
+  margin-bottom: 4px;
+}
+
+.stage-hover-caption {
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--color-primary);
+}
+
+.stage-hover .stage-note {
+  -webkit-line-clamp: 6;
+}
+
+.stage-hover .stage-checks li {
+  white-space: normal;
+}
+
+.replay-route {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

@@ -1,0 +1,172 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTable, micros, tag, type RowOf } from '../hooks/useTable';
+import type { ClaimGate, DecisionOutcome, DecisionRecord, DecisionType, EscalatedClaimStatus } from '../types';
+import { STAGE_TITLES, buildTrace, caseKeyFromAuditReason, fromAuditRecord, fromClaimDecision, fromDecisionCase, fromEscalatedClaim } from './adapter';
+import type { DecisionRow, DecisionTrace, PipelineStepRow, ReverifyCheck, StageKind } from './types';
+
+function parseChecks(json: string): ReverifyCheck[] | undefined {
+  if (!json) return undefined;
+  try {
+    const parsed = JSON.parse(json) as ReverifyCheck[];
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Per-step path recorded by the decision pipeline (`pipeline_step`). Decisions
+ * without recorded steps fall back to a seeded example path.
+ */
+function usePipelineSteps(): PipelineStepRow[] {
+  const rows = useTable('pipelineStep');
+  return useMemo(() => rows
+    .filter(r => r.stage in STAGE_TITLES)
+    .map(r => ({
+      decisionKey: r.decisionKey,
+      seq: r.seq,
+      stage: r.stage as StageKind,
+      system: r.system,
+      version: r.version ?? null,
+      verdict: r.verdict,
+      confidencePct: r.confidencePct ?? null,
+      amountCents: r.amountCents != null ? Number(r.amountCents) : null,
+      note: r.note,
+      detail: r.detail || undefined,
+      checks: parseChecks(r.checksJson),
+    })), [rows]);
+}
+
+export function toDecisionRecord(row: RowOf<'decisionRecord'>): DecisionRecord {
+  return {
+    id: row.id,
+    createdAt: micros(row.createdAt),
+    decisionType: tag(row.decisionType) as DecisionType,
+    outcome: tag(row.outcome) as DecisionOutcome,
+    passId: row.passId ?? null,
+    stationId: row.stationId ?? null,
+    amountCents: row.amountCents,
+    reason: row.reason,
+    policyVersion: row.policyVersion,
+    modelVersion: row.modelVersion,
+  };
+}
+
+function useDecisionRow(key: string | null): DecisionRow | null {
+  const decisionRecords = useTable('decisionRecord');
+  const claims = useTable('claim');
+  const claimDecisions = useTable('claimDecision');
+  const claimReasons = useTable('claimReason');
+  const escalated = useTable('escalatedClaim');
+  const cases = useTable('decisionCase');
+
+  return useMemo(() => {
+    if (!key) return null;
+    const sep = key.indexOf(':');
+    const kind = key.slice(0, sep);
+    const id = key.slice(sep + 1);
+    switch (kind) {
+      case 'audit': {
+        const row = decisionRecords.find(r => String(r.id) === id);
+        if (!row) return null;
+        const audit = fromAuditRecord(toDecisionRecord(row));
+        const caseKey = caseKeyFromAuditReason(row.reason);
+        return caseKey && cases.some(c => `case:${c.claimRef}` === caseKey) ? { ...audit, pipelineKey: caseKey } : audit;
+      }
+      case 'case': {
+        const c = cases.find(r => r.claimRef === id);
+        return c ? fromDecisionCase({
+          claimRef: c.claimRef,
+          customer: c.customer,
+          claimType: tag(c.claimType),
+          amountClaimedCents: c.amountClaimedCents,
+          finalCreditCents: c.finalCreditCents,
+          status: tag(c.status),
+          finalVerdict: c.finalVerdict ? tag(c.finalVerdict) : null,
+          escalationReason: c.escalationReason,
+          policyVersion: c.policyVersion,
+          modelVersion: c.modelVersion,
+        }) : null;
+      }
+      case 'claim': {
+        const claim = claims.find(c => c.id === id);
+        const decision = claimDecisions.find(d => d.claimId === id);
+        if (!claim || !decision) return null;
+        const top = claimReasons
+          .filter(r => r.claimId === id)
+          .sort((a, b) => Math.abs(b.shapValue) - Math.abs(a.shapValue))[0];
+        return fromClaimDecision(
+          { id: claim.id, customerName: claim.customerName, amountClaimedCents: claim.amountClaimedCents, passId: claim.passId, createdAt: micros(claim.createdAt) },
+          {
+            claimId: decision.claimId,
+            creditAmountCents: decision.creditAmountCents,
+            confidencePercent: decision.confidencePercent,
+            gate: tag(decision.gate) as ClaimGate,
+            rule: decision.rule,
+            policyVersion: decision.policyVersion,
+            modelVersion: decision.modelVersion,
+            decidedAt: micros(decision.decidedAt),
+          },
+          top?.feature,
+        );
+      }
+      case 'approval': {
+        const row = escalated.find(r => String(r.id) === id);
+        return row ? fromEscalatedClaim({
+          id: row.id,
+          customerName: row.customerName,
+          amountClaimedCents: row.amountClaimedCents,
+          proposedAmountCents: row.proposedAmountCents,
+          confidencePct: row.confidencePct,
+          escalationReason: row.escalationReason,
+          status: tag(row.status) as EscalatedClaimStatus,
+          policyVersion: row.policyVersion,
+          modelVersion: row.modelVersion,
+          createdAt: micros(row.createdAt),
+          passIds: row.passIds,
+        }) : null;
+      }
+      default:
+        return null;
+    }
+  }, [key, decisionRecords, claims, claimDecisions, claimReasons, escalated, cases]);
+}
+
+export function useDecisionTrace(key: string | null): DecisionTrace | null {
+  const row = useDecisionRow(key);
+  const steps = usePipelineSteps();
+  return useMemo(() => (row ? buildTrace(row, steps) : null), [row, steps]);
+}
+
+function readReplayParam(): string | null {
+  const query = window.location.hash.split('?')[1];
+  return query ? new URLSearchParams(query).get('replay') : null;
+}
+
+function writeReplayParam(key: string | null) {
+  const [path, query] = window.location.hash.split('?');
+  const params = new URLSearchParams(query ?? '');
+  if (key) params.set('replay', key);
+  else params.delete('replay');
+  const next = params.toString();
+  window.location.hash = `${path.replace(/^#/, '')}${next ? `?${next}` : ''}`;
+}
+
+/** The decision whose replay is open, kept in the hash as `?replay=<key>`. */
+export function useReplayParam(): [string | null, (key: string | null) => void] {
+  const [key, setKey] = useState<string | null>(readReplayParam);
+  useEffect(() => {
+    const onHashChange = () => setKey(readReplayParam());
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+  const set = useCallback((next: string | null) => {
+    writeReplayParam(next);
+    setKey(next);
+  }, []);
+  return [key, set];
+}
+
+export function openReplay(key: string) {
+  writeReplayParam(key);
+}

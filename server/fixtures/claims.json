@@ -1,0 +1,74 @@
+[
+  {
+    "customer_name": "Polar Data Systems",
+    "selection": "recent",
+    "pass_count": 80,
+    "lookback_hours": 72,
+    "claimed_pct": 100,
+    "proposed_pct": 100,
+    "confidence_pct": 88,
+    "escalation_reason": "Confidence 88% below 95% auto-approval threshold. Satellite bandwidth allocation could not be fully reconciled against pass telemetry.",
+    "policy_version": "v4",
+    "model_version": "v2"
+  },
+  {
+    "customer_name": "Aether Dynamics",
+    "selection": "storm",
+    "pass_count": 60,
+    "lookback_hours": 72,
+    "claimed_pct": 100,
+    "proposed_pct": 84,
+    "confidence_pct": 82,
+    "escalation_reason": "Confidence 82% below 95% auto-approval threshold. Partial telemetry gap during the M-class flare and Kp 6.7 storm.",
+    "policy_version": "v4",
+    "model_version": "v2"
+  },
+  {
+    "customer_name": "Nexus Corp",
+    "selection": "recent",
+    "pass_count": 40,
+    "lookback_hours": 72,
+    "claimed_pct": 100,
+    "proposed_pct": 100,
+    "confidence_pct": 65,
+    "escalation_reason": "Confidence 65% below 95% auto-approval threshold. Disputed pass durations conflict with ground station logs.",
+    "policy_version": "v4",
+    "model_version": "v2"
+  },
+  {
+    "customer_name": "Helix Orbital",
+    "selection": "recent",
+    "pass_count": 30,
+    "lookback_hours": 72,
+    "claimed_pct": 100,
+    "proposed_pct": 100,
+    "confidence_pct": 91,
+    "escalation_reason": "Confidence 91% below 95% auto-approval threshold. First claim on a new customer contract, no prior baseline.",
+    "policy_version": "v4",
+    "model_version": "v2"
+  },
+  {
+    "customer_name": "Orbital Sciences Inc",
+    "selection": "recent",
+    "pass_count": 120,
+    "lookback_hours": 72,
+    "claimed_pct": 100,
+    "proposed_pct": 83,
+    "confidence_pct": 72,
+    "escalation_reason": "Confidence 72% below 95% auto-approval threshold. Proposed partial credit for passes with partial downlink.",
+    "policy_version": "v4",
+    "model_version": "v2"
+  },
+  {
+    "customer_name": "SkyNet Communications",
+    "selection": "dropped",
+    "pass_count": 20,
+    "lookback_hours": 72,
+    "claimed_pct": 100,
+    "proposed_pct": 100,
+    "confidence_pct": 45,
+    "escalation_reason": "Confidence 45% below 95% auto-approval threshold. Multiple dropped passes in 72 hours that the customer attributes to the Kp 6.7 geomagnetic storm.",
+    "policy_version": "v4",
+    "model_version": "v2"
+  }
+]
