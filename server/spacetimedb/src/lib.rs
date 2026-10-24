@@ -3,9 +3,13 @@ use std::time::Duration;
 
 pub mod authority;
 pub mod confidence_gate;
+pub mod events;
+pub mod sla;
 
 #[cfg(test)]
 mod authority_tests;
+#[cfg(test)]
+mod tests;
 
 #[derive(SpacetimeType, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PassStatus {
