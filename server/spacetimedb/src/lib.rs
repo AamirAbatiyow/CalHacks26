@@ -1,6 +1,14 @@
 use spacetimedb::{ReducerContext, ScheduleAt, SpacetimeType, Table, Timestamp};
 use std::time::Duration;
 
+// SLA deadline management and dispute handling
+pub mod sla;
+// Event-sourced playback system
+pub mod events;
+// Unit tests
+#[cfg(test)]
+mod tests;
+
 #[derive(SpacetimeType, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PassStatus {
     Scheduled,
