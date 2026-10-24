@@ -136,6 +136,8 @@ SPACETIMEDB_MODULE=ground-truth
 | `sim_clock` | Simulation time control |
 | `kpi` | Financial KPIs; credits paid and recovered are kept equal to the ledger totals |
 | `escalated_claim` | Approvals queue: claims the confidence gate escalated for human review |
+| `claim`, `claim_pass`, `claim_evidence`, `claim_decision`, `claim_outcome`, `claim_weather` | Claim page (`#/claims/<id>`): the disputed pass, evidence, gated decision and outcome |
+| `claim_reason` | SHAP contributions behind a claim decision's confidence |
 | `decision_record` | Audit log for AI decisions with `policy_version` and `model_version` |
 
 ### Decision Record Schema
@@ -164,6 +166,9 @@ All AI-driven decisions (disputes, credits, pass classifications) are logged to 
 | `seed_escalated_claim` | Add a claim to the Approvals queue (only if the confidence gate escalates it) |
 | `approve_escalated_claim` / `deny_escalated_claim` / `edit_escalated_claim` | Human decisions on escalated claims |
 | `seek_replay` | Jump a policy replay to a given claim |
+| `seed_claim_decision` | Credit a claim's verified loss; gate, rule and policy version come from the confidence gate and active Cedar policy |
+| `seed_claim_weather` | Attach the `space_weather` reading nearest a claim's signal loss |
+| `seed_claim_reason` | Add a SHAP reason to a claim decision |
 
 ## UI Features
 
