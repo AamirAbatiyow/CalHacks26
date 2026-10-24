@@ -152,6 +152,7 @@ class HitlLearner:
 def _realign_thresholds(old: fm.GatedModel, new: fm.GatedModel, train: pd.DataFrame) -> fm.GatedModel:
     """Map old raw thresholds to the new booster by matching flagged-set size on `train`."""
     r_old, r_new = old.booster.raw(train), new.booster.raw(train)
+    b_old, b_new = old.booster.raw_base(train), new.booster.raw_base(train)
 
     def remap(t):
         if t is None:
@@ -162,8 +163,8 @@ def _realign_thresholds(old: fm.GatedModel, new: fm.GatedModel, train: pd.DataFr
     def remap_ok(t):
         if t is None:
             return None
-        q = (r_old <= t).mean()
-        return float(np.quantile(r_new, q)) if q > 0 else float(r_new.min() - 1)
+        q = (b_old <= t).mean()
+        return float(np.quantile(b_new, q)) if q > 0 else float(b_new.min() - 1)
 
     new.t_fail = remap(old.t_fail)
     new.t_ok = remap_ok(old.t_ok)

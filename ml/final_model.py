@@ -68,6 +68,9 @@ VARIANTS: Dict[str, dict] = {
     "pr12_state": {"numeric": cf.PHYSICAL_NUMERIC + PR12_STATE, "monotone": False},
     "full_causal": {"numeric": cf.FEATURES_NUMERIC, "monotone": False},
     "full_causal_mono": {"numeric": cf.FEATURES_NUMERIC, "monotone": True},
+    # Auto "failed" only for passes whose station's last resolved pass failed (outage
+    # evidence, PR #12/#17); the OK side still uses the plain model score.
+    "full_causal_mono_ev": {"numeric": cf.FEATURES_NUMERIC, "monotone": True, "evidence": True},
     "rule_streak": {"rule": True},
 }
 FINAL_VARIANT = "full_causal_mono"
@@ -186,6 +189,14 @@ class Booster:
         return self
 
     def raw(self, df: pd.DataFrame) -> np.ndarray:
+        """Score used for the auto-'failed' side."""
+        r = self.raw_base(df)
+        if VARIANTS[self.variant].get("evidence"):
+            r = np.where(df["st_last_failed"].fillna(0).to_numpy() == 1, r, r - 2.0)
+        return r
+
+    def raw_base(self, df: pd.DataFrame) -> np.ndarray:
+        """Score used for the auto-'fine' side and for AUC."""
         if self.is_rule:
             s = df["st_fail_streak"].fillna(0).to_numpy() + df["st_failed_frac"].fillna(0).to_numpy()
             return s + 0.01 * df["st_failed_frac_long"].fillna(0).to_numpy()
@@ -259,16 +270,20 @@ class GatedModel:
     rule: str = DEFAULT_RULE
 
     def proba(self, df: pd.DataFrame) -> np.ndarray:
-        return self.calibrator.predict(self.booster.raw(df))
+        return self.calibrator.predict(self.booster.raw_base(df))
 
-    def decide(self, df: pd.DataFrame, rule: Optional[str] = None, raw: Optional[np.ndarray] = None) -> pd.DataFrame:
-        raw = self.booster.raw(df) if raw is None else raw
-        p = self.calibrator.predict(raw)
+    def decide(self, df: pd.DataFrame, rule: Optional[str] = None, raw=None) -> pd.DataFrame:
+        raw, base = (self.booster.raw(df), self.booster.raw_base(df)) if raw is None else raw
+        p = self.calibrator.predict(base)
         t_fail, t_ok = (self.rules[rule] if rule else (self.t_fail, self.t_ok))
         fail = (raw >= t_fail) if t_fail is not None else np.zeros(len(df), bool)
-        ok = (raw <= t_ok) if t_ok is not None else np.zeros(len(df), bool)
+        ok = (base <= t_ok) if t_ok is not None else np.zeros(len(df), bool)
         ok &= ~fail
-        return pd.DataFrame({"raw": raw, "p_fail": p, "auto_fail": fail, "auto_ok": ok}, index=df.index)
+        return pd.DataFrame({"raw": raw, "score": base, "p_fail": p, "auto_fail": fail, "auto_ok": ok},
+                            index=df.index)
+
+    def scores(self, df: pd.DataFrame):
+        return self.booster.raw(df), self.booster.raw_base(df)
 
 
 def fit_gated(train: pd.DataFrame, variant: str, rule: str = DEFAULT_RULE, inner_folds: int = 4, seed: int = 0,
@@ -276,21 +291,25 @@ def fit_gated(train: pd.DataFrame, variant: str, rule: str = DEFAULT_RULE, inner
     """Inner station-grouped OOF -> isotonic + thresholds for every rule; final booster on all of `train`."""
     y = train["y"].to_numpy()
     folds = station_folds(train["ground_station"].to_numpy(), inner_folds, seed + 101)
-    oof = np.zeros(len(train))
+    oof, oof_base = np.zeros(len(train)), np.zeros(len(train))
     for f in range(inner_folds):
         tr, va = folds != f, folds == f
         if va.sum() == 0 or tr.sum() == 0:
             continue
         b = Booster(variant).fit(train[tr])
-        oof[va] = b.raw(train[va])
-    iso = IsotonicRegression(out_of_bounds="clip", y_min=0.0, y_max=1.0).fit(oof, y)
-    rules = {r: rule_thresholds(oof, y, r, ok_side) for r in RULES}
+        oof[va], oof_base[va] = b.raw(train[va]), b.raw_base(train[va])
+    iso = IsotonicRegression(out_of_bounds="clip", y_min=0.0, y_max=1.0).fit(oof_base, y)
+    rules = {}
+    for r in RULES:
+        t_fail, _ = rule_thresholds(oof, y, r, ok_side=False)
+        _, t_ok = rule_thresholds(oof_base, y, r, ok_side)
+        rules[r] = (t_fail, t_ok)
     t_fail, t_ok = rules[rule]
     kind, _, z = RULES[rule]
     targets = {f"{t:.2f}": pick_threshold(oof, y, t, kind, z=z) for t in extra_targets}
     targets["0.95"] = t_fail
     booster = Booster(variant).fit(train)
-    inner = {"oof_auc": float(roc_auc_score(y, oof)) if 0 < y.mean() < 1 else None,
+    inner = {"oof_auc": float(roc_auc_score(y, oof_base)) if 0 < y.mean() < 1 else None,
              "oof_flagged": int((oof >= t_fail).sum()) if t_fail is not None else 0, "rule": rule}
     return GatedModel(booster, iso, t_fail, t_ok, targets, inner, rules, rule)
 
@@ -327,7 +346,7 @@ def gate_metrics(df: pd.DataFrame, dec: pd.DataFrame) -> Dict:
     n_fail_all = int((y == 1).sum())
     out = {
         "n": int(len(df)), "n_failures": n_fail_all, "base_rate": float(y.mean()) if len(y) else None,
-        "auc": float(roc_auc_score(y, dec["raw"])) if 0 < y.mean() < 1 else None,
+        "auc": float(roc_auc_score(y, dec["score"])) if 0 < y.mean() < 1 else None,
         "fail_flagged": nf, "fail_tp": tp,
         "fail_precision": tp / nf if nf else None,
         "fail_precision_wilson": wilson(tp, nf) if nf else None,
@@ -358,7 +377,7 @@ def eval_station_cv(df: pd.DataFrame, variant: str, k: int = 5, seed: int = 0,
     for f in range(k):
         tr, te = df[folds != f], df[folds == f]
         gm = fit_gated(tr, variant, seed=seed + f, **kw)
-        raw = gm.booster.raw(te)
+        raw = gm.scores(te)
         for r in rules:
             d = gm.decide(te, r, raw)
             d["fold"] = f
@@ -385,7 +404,7 @@ def eval_time(df: pd.DataFrame, variant: str, frac: float = 0.7, seed: int = 0,
               rules: Sequence[str] = tuple(RULES), **kw):
     tr, te, cut = time_split(df, frac)
     gm = fit_gated(tr, variant, seed=seed, **kw)
-    raw = gm.booster.raw(te)
+    raw = gm.scores(te)
     unseen = ~te["ground_station"].isin(set(tr["ground_station"]))
     out = {}
     for r in rules:
