@@ -16,7 +16,7 @@ use crate::pipeline::{self, reverify_checks, system1_route_note, usd, Stage, Ste
 use crate::authority::{check_authorization, get_active_policy, AuthzDecision};
 use crate::decision_logic::{
     cedar_for_rule, cedar_permits, derive_telemetry, entitled_credit_cents, ml_failure_proxy, needs_text,
-    parse_evidence_ref, rule_context, sanity_failures, Condition, AUTO_DECIDE_CONFIDENCE_PCT,
+    contract_ref_matches, parse_evidence_ref, rule_context, sanity_failures, Condition, AUTO_DECIDE_CONFIDENCE_PCT,
     COMPLETED_LOSS_PCT, MIN_RULE_REVIEWERS, MIN_RULE_SUPPORT, RULE_APPROVE_ACTION, RULE_DENY_ACTION, STORM_KP,
 };
 use crate::{
@@ -976,7 +976,12 @@ fn evidence_exists(ctx: &ReducerContext, case: &DecisionCase, snapshot: &Value, 
         "pass" => as_u64()? == case.pass_id && ctx.db.pass().id().find(case.pass_id).is_some(),
         "pass_telemetry" => as_u64()? == case.pass_id && ctx.db.pass_telemetry().pass_id().find(case.pass_id).is_some(),
         "station" => key == case.station_id && ctx.db.station().id().find(case.station_id.clone()).is_some(),
-        "contract_term" => key == case.customer && ctx.db.contract_term().customer().find(&case.customer).is_some(),
+        "contract_term" => ctx
+            .db
+            .contract_term()
+            .customer()
+            .find(&case.customer)
+            .is_some_and(|c| contract_ref_matches(key, &c.customer, &c.contract_id)),
         "dispute_message" => Some(as_u64()?) == case.message_id && ctx.db.dispute_message().id().find(as_u64()?).is_some(),
         "station_maintenance" => {
             let id = as_u64()?;

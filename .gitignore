@@ -27,8 +27,5 @@ npm-debug.log*
 # SpacetimeDB
 *.wasm
 
-# Generated bindings
-web/src/module_bindings/
-
 # Generated bindings for the attacker script
 server/scripts/module_bindings/
