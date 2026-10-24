@@ -195,6 +195,14 @@ export interface ClaimWeather {
   stormActive: boolean;
 }
 
+export interface ClaimReason {
+  id: bigint;
+  claimId: string;
+  feature: string;
+  detail: string;
+  shapValue: number;
+}
+
 export const LedgerEntryType = {
   Credit: 'Credit',
   Invoice: 'Invoice',

@@ -6,6 +6,7 @@ import type {
   ClaimDecision,
   ClaimOutcome,
   ClaimWeather,
+  ClaimReason,
 } from '../types';
 import { ClaimGate, DataIntegrityStatus } from '../types';
 import { useTable, useConnected, reducers, micros, tag } from './useTable';
@@ -33,9 +34,12 @@ export interface ClaimData {
   decision: ClaimDecision | null;
   outcome: ClaimOutcome | null;
   weather: ClaimWeather | null;
+  reasons: ClaimReason[];
+  stationRevenueCents: bigint;
 }
 
-export function useClaimData(claimId: string) {
+/** Live rows for one claim; with no id, the most recently created claim. */
+export function useClaimData(requestedClaimId: string | null) {
   const connected = useConnected();
   const claims = useTable('claim');
   const passes = useTable('claimPass');
@@ -43,6 +47,17 @@ export function useClaimData(claimId: string) {
   const decisions = useTable('claimDecision');
   const outcomes = useTable('claimOutcome');
   const weathers = useTable('claimWeather');
+  const reasonRows = useTable('claimReason');
+  const stations = useTable('station');
+
+  const claimId = useMemo(() => {
+    if (requestedClaimId) return requestedClaimId;
+    const latest = claims.reduce<(typeof claims)[number] | null>(
+      (best, c) => (!best || micros(c.createdAt) > micros(best.createdAt) ? c : best),
+      null,
+    );
+    return latest?.id ?? null;
+  }, [claims, requestedClaimId]);
 
   const claim = useMemo<Claim | null>(() => {
     const row = claims.find(c => c.id === claimId);
@@ -112,9 +127,15 @@ export function useClaimData(claimId: string) {
     return row ? { claimId: row.claimId, kpIndex: row.kpIndex, stormActive: row.stormActive } : null;
   }, [weathers, claimId]);
 
-  const seedDemoClaim = useCallback(() => {
-    reducers()?.seedDemoClaim({});
-  }, []);
+  const reasons = useMemo<ClaimReason[]>(() => reasonRows
+    .filter(r => r.claimId === claimId)
+    .map(r => ({ id: r.id, claimId: r.claimId, feature: r.feature, detail: r.detail, shapValue: r.shapValue }))
+    .sort((a, b) => Math.abs(b.shapValue) - Math.abs(a.shapValue)), [reasonRows, claimId]);
+
+  const stationRevenueCents = useMemo(
+    () => stations.find(s => s.name === pass?.stationName)?.monthlyRevenueCents ?? 0n,
+    [stations, pass],
+  );
 
   const approveClaim = useCallback((id: string) => {
     reducers()?.approveClaimDecision({ claimId: id });
@@ -130,13 +151,15 @@ export function useClaimData(claimId: string) {
 
   return {
     connected,
+    claimId,
     claim,
     pass,
     evidence,
     decision,
     outcome,
     weather,
-    seedDemoClaim,
+    reasons,
+    stationRevenueCents,
     approveClaim,
     escalateClaim,
     updateOutcome,

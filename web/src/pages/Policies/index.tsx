@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { usePoliciesDB } from '../../hooks/usePoliciesDB';
+import { useHashParam } from '../../hooks/useHashPage';
 import { PolicyStatus, ReplayStatus } from '../../types';
 import type { PolicyVersion, CedarRule, PolicyReplay } from '../../types';
 import './Policies.css';
@@ -262,14 +263,20 @@ export default function Policies() {
     promotePolicyVersion,
   } = usePoliciesDB();
 
+  const linkedVersionId = useHashParam();
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
+  const [appliedLinkId, setAppliedLinkId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (policyVersions.length > 0 && !selectedVersionId) {
+    if (policyVersions.length === 0) return;
+    if (linkedVersionId && linkedVersionId !== appliedLinkId && policyVersions.some(v => v.id === linkedVersionId)) {
+      setSelectedVersionId(linkedVersionId);
+      setAppliedLinkId(linkedVersionId);
+    } else if (!selectedVersionId) {
       const proposed = policyVersions.find(v => v.status === PolicyStatus.Proposed);
       setSelectedVersionId(proposed?.id ?? policyVersions[0].id);
     }
-  }, [policyVersions, selectedVersionId]);
+  }, [policyVersions, selectedVersionId, linkedVersionId, appliedLinkId]);
 
   const selectedVersion = policyVersions.find(v => v.id === selectedVersionId);
   const currentVersion = policyVersions.find(v => v.status === PolicyStatus.Current);
