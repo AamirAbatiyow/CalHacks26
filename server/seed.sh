@@ -134,11 +134,6 @@ echo "Seeding contracts, decision history and incoming claims..."
 "$SPACETIME" call "$MODULE" seed_learning_history --server "$SERVER" || true
 "$SPACETIME" call "$MODULE" seed_incoming_claims --server "$SERVER" || true
 
-# Break It: attack fixtures plus one measured run
-echo "Seeding attack fixtures..."
-"$SPACETIME" call "$MODULE" seed_attack_fixtures --server "$SERVER" || true
-"$SPACETIME" call "$MODULE" run_all_attacks --server "$SERVER" || true
-
 # Decision architecture: SLA terms System 1/2 read, station maintenance windows, and
 # six months of human-labeled decisions the worker trains System 1 on and mines for
 # policy proposals. Start the worker (cd worker && npm start) after seeding.
@@ -162,5 +157,20 @@ if [ -d "$WORKER_DIR/node_modules" ]; then
 else
   echo "Skipping labeled history: run 'npm install' in worker/ and then 'npm run seed-history' there."
 fi
+
+# Break It runs last so its decisions see the contracts, SLA terms and learned policies above,
+# and the System 1 model a running worker trains on the history (proxy scores without one).
+echo "Waiting up to 60s for the worker to train System 1..."
+for _ in $(seq 1 30); do
+  if "$SPACETIME" sql "$MODULE" --server "$SERVER" "SELECT version FROM model_version" 2>/dev/null | grep -qE '^ *[0-9]+ *$'; then
+    echo "System 1 trained."
+    break
+  fi
+  sleep 2
+done
+
+echo "Seeding attack fixtures..."
+"$SPACETIME" call "$MODULE" seed_attack_fixtures --server "$SERVER" || true
+"$SPACETIME" call "$MODULE" run_all_attacks --server "$SERVER" || true
 
 echo "Seeding complete!"

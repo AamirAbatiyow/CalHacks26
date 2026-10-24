@@ -328,14 +328,14 @@ fn active_model_label(ctx: &ReducerContext) -> String {
         .unwrap_or_else(|| "s1-none".to_string())
 }
 
-fn nearest_weather(ctx: &ReducerContext, at_micros: i64) -> Option<crate::SpaceWeather> {
+pub(crate) fn nearest_weather(ctx: &ReducerContext, at_micros: i64) -> Option<crate::SpaceWeather> {
     ctx.db
         .space_weather()
         .iter()
         .min_by_key(|w| (w.timestamp.to_micros_since_unix_epoch() - at_micros).abs())
 }
 
-fn ensure_telemetry(ctx: &ReducerContext, p: &Pass) -> PassTelemetry {
+pub(crate) fn ensure_telemetry(ctx: &ReducerContext, p: &Pass) -> PassTelemetry {
     if let Some(t) = ctx.db.pass_telemetry().pass_id().find(p.id) {
         return t;
     }
@@ -616,7 +616,7 @@ fn pick_pass(ctx: &ReducerContext, storm: bool, status: PassStatus) -> Option<Pa
     candidates.into_iter().next().map(|(_, _, p)| p)
 }
 
-fn set_telemetry_loss(ctx: &ReducerContext, p: &Pass, loss_pct: u32) {
+pub(crate) fn set_telemetry_loss(ctx: &ReducerContext, p: &Pass, loss_pct: u32) {
     let t = ensure_telemetry(ctx, p);
     let received = (t.expected_mb * (100 - loss_pct.min(100)) as f64 / 100.0 * 10.0).round() / 10.0;
     ctx.db.pass_telemetry().pass_id().update(PassTelemetry {

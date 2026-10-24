@@ -105,6 +105,59 @@ export const AttackClaimStatus = __t.enum("AttackClaimStatus", {
 });
 export type AttackClaimStatus = __Infer<typeof AttackClaimStatus>;
 
+export const AttackClearance = __t.object("AttackClearance", {
+  id: __t.u64(),
+  sessionId: __t.u64(),
+  versionId: __t.string(),
+  triggerCaseId: __t.string(),
+  heldBefore: __t.u32(),
+  cleared: __t.u32(),
+  stillHeld: __t.u32(),
+  paidCents: __t.i64(),
+  protectedCents: __t.i64(),
+  badCents: __t.i64(),
+  createdAt: __t.timestamp(),
+});
+export type AttackClearance = __Infer<typeof AttackClearance>;
+
+export const AttackEval = __t.object("AttackEval", {
+  id: __t.u64(),
+  sessionId: __t.u64(),
+  label: __t.string(),
+  fixtureId: __t.u64(),
+  get attackType() {
+    return AttackType;
+  },
+  attackRunId: __t.option(__t.u64()),
+  description: __t.string(),
+  tried: __t.string(),
+  policyVersion: __t.string(),
+  modelVersion: __t.string(),
+  passId: __t.u64(),
+  stationId: __t.string(),
+  customer: __t.string(),
+  claimedCents: __t.i64(),
+  reason: __t.string(),
+  decidedBy: __t.string(),
+  outcome: __t.string(),
+  decision: __t.string(),
+  paidCents: __t.i64(),
+  supportedCents: __t.i64(),
+  protectedCents: __t.i64(),
+  badCents: __t.i64(),
+  confidence: __t.i64(),
+  s1PApprove: __t.option(__t.f64()),
+  evidenceJson: __t.string(),
+  screenJson: __t.string(),
+  rulesJson: __t.string(),
+  s1Json: __t.string(),
+  why: __t.string(),
+  review: __t.string(),
+  reviewRef: __t.string(),
+  createdAt: __t.timestamp(),
+});
+export type AttackEval = __Infer<typeof AttackEval>;
+
 export const AttackFixture = __t.object("AttackFixture", {
   id: __t.u64(),
   get attackType() {
@@ -235,6 +288,22 @@ export const AuditLog = __t.object("AuditLog", {
   newState: __t.string(),
 });
 export type AuditLog = __Infer<typeof AuditLog>;
+
+export const AuthorityChange = __t.object("AuthorityChange", {
+  id: __t.u64(),
+  kind: __t.string(),
+  target: __t.option(__t.identity()),
+  policyId: __t.string(),
+  valueCents: __t.i64(),
+  requestedBy: __t.identity(),
+  requestedAt: __t.timestamp(),
+  status: __t.string(),
+  approvedBy: __t.option(__t.identity()),
+  decidedAt: __t.option(__t.timestamp()),
+  refusal: __t.string(),
+  policyVersion: __t.string(),
+});
+export type AuthorityChange = __Infer<typeof AuthorityChange>;
 
 export const AuthorizationLog = __t.object("AuthorizationLog", {
   id: __t.u64(),

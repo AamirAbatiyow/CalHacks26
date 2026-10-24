@@ -20,6 +20,8 @@ const llm = llmConfigFromEnv();
 const mode = llm ? 'llm' : 'mock';
 const llmModel = llm ? llm.model : 'mock-analyst-1';
 
+const HEARTBEAT_MS = 5000;
+
 let conn: DbConnection;
 let ready = false;
 let active: { version: number; weights: number[] } | null = null;
@@ -27,9 +29,20 @@ let lastNote = 'starting';
 const parsed = new Map<bigint, Label>();
 const handled = new Set<string>();
 let chain: Promise<unknown> = Promise.resolve();
+let beat: ReturnType<typeof setInterval> | null = null;
+let bootstrapTimer: ReturnType<typeof setTimeout> | null = null;
 
 function enqueue(name: string, job: () => Promise<void>) {
   chain = chain.then(job).catch(err => console.error(`[worker] ${name} failed:`, err?.message ?? err));
+}
+
+/** History is seeded in batches; train once the batches stop arriving. */
+function bootstrapSoon() {
+  if (bootstrapTimer) clearTimeout(bootstrapTimer);
+  bootstrapTimer = setTimeout(() => {
+    bootstrapTimer = null;
+    if (ready && !active) enqueue('bootstrap System 1', () => learn(undefined));
+  }, 3000);
 }
 
 function labels(): Label[] {
@@ -70,6 +83,12 @@ function promotedRules(): Rule[] {
 
 async function heartbeat() {
   await conn.reducers.workerHeartbeat({ mode, llmModel, note: lastNote });
+}
+
+/** Runs outside the job queue so a long retrain or a call lost with a dropped socket never delays it. */
+function beatNow() {
+  if (!ready) return;
+  heartbeat().catch(err => console.error('[worker] heartbeat failed:', err?.message ?? err));
 }
 
 /** Refit System 1 on all human labels, gate on replay precision, then mine for policy proposals. */
@@ -212,12 +231,21 @@ function onCase(c: DecisionCase) {
 
 function start(c: DbConnection) {
   conn = c;
+  ready = false;
+  // A reconnect starts from a fresh subscription: jobs queued on the old socket may never settle,
+  // and cases they were handling are picked up again (the module rejects anything already decided).
+  // The database may also have been republished, so model and labels are reloaded from it.
+  chain = Promise.resolve();
+  handled.clear();
+  parsed.clear();
+  active = null;
   conn.db.decisionCase.onInsert((_ctx, row) => onCase(row));
   conn.db.decisionCase.onUpdate((_ctx, _old, row) => onCase(row));
   conn.db.modelVersion.onInsert(() => loadActiveModel());
   conn.db.modelVersion.onUpdate(() => loadActiveModel());
   conn.db.labeledDecision.onInsert((_ctx, row) => {
     if (ready && row.source === 'live') enqueue(`retrain on label ${row.id}`, () => learn(row.id));
+    else if (ready && !active) bootstrapSoon();
   });
   conn
     .subscriptionBuilder()
@@ -225,11 +253,13 @@ function start(c: DbConnection) {
       loadActiveModel();
       ready = true;
       console.log(`[worker] subscribed (System 2: ${mode} ${llmModel}); ${conn.db.labeledDecision.count()} labeled decisions`);
-      if (!active) enqueue('bootstrap System 1', () => learn(undefined));
-      else enqueue('initial mine', async () => {
+      if (!active) {
+        lastNote = 'training System 1';
+        enqueue('bootstrap System 1', () => learn(undefined));
+      } else {
         lastNote = 'ready';
-        await heartbeat();
-      });
+      }
+      beatNow();
       enqueue('pending cases', async () => {
         for (const row of conn.db.decisionCase.iter()) onCase(row);
       });
@@ -243,7 +273,7 @@ function start(c: DbConnection) {
       tables.modelVersion,
       tables.learnedRule,
     ]);
-  setInterval(() => enqueue('heartbeat', heartbeat), 5000);
+  if (!beat) beat = setInterval(beatNow, HEARTBEAT_MS);
 }
 
 connect(start);

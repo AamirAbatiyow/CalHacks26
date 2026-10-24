@@ -52,10 +52,6 @@ export function useBreakItDB() {
     attackParams: row.attackParams,
   })), [fixtureRows]);
 
-  const seedFixtures = useCallback(() => {
-    reducers()?.seedAttackFixtures({});
-  }, []);
-
   const runAttackType = useCallback(async (attackType: AttackType) => {
     // Injection attacks are filed as real claims and scored as the decision worker decides them.
     // The module refuses to file them while the worker is offline; the rejection carries the reason.
@@ -80,7 +76,6 @@ export function useBreakItDB() {
     sessions,
     fixtures,
     kpi: kpiRows[0] ?? null,
-    seedFixtures,
     runAttackType,
     runAllAttacks,
     clearRuns,

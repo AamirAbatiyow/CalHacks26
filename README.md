@@ -145,7 +145,16 @@ spacetime login                                  # Maincloud only
 ./reseed.sh ground-truth-aamir maincloud --yes   # or: ./reseed.sh ground-truth-aamir local --yes
 ```
 
-Connected clients reconnect on their own. Restart the worker after a reseed, since its subscriptions were to the old data.
+Connected clients reconnect on their own. The worker reconnects too and retrains System 1 on the reseeded history, so start it before reseeding and leave it running: `seed.sh` waits up to 60s for that model before running Break It, and without a running worker Break It falls back to a fixed stand-in score. From the repo root:
+
+```bash
+(cd worker && npm install && npm run generate && STDB_HOST=wss://maincloud.spacetimedb.com STDB_MODULE=ground-truth-aamir npm start)
+# in another terminal
+server/reseed.sh ground-truth-aamir maincloud --yes
+(cd web && npm run generate && npm run build)
+```
+
+Schema changes (such as Break It's `attack_eval`, `attack_clearance` and `authority_change` tables) need this reseed rather than a plain publish. The seed ends by running every Break It attack, so the page opens with the before and after comparison and the held storm-overclaim cluster ready for the live decision. A promoted v7 stays promoted, so after the live decision only a reseed puts the cluster back on hold.
 
 ## SpacetimeDB Tables
 
