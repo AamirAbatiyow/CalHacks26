@@ -8,6 +8,7 @@ import { type Infer as __Infer } from "spacetimedb";
 // Import all reducer arg schemas
 import AddPolicyVersionReducer from "../add_policy_version_reducer";
 import AdvanceReplayReducer from "../advance_replay_reducer";
+import ApproveAuthorityChangeReducer from "../approve_authority_change_reducer";
 import ApproveClaimDecisionReducer from "../approve_claim_decision_reducer";
 import ApproveDisputeReducer from "../approve_dispute_reducer";
 import ApproveEscalatedClaimReducer from "../approve_escalated_claim_reducer";
@@ -52,6 +53,8 @@ import RecordWeatherAlertReducer from "../record_weather_alert_reducer";
 import RegisterActorReducer from "../register_actor_reducer";
 import RegisterAttackerReducer from "../register_attacker_reducer";
 import RegisterModelVersionReducer from "../register_model_version_reducer";
+import RequestClaimCapChangeReducer from "../request_claim_cap_change_reducer";
+import RequestPayoutLimitChangeReducer from "../request_payout_limit_change_reducer";
 import RunAllAttacksReducer from "../run_all_attacks_reducer";
 import RunAttackFixtureReducer from "../run_attack_fixture_reducer";
 import RunAttackTypeReducer from "../run_attack_type_reducer";
@@ -101,6 +104,7 @@ import WorkerHeartbeatReducer from "../worker_heartbeat_reducer";
 
 export type AddPolicyVersionParams = __Infer<typeof AddPolicyVersionReducer>;
 export type AdvanceReplayParams = __Infer<typeof AdvanceReplayReducer>;
+export type ApproveAuthorityChangeParams = __Infer<typeof ApproveAuthorityChangeReducer>;
 export type ApproveClaimDecisionParams = __Infer<typeof ApproveClaimDecisionReducer>;
 export type ApproveDisputeParams = __Infer<typeof ApproveDisputeReducer>;
 export type ApproveEscalatedClaimParams = __Infer<typeof ApproveEscalatedClaimReducer>;
@@ -145,6 +149,8 @@ export type RecordWeatherAlertParams = __Infer<typeof RecordWeatherAlertReducer>
 export type RegisterActorParams = __Infer<typeof RegisterActorReducer>;
 export type RegisterAttackerParams = __Infer<typeof RegisterAttackerReducer>;
 export type RegisterModelVersionParams = __Infer<typeof RegisterModelVersionReducer>;
+export type RequestClaimCapChangeParams = __Infer<typeof RequestClaimCapChangeReducer>;
+export type RequestPayoutLimitChangeParams = __Infer<typeof RequestPayoutLimitChangeReducer>;
 export type RunAllAttacksParams = __Infer<typeof RunAllAttacksReducer>;
 export type RunAttackFixtureParams = __Infer<typeof RunAttackFixtureReducer>;
 export type RunAttackTypeParams = __Infer<typeof RunAttackTypeReducer>;

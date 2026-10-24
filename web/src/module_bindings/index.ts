@@ -36,6 +36,7 @@ import {
 // Import all reducer arg schemas
 import AddPolicyVersionReducer from "./add_policy_version_reducer";
 import AdvanceReplayReducer from "./advance_replay_reducer";
+import ApproveAuthorityChangeReducer from "./approve_authority_change_reducer";
 import ApproveClaimDecisionReducer from "./approve_claim_decision_reducer";
 import ApproveDisputeReducer from "./approve_dispute_reducer";
 import ApproveEscalatedClaimReducer from "./approve_escalated_claim_reducer";
@@ -80,6 +81,8 @@ import RecordWeatherAlertReducer from "./record_weather_alert_reducer";
 import RegisterActorReducer from "./register_actor_reducer";
 import RegisterAttackerReducer from "./register_attacker_reducer";
 import RegisterModelVersionReducer from "./register_model_version_reducer";
+import RequestClaimCapChangeReducer from "./request_claim_cap_change_reducer";
+import RequestPayoutLimitChangeReducer from "./request_payout_limit_change_reducer";
 import RunAllAttacksReducer from "./run_all_attacks_reducer";
 import RunAttackFixtureReducer from "./run_attack_fixture_reducer";
 import RunAttackTypeReducer from "./run_attack_type_reducer";
@@ -141,6 +144,7 @@ import AttackRunRow from "./attack_run_table";
 import AttackRunSessionRow from "./attack_run_session_table";
 import AuditDecisionRow from "./audit_decision_table";
 import AuditLogRow from "./audit_log_table";
+import AuthorityChangeRow from "./authority_change_table";
 import AuthorizationLogRow from "./authorization_log_table";
 import CaseConflictRow from "./case_conflict_table";
 import CaseDecisionRow from "./case_decision_table";
@@ -329,6 +333,17 @@ const tablesSchema = __schema({
       { name: 'audit_log_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, AuditLogRow),
+  authorityChange: __table({
+    name: 'authority_change',
+    indexes: [
+      { accessor: 'id', name: 'authority_change_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'authority_change_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, AuthorityChangeRow),
   authorizationLog: __table({
     name: 'authorization_log',
     indexes: [
@@ -998,6 +1013,7 @@ const tablesSchema = __schema({
 const reducersSchema = __reducers(
   __reducerSchema("add_policy_version", AddPolicyVersionReducer),
   __reducerSchema("advance_replay", AdvanceReplayReducer),
+  __reducerSchema("approve_authority_change", ApproveAuthorityChangeReducer),
   __reducerSchema("approve_claim_decision", ApproveClaimDecisionReducer),
   __reducerSchema("approve_dispute", ApproveDisputeReducer),
   __reducerSchema("approve_escalated_claim", ApproveEscalatedClaimReducer),
@@ -1042,6 +1058,8 @@ const reducersSchema = __reducers(
   __reducerSchema("register_actor", RegisterActorReducer),
   __reducerSchema("register_attacker", RegisterAttackerReducer),
   __reducerSchema("register_model_version", RegisterModelVersionReducer),
+  __reducerSchema("request_claim_cap_change", RequestClaimCapChangeReducer),
+  __reducerSchema("request_payout_limit_change", RequestPayoutLimitChangeReducer),
   __reducerSchema("run_all_attacks", RunAllAttacksReducer),
   __reducerSchema("run_attack_fixture", RunAttackFixtureReducer),
   __reducerSchema("run_attack_type", RunAttackTypeReducer),
@@ -1118,6 +1136,8 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "audit_decision": Omit<typeof tablesSchema.schemaType.tables["auditDecision"], "accessorName"> & { readonly accessorName: "audit_decision" };
     /** @deprecated Use `auditLog` instead. This alias will be removed in the next major version. */
     readonly "audit_log": Omit<typeof tablesSchema.schemaType.tables["auditLog"], "accessorName"> & { readonly accessorName: "audit_log" };
+    /** @deprecated Use `authorityChange` instead. This alias will be removed in the next major version. */
+    readonly "authority_change": Omit<typeof tablesSchema.schemaType.tables["authorityChange"], "accessorName"> & { readonly accessorName: "authority_change" };
     /** @deprecated Use `authorizationLog` instead. This alias will be removed in the next major version. */
     readonly "authorization_log": Omit<typeof tablesSchema.schemaType.tables["authorizationLog"], "accessorName"> & { readonly accessorName: "authorization_log" };
     /** @deprecated Use `caseConflict` instead. This alias will be removed in the next major version. */
@@ -1241,6 +1261,7 @@ const tableAccessorAliases = {
   "attack_run_session": "attackRunSession",
   "audit_decision": "auditDecision",
   "audit_log": "auditLog",
+  "authority_change": "authorityChange",
   "authorization_log": "authorizationLog",
   "case_conflict": "caseConflict",
   "case_decision": "caseDecision",
@@ -1330,6 +1351,8 @@ export type DbView = __DbViewBase & {
   readonly "audit_decision": __DbViewBase["auditDecision"];
   /** @deprecated Use `auditLog` instead. This alias will be removed in the next major version. */
   readonly "audit_log": __DbViewBase["auditLog"];
+  /** @deprecated Use `authorityChange` instead. This alias will be removed in the next major version. */
+  readonly "authority_change": __DbViewBase["authorityChange"];
   /** @deprecated Use `authorizationLog` instead. This alias will be removed in the next major version. */
   readonly "authorization_log": __DbViewBase["authorizationLog"];
   /** @deprecated Use `caseConflict` instead. This alias will be removed in the next major version. */
@@ -1450,6 +1473,8 @@ export type Tables = __TablesBase & {
   readonly "audit_decision": __TablesBase["auditDecision"];
   /** @deprecated Use `auditLog` instead. This alias will be removed in the next major version. */
   readonly "audit_log": __TablesBase["auditLog"];
+  /** @deprecated Use `authorityChange` instead. This alias will be removed in the next major version. */
+  readonly "authority_change": __TablesBase["authorityChange"];
   /** @deprecated Use `authorizationLog` instead. This alias will be removed in the next major version. */
   readonly "authorization_log": __TablesBase["authorizationLog"];
   /** @deprecated Use `caseConflict` instead. This alias will be removed in the next major version. */

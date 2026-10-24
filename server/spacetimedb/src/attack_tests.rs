@@ -200,10 +200,34 @@ fn dollar_amounts_are_grouped() {
 }
 
 #[test]
-fn only_admins_may_raise_their_own_limit() {
-    assert!(!may_raise_own_limit(UserRole::Customer));
-    assert!(!may_raise_own_limit(UserRole::Operator));
-    assert!(may_raise_own_limit(UserRole::Admin));
+fn no_one_raises_their_own_limit_or_approves_their_own_request() {
+    use crate::authority_change::separation_checks;
+    let (alice, bob) = (Identity::from_byte_array([1; 32]), Identity::from_byte_array([2; 32]));
+    for role in [UserRole::Customer, UserRole::Operator, UserRole::Admin] {
+        assert!(!separation_checks(alice, Some(role), alice, Some(alice)).is_empty(), "{:?} raised own limit", role);
+        assert!(!separation_checks(alice, Some(role), alice, None).is_empty(), "{:?} approved own cap change", role);
+    }
+    assert!(!separation_checks(bob, Some(UserRole::Admin), alice, Some(bob)).is_empty(), "approver is the target");
+    assert!(!separation_checks(bob, Some(UserRole::Operator), alice, Some(alice)).is_empty(), "operator approved");
+    assert!(separation_checks(bob, Some(UserRole::Admin), alice, Some(alice)).is_empty(), "a second admin may approve");
+    assert!(separation_checks(bob, Some(UserRole::Admin), alice, None).is_empty());
+}
+
+#[test]
+fn cedar_forbids_self_approval_even_for_admins() {
+    use crate::authority::{evaluate_authority_change, get_default_policy_text};
+    let text = get_default_policy_text();
+    let own = evaluate_authority_change(text, "v6", 1, "alice", "admin", "alice", "alice");
+    assert!(!own.allowed);
+    assert!(own.policies.contains(&"sod-no-own-authority".to_string()) && own.policies.contains(&"sod-no-own-request".to_string()), "{:?}", own.policies);
+    let own_cap = evaluate_authority_change(text, "v6", 2, "alice", "admin", "alice", "policy:default");
+    assert_eq!(own_cap.policies, vec!["sod-no-own-request".to_string()]);
+    assert!(!own_cap.allowed);
+    assert!(!evaluate_authority_change(text, "v6", 3, "bob", "operator", "alice", "alice").allowed, "operators have no permit");
+    let second = evaluate_authority_change(text, "v6", 4, "bob", "admin", "alice", "alice");
+    assert!(second.allowed && second.policies == vec!["authority-change-by-admin".to_string()], "{:?}", second.policies);
+    // A policy text that predates the rules still gets them.
+    assert!(!evaluate_authority_change("permit(principal, action, resource);", "v1", 5, "alice", "admin", "alice", "alice").allowed);
 }
 
 #[test]

@@ -78,7 +78,46 @@ pub struct AuthorizationLog {
     pub reason: String,
 }
 
-const DEFAULT_CEDAR_POLICY: &str = r#"
+macro_rules! separation_of_duties_policy {
+    () => {
+        r#"
+// Separation of duties: nobody raises their own authority or approves a change
+// they requested. Forbids override every permit, including the admin's.
+@id("sod-no-own-authority")
+forbid(
+    principal,
+    action == GroundTruth::Action::"approve_authority_change",
+    resource
+) when {
+    resource.target == principal
+};
+
+@id("sod-no-own-request")
+forbid(
+    principal,
+    action == GroundTruth::Action::"approve_authority_change",
+    resource
+) when {
+    resource.requested_by == principal
+};
+
+@id("authority-change-by-admin")
+permit(
+    principal,
+    action == GroundTruth::Action::"approve_authority_change",
+    resource
+) when {
+    principal.role == "admin"
+};
+"#
+    };
+}
+
+/// Cedar rules for payout-limit and claim-cap changes. Authority checks evaluate
+/// them with the active policy even when its text predates them.
+pub const SEPARATION_OF_DUTIES_POLICY: &str = separation_of_duties_policy!();
+
+const DEFAULT_CEDAR_POLICY: &str = concat!(r#"
 // Ground Truth Cedar Policy v4
 // Defines authorization rules for the AI billing analyst system
 
@@ -143,7 +182,7 @@ permit(
     action,
     resource
 );
-"#;
+"#, separation_of_duties_policy!());
 
 const CEDAR_SCHEMA: &str = r#"
 namespace GroundTruth {
@@ -187,6 +226,17 @@ namespace GroundTruth {
     action edit_policy appliesTo {
         principal: Actor,
         resource: Policy,
+    };
+    entity User {
+        role: String,
+    };
+    entity AuthorityChange {
+        requested_by: User,
+        target: User,
+    };
+    action approve_authority_change appliesTo {
+        principal: User,
+        resource: AuthorityChange,
     };
 }
 "#;
@@ -551,4 +601,74 @@ pub fn get_default_policy_text() -> &'static str {
 /// Expose the Cedar schema for reference
 pub fn get_cedar_schema() -> &'static str {
     CEDAR_SCHEMA
+}
+
+/// Outcome of a Cedar check on approving an authority change.
+#[derive(Debug, Clone)]
+pub struct AuthorityDecision {
+    pub allowed: bool,
+    pub policy_version: String,
+    /// Ids of the Cedar policies that decided it: the forbids that fired, or the permit.
+    pub policies: Vec<String>,
+}
+
+/// Cedar check for `approver` (with `approver_role`) approving a change that
+/// `requested_by` asked for to `target`'s authority. A claim-cap change targets the
+/// policy, written as `policy:<id>`, so it never equals a user.
+pub fn evaluate_authority_change(
+    policy_text: &str,
+    policy_version: &str,
+    change_id: u64,
+    approver: &str,
+    approver_role: &str,
+    requested_by: &str,
+    target: &str,
+) -> AuthorityDecision {
+    let text = if policy_text.contains("sod-no-own-authority") {
+        policy_text.to_string()
+    } else {
+        format!("{}\n{}", policy_text, SEPARATION_OF_DUTIES_POLICY)
+    };
+    let deny = |policies: Vec<String>| AuthorityDecision { allowed: false, policy_version: policy_version.to_string(), policies };
+    let Ok(policies) = PolicySet::from_str(&text) else { return deny(vec!["policy parse error".to_string()]) };
+    let user = |id: &str| serde_json::json!({ "type": "GroundTruth::User", "id": id });
+    let mut entities = vec![
+        serde_json::json!({ "uid": user(approver), "attrs": { "role": approver_role }, "parents": [] }),
+        serde_json::json!({
+            "uid": { "type": "GroundTruth::AuthorityChange", "id": change_id.to_string() },
+            "attrs": { "requested_by": { "__entity": user(requested_by) }, "target": { "__entity": user(target) } },
+            "parents": [],
+        }),
+    ];
+    for id in [requested_by, target] {
+        if id != approver {
+            entities.push(serde_json::json!({ "uid": user(id), "attrs": { "role": "" }, "parents": [] }));
+        }
+    }
+    entities.dedup_by(|a, b| a["uid"] == b["uid"]);
+    let Ok(entities) = Entities::from_json_value(serde_json::Value::Array(entities), None) else {
+        return deny(vec!["invalid entities".to_string()]);
+    };
+    let uid = |t: &str, id: &str| EntityUid::from_type_name_and_id(EntityTypeName::from_str(t).unwrap(), EntityId::from_str(id).unwrap());
+    let Ok(request) = Request::new(
+        uid("GroundTruth::User", approver),
+        uid("GroundTruth::Action", "approve_authority_change"),
+        uid("GroundTruth::AuthorityChange", &change_id.to_string()),
+        Context::empty(),
+        None,
+    ) else {
+        return deny(vec!["invalid request".to_string()]);
+    };
+    let response = Authorizer::new().is_authorized(&request, &policies, &entities);
+    let mut fired: Vec<String> = response
+        .diagnostics()
+        .reason()
+        .map(|id| policies.policy(id).and_then(|p| p.annotation("id")).map(|s| s.to_string()).unwrap_or_else(|| id.to_string()))
+        .collect();
+    fired.sort();
+    AuthorityDecision {
+        allowed: response.decision() == Decision::Allow,
+        policy_version: policy_version.to_string(),
+        policies: fired,
+    }
 }

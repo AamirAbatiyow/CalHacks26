@@ -1,5 +1,6 @@
 use spacetimedb::{Identity, ReducerContext, SpacetimeType, Table, Timestamp};
 use crate::attack_eval::{self as eval, attack_eval, AttackEval, ClaimAttack, Config};
+use crate::authority_change as change;
 use crate::{pass, space_weather, FlareClass};
 
 #[derive(SpacetimeType, Clone, Copy, PartialEq, Eq, Debug)]
@@ -321,10 +322,6 @@ pub fn assess_claim(
     flags
 }
 
-pub fn may_raise_own_limit(role: UserRole) -> bool {
-    role == UserRole::Admin
-}
-
 // ---------------------------------------------------------------------------
 // Attack catalog. Every claim attack resolves to a real seeded pass by
 // satellite, station and order (`sat`, `station`, `nth`), claims that pass's
@@ -632,64 +629,47 @@ pub fn file_claim(
     }
 }
 
-fn apply_limit_raise(ctx: &ReducerContext, caller: Identity, new_limit_cents: i64) -> Result<(), String> {
-    let Some(config) = ctx.db.user_config().identity().find(caller) else {
-        ctx.db.user_config().insert(UserConfig {
-            identity: caller,
-            role: UserRole::Customer,
-            payout_limit_cents: default_payout_limit_cents(),
-            can_edit_policies: false,
-        });
-        return Err(format!("unknown user {} cannot set a payout limit", caller));
-    };
-    if !may_raise_own_limit(config.role) {
-        return Err(format!(
-            "{:?} cannot raise own limit from {} to {}",
-            config.role,
-            dollars(config.payout_limit_cents),
-            dollars(new_limit_cents)
-        ));
+/// An insider changing authority on their own: the request goes in, then the same
+/// person tries to approve it, which separation of duties refuses. A refused request
+/// stays pending for another admin unless `withdraw` (Break It's attempts are withdrawn).
+fn self_approved_change(ctx: &ReducerContext, caller: Identity, kind: &str, policy_id: &str, value_cents: i64, withdraw: bool) -> Result<(), String> {
+    if ctx.db.user_config().identity().find(caller).is_none() {
+        register_role(ctx, caller, UserRole::Customer);
+        return Err(format!("unknown user {} cannot change authority", caller));
     }
-    ctx.db.user_config().identity().update(UserConfig { payout_limit_cents: new_limit_cents, ..config });
-    Ok(())
+    let target = (kind == change::PAYOUT_LIMIT).then_some(caller);
+    let id = change::request(ctx, caller, kind, target, policy_id, value_cents)?;
+    change::approve(ctx, caller, id).map_err(|r| {
+        if withdraw {
+            change::withdraw(ctx, id);
+            r.message()
+        } else {
+            format!("{}; request {} waits for another admin", r.message(), id)
+        }
+    })
 }
 
-fn apply_policy_edit(ctx: &ReducerContext, caller: Identity, policy_id: &str, new_max_claim_cents: i64) -> Result<(), String> {
-    let config = ctx.db.user_config().identity().find(caller);
-    if !config.as_ref().is_some_and(|c| c.can_edit_policies) {
-        return Err(format!(
-            "{} has no policy-edit permission",
-            config.map(|c| format!("{:?}", c.role)).unwrap_or_else(|| "Unknown user".to_string())
-        ));
-    }
-    let policy = ctx
-        .db
-        .policy_rule()
-        .id()
-        .find(policy_id.to_string())
-        .ok_or_else(|| format!("policy {} not found", policy_id))?;
-    ctx.db.policy_rule().id().update(PolicyRule {
-        max_claim_cents: new_max_claim_cents,
-        last_modified_by: caller,
-        last_modified_at: ctx.timestamp,
-        ..policy
-    });
-    Ok(())
+fn apply_limit_raise(ctx: &ReducerContext, caller: Identity, new_limit_cents: i64, withdraw: bool) -> Result<(), String> {
+    self_approved_change(ctx, caller, change::PAYOUT_LIMIT, "", new_limit_cents, withdraw)
+        .map_err(|e| format!("raising own payout limit to {} refused: {}", dollars(new_limit_cents), e))
+}
+
+fn apply_policy_edit(ctx: &ReducerContext, caller: Identity, policy_id: &str, new_max_claim_cents: i64, withdraw: bool) -> Result<(), String> {
+    self_approved_change(ctx, caller, change::CLAIM_CAP, policy_id, new_max_claim_cents, withdraw)
+        .map_err(|e| format!("claim cap change to {} refused: {}", dollars(new_max_claim_cents), e))
 }
 
 #[spacetimedb::reducer]
 pub fn raise_own_limit(ctx: &ReducerContext, new_limit_cents: i64) {
-    match apply_limit_raise(ctx, ctx.sender(), new_limit_cents) {
-        Ok(()) => log::info!("Admin raised limit (legitimate for admin role)"),
-        Err(e) => log::warn!("SECURITY: {}", e),
+    if let Err(e) = apply_limit_raise(ctx, ctx.sender(), new_limit_cents, false) {
+        log::warn!("SECURITY: {}", e);
     }
 }
 
 #[spacetimedb::reducer]
 pub fn edit_policy(ctx: &ReducerContext, policy_id: String, new_max_claim_cents: i64) {
-    match apply_policy_edit(ctx, ctx.sender(), &policy_id, new_max_claim_cents) {
-        Ok(()) => log::info!("Policy {} updated by authorized user", policy_id),
-        Err(e) => log::warn!("SECURITY: {}", e),
+    if let Err(e) = apply_policy_edit(ctx, ctx.sender(), &policy_id, new_max_claim_cents, false) {
+        log::warn!("SECURITY: {}", e);
     }
 }
 
@@ -818,9 +798,9 @@ fn execute_insider(ctx: &ReducerContext, session_id: u64, configs: &(Config, Con
     let action = extract_param(params, "action").unwrap_or_default();
     let attempt = if action == "edit_policy" {
         ensure_default_policy(ctx);
-        apply_policy_edit(ctx, attacker, "default", value)
+        apply_policy_edit(ctx, attacker, "default", value, true)
     } else {
-        apply_limit_raise(ctx, attacker, value)
+        apply_limit_raise(ctx, attacker, value, true)
     };
     let role = extract_param(params, "role").unwrap_or_else(|| "customer".to_string());
     let blocked = attempt.as_ref().err().map(|e| e.as_str());

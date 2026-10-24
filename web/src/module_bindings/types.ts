@@ -289,6 +289,22 @@ export const AuditLog = __t.object("AuditLog", {
 });
 export type AuditLog = __Infer<typeof AuditLog>;
 
+export const AuthorityChange = __t.object("AuthorityChange", {
+  id: __t.u64(),
+  kind: __t.string(),
+  target: __t.option(__t.identity()),
+  policyId: __t.string(),
+  valueCents: __t.i64(),
+  requestedBy: __t.identity(),
+  requestedAt: __t.timestamp(),
+  status: __t.string(),
+  approvedBy: __t.option(__t.identity()),
+  decidedAt: __t.option(__t.timestamp()),
+  refusal: __t.string(),
+  policyVersion: __t.string(),
+});
+export type AuthorityChange = __Infer<typeof AuthorityChange>;
+
 export const AuthorizationLog = __t.object("AuthorizationLog", {
   id: __t.u64(),
   timestamp: __t.timestamp(),

@@ -219,19 +219,28 @@ pub fn insider(ctx: &ReducerContext, session_id: u64, cfg: &Config, fixture: &At
     row.decided_by = "role_check".to_string();
     row.customer = role.to_string();
     row.screen_json = json!([{ "check": "Privilege", "detail": blocked.unwrap_or("allowed for this role"), "on_target": blocked.is_some() }]).to_string();
+    let forbids: Vec<&str> = ["sod-no-own-authority", "sod-no-own-request"].into_iter().filter(|id| blocked.is_some_and(|b| b.contains(id))).collect();
+    let cedar_version = crate::authority::active_policy_version(ctx).unwrap_or_default();
+    row.rules_json = json!({
+        "policy_version": cedar_version,
+        "fired": forbids.iter().map(|id| json!({ "policy": id, "action": "approve_authority_change", "outcome": "forbid" })).collect::<Vec<_>>(),
+        "note": "Separation of duties: authority changes need an admin other than the requester and the user whose limit changes. Enforced in Cedar and in the module, for every policy and model version.",
+    })
+    .to_string();
     match blocked {
         Some(reason) => {
             row.outcome = CAUGHT.to_string();
             row.decision = "blocked".to_string();
             row.protected_cents = fixture.amount_cents;
-            row.why = format!("The role check refused it: {}. Role checks do not depend on the policy or model version.", reason);
+            let mut chars = reason.chars();
+            row.why = format!("{}{}.", chars.next().map(|c| c.to_uppercase().to_string()).unwrap_or_default(), chars.as_str());
         }
         None => {
             row.outcome = MISSED.to_string();
             row.decision = "approve".to_string();
             row.paid_cents = fixture.amount_cents;
             row.bad_cents = fixture.amount_cents;
-            row.why = format!("A {} may change this setting, so the change went through. Role checks do not depend on the policy or model version.", role);
+            row.why = format!("A {} made this change and it went through.", role);
         }
     }
     row

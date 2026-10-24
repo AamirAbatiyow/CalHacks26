@@ -162,6 +162,19 @@ export function AttackDetail({ row, before, review }: { row: AttackEvalRow; befo
         </Section>
       )}
 
+      {row.decidedBy === 'role_check' && rules.note && (
+        <Section title="Rules and policies">
+          {(rules.fired ?? []).length > 0 ? (
+            <ul className="breakit-list">
+              {rules.fired!.map((r, i) => (
+                <li key={i} className="hit"><code>{r.policy}</code> {r.action.replace(/_/g, ' ')} → {r.outcome} <span className="breakit-muted">in Cedar {rules.policy_version}</span></li>
+              ))}
+            </ul>
+          ) : <p>No Cedar rule refused it.</p>}
+          <p className="breakit-muted">{rules.note}</p>
+        </Section>
+      )}
+
       {policyRan && s1.p_approve !== undefined && (
         <Section title="System 1">
           <Facts rows={[

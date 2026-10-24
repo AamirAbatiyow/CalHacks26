@@ -7,6 +7,7 @@ pub mod approvals;
 pub mod attack_eval;
 pub mod attack_run;
 pub mod authority;
+pub mod authority_change;
 pub mod cases;
 pub mod claim;
 pub mod confidence_gate;
