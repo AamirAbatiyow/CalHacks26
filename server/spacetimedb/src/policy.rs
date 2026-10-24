@@ -217,14 +217,25 @@ pub fn set_replay_speed(ctx: &ReducerContext, replay_id: u64, speed: f32) {
 }
 
 #[spacetimedb::reducer]
-pub fn toggle_rule(ctx: &ReducerContext, rule_id: String) {
-    if let Some(rule) = ctx.db.cedar_rule().id().find(rule_id) {
-        ctx.db.cedar_rule().id().update(CedarRule {
-            enabled: !rule.enabled,
-            ..rule
-        });
+pub fn toggle_rule(ctx: &ReducerContext, rule_id: String) -> Result<(), String> {
+    let rule = ctx.db.cedar_rule().id().find(rule_id).ok_or("unknown rule")?;
+    if GOVERNING_RULES.contains(&rule.name.as_str()) {
+        return Err(format!("\"{}\" is a governing rule and cannot be switched off", rule.name));
     }
+    ctx.db.cedar_rule().id().update(CedarRule {
+        enabled: !rule.enabled,
+        ..rule
+    });
+    Ok(())
 }
+
+/// The 95% gate and the human-authority rules hold in every version.
+pub const GOVERNING_RULES: [&str; 4] = [
+    "Auto-decide at 95% confidence",
+    "Escalate below 95%",
+    "AI cannot edit policies",
+    "Human approver authority",
+];
 
 #[spacetimedb::reducer]
 pub fn create_policy_version(

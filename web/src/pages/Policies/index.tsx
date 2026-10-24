@@ -24,6 +24,14 @@ import './Policies.css';
 
 const HISTORY = 'history';
 
+// Mirrors GOVERNING_RULES in server/spacetimedb/src/policy.rs: the 95% gate cannot be switched off.
+const GOVERNING_RULES = new Set([
+  'Auto-decide at 95% confidence',
+  'Escalate below 95%',
+  'AI cannot edit policies',
+  'Human approver authority',
+]);
+
 function formatDate(micros: bigint): string {
   const date = new Date(Number(micros) / 1000);
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -185,7 +193,7 @@ function RuleList({ rules, changed, onToggleRule, onOpen, onCreateVersion, canEd
     { key: 'description', label: 'What it does', width: 'minmax(0, 1.4fr)', sort: r => r.description, render: r => <span className="ui-table-muted">{r.description}</span> },
     {
       key: 'enabled', label: 'Status', width: '70px', align: 'right', sort: r => (r.enabled ? 1 : 0),
-      render: r => canEdit ? (
+      render: r => GOVERNING_RULES.has(r.name) ? <Chip>Fixed</Chip> : canEdit ? (
         <button
           className={`toggle-btn ${r.enabled ? 'enabled' : ''}`}
           role="switch"
