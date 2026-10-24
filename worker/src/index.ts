@@ -30,9 +30,19 @@ const parsed = new Map<bigint, Label>();
 const handled = new Set<string>();
 let chain: Promise<unknown> = Promise.resolve();
 let beat: ReturnType<typeof setInterval> | null = null;
+let bootstrapTimer: ReturnType<typeof setTimeout> | null = null;
 
 function enqueue(name: string, job: () => Promise<void>) {
   chain = chain.then(job).catch(err => console.error(`[worker] ${name} failed:`, err?.message ?? err));
+}
+
+/** History is seeded in batches; train once the batches stop arriving. */
+function bootstrapSoon() {
+  if (bootstrapTimer) clearTimeout(bootstrapTimer);
+  bootstrapTimer = setTimeout(() => {
+    bootstrapTimer = null;
+    if (ready && !active) enqueue('bootstrap System 1', () => learn(undefined));
+  }, 3000);
 }
 
 function labels(): Label[] {
@@ -232,6 +242,7 @@ function start(c: DbConnection) {
   conn.db.modelVersion.onUpdate(() => loadActiveModel());
   conn.db.labeledDecision.onInsert((_ctx, row) => {
     if (ready && row.source === 'live') enqueue(`retrain on label ${row.id}`, () => learn(row.id));
+    else if (ready && !active) bootstrapSoon();
   });
   conn
     .subscriptionBuilder()
