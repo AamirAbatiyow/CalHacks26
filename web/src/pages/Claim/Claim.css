@@ -246,6 +246,28 @@
   color: var(--color-secondary);
 }
 
+.decision-card.replayable {
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.decision-card.replayable:hover {
+  border-color: var(--color-secondary);
+}
+
+.decision-card.replayable:focus-visible {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.decision-card.replayable:hover .decision-replay {
+  color: var(--color-primary);
+}
+
+.decision-replay {
+  margin-top: 4px;
+}
+
 .decision-link {
   color: var(--color-secondary);
   text-decoration: underline;

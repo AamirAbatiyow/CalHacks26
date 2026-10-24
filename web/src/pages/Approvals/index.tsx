@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { usePendingApprovals, useApprovalActions } from '../../hooks/useApprovals';
+import { openReplay } from '../../replay/useDecisionTrace';
 import './Approvals.css';
 
 function formatDollarsExact(cents: bigint): string {
@@ -115,6 +116,9 @@ export default function ApprovalsPage() {
             <span>Policy {selectedClaim.policyVersion}</span>
             <span className="meta-sep">·</span>
             <span>Model {selectedClaim.modelVersion}</span>
+            <button className="replay-trigger detail-replay" onClick={() => openReplay(`approval:${selectedClaim.id}`)}>
+              <span className="replay-trigger-glyph">▶</span>Replay path
+            </button>
           </div>
           
           {editMode ? (

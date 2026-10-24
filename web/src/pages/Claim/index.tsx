@@ -5,6 +5,7 @@ import { useClaimData } from '../../hooks/useClaimData';
 import { useHashParam } from '../../hooks/useHashPage';
 import { useTable } from '../../hooks/useTable';
 import { ClaimGate, DataIntegrityStatus } from '../../types';
+import { openReplay } from '../../replay/useDecisionTrace';
 import './Claim.css';
 
 function formatDollarsExact(cents: bigint | number): string {
@@ -35,7 +36,7 @@ function formatShap(value: number): string {
 function VersionLink({ label, version, policyVersion, known }: { label: string; version: string; policyVersion: string; known: boolean }) {
   if (!known) return <span>{label} {version}</span>;
   return (
-    <a className="decision-link" href={`#/policies/${encodeURIComponent(policyVersion)}`} title={`Open policy ${policyVersion} in Policies`}>
+    <a className="decision-link" onClick={e => e.stopPropagation()} href={`#/policies/${encodeURIComponent(policyVersion)}`} title={`Open policy ${policyVersion} in Policies`}>
       {label} {version}
     </a>
   );
@@ -190,7 +191,14 @@ export default function ClaimPage() {
               </div>
             </div>
 
-            <div className="decision-card">
+            <div
+              className="decision-card replayable"
+              role="button"
+              tabIndex={0}
+              title="Replay this decision"
+              onClick={() => openReplay(`claim:${claim.id}`)}
+              onKeyDown={(e) => { if (e.key === 'Enter') openReplay(`claim:${claim.id}`); }}
+            >
               <div className="decision-main">
                 <span className="decision-credit">
                   {getCreditLabel(decision.creditAmountCents, claim.amountClaimedCents)} {formatDollarsExact(decision.creditAmountCents)}
@@ -221,6 +229,7 @@ export default function ClaimPage() {
                 <span className="decision-separator">·</span>
                 <VersionLink label="Model" version={decision.modelVersion} policyVersion={decision.policyVersion} known={policyKnown} />
               </div>
+              <span className="replay-trigger decision-replay"><span className="replay-trigger-glyph">▶</span>Replay decision</span>
             </div>
 
             <div className="outcome-row">
