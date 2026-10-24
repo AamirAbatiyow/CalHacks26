@@ -4,7 +4,79 @@ import { ClaimPlaybackBar } from './ClaimPlaybackBar';
 import { KpiStrip } from '../../components/KpiStrip';
 import { useClaimData } from '../../hooks/useClaimData';
 import { ClaimGate, DataIntegrityStatus } from '../../types';
+import type { Claim, ClaimPass, ClaimEvidence, ClaimDecision, ClaimOutcome, ClaimWeather, Kpi } from '../../types';
 import './Claim.css';
+
+const DEMO_MODE = true;
+
+function getDemoData(): {
+  claim: Claim;
+  pass: ClaimPass;
+  evidence: ClaimEvidence;
+  decision: ClaimDecision;
+  outcome: ClaimOutcome;
+  weather: ClaimWeather;
+  kpi: Kpi;
+} {
+  const now = BigInt(Date.now() * 1000);
+  return {
+    claim: {
+      id: 'CLM-10021',
+      customerName: 'Northpoint Orbital',
+      amountClaimedCents: BigInt(1820000),
+      passId: BigInt(10021),
+      createdAt: now,
+    },
+    pass: {
+      id: BigInt(10021),
+      claimId: 'CLM-10021',
+      stationLat: 78.23,
+      stationLon: 15.39,
+      stationName: 'Svalbard',
+      satelliteNoradId: 25544,
+      satelliteTle1: '1 25544U 98067A   24001.50000000  .00016717  00000-0  10270-3 0  9025',
+      satelliteTle2: '2 25544  51.6400 208.9163 0006703 272.9017  87.1268 15.50109356999999',
+      contactStartTime: now - BigInt(45 * 60 * 1000000),
+      signalLostTime: now - BigInt(32 * 60 * 1000000),
+      contactEndTime: now - BigInt(20 * 60 * 1000000),
+      maxElevationDeg: 12.4,
+    },
+    evidence: {
+      claimId: 'CLM-10021',
+      dataIntegrityStatus: DataIntegrityStatus.Pass,
+      estimatedLossCents: BigInt(240000),
+      missingEvidenceCents: BigInt(158000),
+    },
+    decision: {
+      claimId: 'CLM-10021',
+      creditAmountCents: BigInt(115000),
+      confidencePercent: 96,
+      gate: ClaimGate.Auto,
+      rule: 'credit_auto_limit',
+      policyVersion: 'v4',
+      modelVersion: 'v2',
+      decidedAt: now,
+    },
+    outcome: {
+      claimId: 'CLM-10021',
+      creditMemoSent: true,
+      ledgerPosted: true,
+      completedAt: now,
+    },
+    weather: {
+      claimId: 'CLM-10021',
+      kpIndex: 6,
+      stormActive: true,
+    },
+    kpi: {
+      id: 'main',
+      billedThisMonthCents: BigInt(1940000000),
+      revenueAtRiskCents: BigInt(41200000),
+      creditsPaidCents: BigInt(8600000),
+      recoveredCents: BigInt(13100000),
+    },
+  };
+}
 
 function formatDollarsExact(cents: bigint | number): string {
   const dollars = Number(cents) / 100;
@@ -27,17 +99,19 @@ interface ClaimPageProps {
 }
 
 export default function ClaimPage({ claimId = 'CLM-10021' }: ClaimPageProps) {
-  const {
-    connected,
-    claim,
-    pass,
-    evidence,
-    decision,
-    outcome,
-    weather,
-    kpi,
-    seedDemoClaim,
-  } = useClaimData(claimId);
+  const liveData = useClaimData(claimId);
+
+  const demoData = useMemo(() => getDemoData(), []);
+  
+  const useDemo = DEMO_MODE || !liveData.connected;
+  const claim = useDemo ? demoData.claim : liveData.claim;
+  const pass = useDemo ? demoData.pass : liveData.pass;
+  const evidence = useDemo ? demoData.evidence : liveData.evidence;
+  const decision = useDemo ? demoData.decision : liveData.decision;
+  const outcome = useDemo ? demoData.outcome : liveData.outcome;
+  const weather = useDemo ? demoData.weather : liveData.weather;
+  const kpi = useDemo ? demoData.kpi : liveData.kpi;
+  const connected = useDemo || liveData.connected;
 
   const [currentTimeOverride, setCurrentTimeOverride] = useState<bigint | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -46,16 +120,16 @@ export default function ClaimPage({ claimId = 'CLM-10021' }: ClaimPageProps) {
   const currentTime = currentTimeOverride ?? pass?.contactStartTime ?? BigInt(0);
 
   useEffect(() => {
-    if (!connected) return;
+    if (DEMO_MODE || !liveData.connected) return;
 
     const timer = setTimeout(() => {
-      if (!claim) {
-        seedDemoClaim();
+      if (!liveData.claim) {
+        liveData.seedDemoClaim();
       }
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [connected, claim, seedDemoClaim]);
+  }, [liveData]);
 
   useEffect(() => {
     if (!isPlaying || !pass) return;
