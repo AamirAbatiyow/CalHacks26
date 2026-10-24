@@ -5,7 +5,7 @@
 //! logistic stand-in (`PROXY_MODEL_VERSION`); the System 1 model owned by the
 //! retraining work replaces it by writing `case_score` rows.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::contracts::{CustomerContract, MessageFields, NEW_ACCOUNT_DAYS};
 
@@ -29,7 +29,7 @@ pub const DECIDING_KEYS: [&str; 10] = [
     "account",
 ];
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Features {
     /// dropped_pass | partial_downlink | data_integrity
     pub claim_type: String,
@@ -56,7 +56,7 @@ pub struct Features {
     pub min_elevation_deg: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MessageFieldsSnapshot {
     pub cites_weather: bool,
     pub claims_full_loss: bool,
@@ -336,6 +336,28 @@ pub fn assess(f: &Features) -> Assessment {
         shap,
         conflicts,
         model_version: PROXY_MODEL_VERSION.to_string(),
+    }
+}
+
+/// `assess` with a trained System 1 supplying the probability instead of the proxy.
+/// `p_approve` is the model's probability that a human would credit the claim, so
+/// confidence is agreement with paying the recommended credit (or with paying
+/// nothing when the contract-literal credit is zero), minus the evidence conflicts.
+pub fn assess_with_model(f: &Features, p_approve: f64, model_version: &str, shap: Vec<Shap>) -> Assessment {
+    let recommended = recommend(f);
+    let credit_cents = f.credit_for(recommended);
+    let pays = recommended != DENY && credit_cents > 0;
+    let agreement = if pays { p_approve } else { 1.0 - p_approve };
+    let conflicts = conflicts(f);
+    let penalty: i64 = conflicts.iter().map(|c| c.penalty).sum();
+    Assessment {
+        recommended,
+        credit_cents,
+        failure_prob: p_approve,
+        confidence: ((agreement * 100.0).floor() as i64 - penalty).clamp(5, 99),
+        shap,
+        conflicts,
+        model_version: model_version.to_string(),
     }
 }
 

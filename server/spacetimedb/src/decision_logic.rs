@@ -128,6 +128,55 @@ pub fn rule_context(snapshot: &Value) -> Value {
     })
 }
 
+/// System 1's structured features for a snapshot, in the order of `names`
+/// (a model version's `feature_names_json`). Port of `worker/src/features.ts::featurize`.
+pub fn system1_features(snapshot: &Value, names: &[String]) -> Vec<f64> {
+    let c = rule_context(snapshot);
+    let loss = c["telemetry_loss_pct"].as_i64().unwrap_or(0) as f64 / 100.0;
+    let ratio_pct = c["amount_ratio_pct"].as_i64().unwrap_or(0);
+    let t = c["claim_type"].as_str().unwrap_or("");
+    let flag = |k: &str| c[k].as_bool().unwrap_or(false);
+    let b = |v: bool| if v { 1.0 } else { 0.0 };
+    let storm = flag("storm");
+    let maintenance = flag("maintenance_overlap");
+    names
+        .iter()
+        .map(|n| match n.as_str() {
+            "bias" => 1.0,
+            "ml_failure_prob" => snapshot["ml"]["failure_probability"].as_f64().unwrap_or(0.0),
+            "telemetry_loss" => loss,
+            "pass_completed" => b(flag("pass_completed")),
+            "kp_norm" => snapshot["weather"]["kp_index"].as_f64().unwrap_or(0.0) / 9.0,
+            "storm" => b(storm),
+            "weather_exclusion" => b(flag("weather_exclusion")),
+            "storm_x_exclusion" => b(storm && flag("weather_exclusion")),
+            "within_window" => b(flag("within_window")),
+            "amount_ratio" => ratio_pct.min(400) as f64 / 100.0,
+            "inflated_amount" => b(ratio_pct > 200),
+            "station_drop_rate" => c["station_drop_rate_pct"].as_i64().unwrap_or(0) as f64 / 100.0,
+            "maintenance_overlap" => b(maintenance),
+            "type_dropped" => b(t == "dropped_pass"),
+            "type_degraded" => b(t == "degraded_link"),
+            "type_late" => b(t == "late_delivery"),
+            "degraded_x_loss" => if t == "degraded_link" { loss } else { 0.0 },
+            "degraded_x_storm" => b(t == "degraded_link" && storm),
+            "late_x_maintenance" => b(t == "late_delivery" && maintenance),
+            _ => 0.0,
+        })
+        .collect()
+}
+
+/// System 1's approve-probability: the logistic of `weights · x`.
+pub fn system1_predict(weights: &[f64], x: &[f64]) -> f64 {
+    let z: f64 = weights.iter().zip(x).map(|(w, v)| w * v).sum();
+    if z >= 0.0 {
+        1.0 / (1.0 + (-z).exp())
+    } else {
+        let e = z.exp();
+        e / (1.0 + e)
+    }
+}
+
 fn condition_to_cedar(c: &Condition) -> Result<String, String> {
     let f = c.feature.as_str();
     if f == "claim_type" {
@@ -270,6 +319,35 @@ mod tests {
             Condition { feature: "storm".into(), op: "eq".into(), value: json!(true) },
             Condition { feature: "weather_exclusion".into(), op: "eq".into(), value: json!(false) },
         ]
+    }
+
+    fn worker_feature_names() -> Vec<String> {
+        let src = include_str!("../../../worker/src/features.ts");
+        let start = src.find("FEATURE_NAMES = [").expect("FEATURE_NAMES in features.ts");
+        let body = &src[start..src[start..].find("] as const").unwrap() + start];
+        body.split('\'').skip(1).step_by(2).map(str::to_string).collect()
+    }
+
+    #[test]
+    fn system1_features_cover_every_worker_feature() {
+        let names = worker_feature_names();
+        assert_eq!(names.len(), 19, "{:?}", names);
+        let mut s = snapshot("degraded_link", 30, "Ok", true, false);
+        s["ml"] = json!({"failure_probability": 0.4});
+        s["claim"]["amount_claimed_cents"] = json!(450000);
+        let x = system1_features(&s, &names);
+        let get = |n: &str| x[names.iter().position(|m| m == n).unwrap()];
+        assert_eq!(get("bias"), 1.0);
+        assert_eq!(get("ml_failure_prob"), 0.4);
+        assert_eq!(get("telemetry_loss"), 0.3);
+        assert_eq!(get("amount_ratio"), 3.0);
+        assert_eq!(get("inflated_amount"), 1.0);
+        assert_eq!(get("degraded_x_loss"), 0.3);
+        assert_eq!(get("degraded_x_storm"), 1.0);
+        assert!((get("kp_norm") - 6.3 / 9.0).abs() < 1e-12);
+        assert_eq!(get("type_dropped"), 0.0);
+        let p = system1_predict(&[0.5, 2.0], &[1.0, 0.25]);
+        assert!((p - 1.0 / (1.0 + (-1.0f64).exp())).abs() < 1e-12);
     }
 
     #[test]

@@ -134,11 +134,6 @@ echo "Seeding contracts, decision history and incoming claims..."
 "$SPACETIME" call "$MODULE" seed_learning_history --server "$SERVER" || true
 "$SPACETIME" call "$MODULE" seed_incoming_claims --server "$SERVER" || true
 
-# Break It: attack fixtures plus one measured run
-echo "Seeding attack fixtures..."
-"$SPACETIME" call "$MODULE" seed_attack_fixtures --server "$SERVER" || true
-"$SPACETIME" call "$MODULE" run_all_attacks --server "$SERVER" || true
-
 # Decision architecture: SLA terms System 1/2 read, station maintenance windows, and
 # six months of human-labeled decisions the worker trains System 1 on and mines for
 # policy proposals. Start the worker (cd worker && npm start) after seeding.
@@ -151,10 +146,22 @@ jq -c '.[]' "$FIXTURES_DIR/sla_terms.json" | while read -r c; do
 done
 "$SPACETIME" call "$MODULE" seed_decision_world --server "$SERVER" || true
 WORKER_DIR="$SCRIPT_DIR/../worker"
+if [ "$SERVER" = "maincloud" ]; then
+  WORKER_HOST="${STDB_HOST:-wss://maincloud.spacetimedb.com}"
+else
+  WORKER_HOST="${STDB_HOST:-ws://localhost:3000}"
+fi
 if [ -d "$WORKER_DIR/node_modules" ]; then
-  (cd "$WORKER_DIR" && STDB_MODULE="$MODULE" npm run --silent seed-history) || true
+  # The worker's bindings are generated, not committed.
+  [ -f "$WORKER_DIR/src/module_bindings/index.ts" ] || (cd "$WORKER_DIR" && npm run --silent generate > /dev/null)
+  (cd "$WORKER_DIR" && STDB_HOST="$WORKER_HOST" STDB_MODULE="$MODULE" npm run --silent seed-history) || true
 else
   echo "Skipping labeled history: run 'npm install' in worker/ and then 'npm run seed-history' there."
 fi
+
+# Break It runs last so its decisions see the contracts, SLA terms and learned policies above.
+echo "Seeding attack fixtures..."
+"$SPACETIME" call "$MODULE" seed_attack_fixtures --server "$SERVER" || true
+"$SPACETIME" call "$MODULE" run_all_attacks --server "$SERVER" || true
 
 echo "Seeding complete!"

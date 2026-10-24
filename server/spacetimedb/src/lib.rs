@@ -4,6 +4,7 @@ use std::time::Duration;
 use ledger::{ledger_entry, LedgerEntry, LedgerEntryType};
 
 pub mod approvals;
+pub mod attack_eval;
 pub mod attack_run;
 pub mod authority;
 pub mod cases;

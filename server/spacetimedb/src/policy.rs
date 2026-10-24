@@ -306,6 +306,7 @@ pub fn promote_policy_version(ctx: &ReducerContext, version_id: String) {
         });
         crate::authority::activate_policy_version(ctx, &version_id, "Promoted on the Policies page");
         crate::learning::on_promoted(ctx, &version_id);
+        crate::attack_eval::reconsider(ctx, &version_id);
     }
 }
 

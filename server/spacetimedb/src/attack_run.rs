@@ -1,4 +1,5 @@
 use spacetimedb::{Identity, ReducerContext, SpacetimeType, Table, Timestamp};
+use crate::attack_eval::{self as eval, attack_eval, AttackEval, ClaimAttack, Config};
 use crate::{pass, space_weather, FlareClass};
 
 #[derive(SpacetimeType, Clone, Copy, PartialEq, Eq, Debug)]
@@ -112,7 +113,7 @@ pub struct AttackFixture {
     pub attack_params: String,
 }
 
-fn attack_type_name(attack_type: AttackType) -> &'static str {
+pub(crate) fn attack_type_name(attack_type: AttackType) -> &'static str {
     match attack_type {
         AttackType::InflatedClaim => "Inflated claim",
         AttackType::DuplicateClaim => "Duplicate claim",
@@ -414,6 +415,7 @@ pub fn reason_text(key: &str) -> &'static str {
     match key {
         "flare" => "Solar flare blacked out the downlink; requesting SLA credit",
         "storm" => "Geomagnetic storm degraded the link; requesting SLA credit",
+        "storm_full" => "Geomagnetic storm wiped out the downlink; requesting full credit for the whole pass",
         "radio_burst" => "Solar radio burst interference wiped out the pass",
         "aurora" => "Auroral activity caused ionospheric scintillation and signal loss",
         "cme" => "CME impact disrupted the downlink; requesting SLA credit",
@@ -473,8 +475,12 @@ pub struct ClaimPlan {
 
 pub fn plan_claim(fixture_amount_cents: i64, params: &str, passes: &[PassFacts]) -> Result<ClaimPlan, String> {
     let claim_station = extract_param(params, "claim_station");
+    let by_id = extract_param(params, "pass_id").and_then(|s| s.parse::<u64>().ok());
     let (pass_id, station_id, revenue_cents) = if extract_param(params, "pass").as_deref() == Some("missing") {
         (MISSING_PASS_ID, claim_station.unwrap_or_default(), 0)
+    } else if let Some(id) = by_id {
+        let pass = passes.iter().find(|p| p.id == id).ok_or_else(|| format!("pass {} is not seeded", id))?;
+        (pass.id, claim_station.unwrap_or_else(|| pass.station_id.clone()), pass.revenue_cents)
     } else {
         let pass = select_pass(passes, params)
             .ok_or_else(|| format!("no seeded pass matches '{}'", params))?;
@@ -720,8 +726,17 @@ pub fn seed_attack_fixtures(ctx: &ReducerContext) {
             attack_params: spec.params.to_string(),
         });
     }
+    let used: Vec<u64> = {
+        let passes = load_passes(ctx);
+        CATALOG.iter().filter_map(|spec| select_pass(&passes, spec.params).map(|p| p.id)).collect()
+    };
+    let cluster = eval::cluster_fixtures(ctx, &used);
+    let clustered = cluster.len();
+    for fixture in cluster {
+        ctx.db.attack_fixture().insert(fixture);
+    }
     ensure_default_policy(ctx);
-    log::info!("Seeded {} attack fixtures against seeded passes", CATALOG.len());
+    log::info!("Seeded {} attack fixtures against seeded passes, {} in the storm-overclaim cluster", CATALOG.len() + clustered, clustered);
 }
 
 // ---------------------------------------------------------------------------
@@ -731,7 +746,22 @@ pub fn seed_attack_fixtures(ctx: &ReducerContext) {
 struct Outcome {
     result: AttackResult,
     amount_cents: i64,
+    protected_cents: i64,
+    bad_cents: i64,
     detail: String,
+    /// Decision under the earlier policy and model, then under the active ones.
+    evals: Option<(AttackEval, AttackEval)>,
+}
+
+impl Outcome {
+    fn plain(result: AttackResult, amount_cents: i64, detail: String) -> Self {
+        let (protected_cents, bad_cents) = match result {
+            AttackResult::Caught => (amount_cents, 0),
+            AttackResult::Missed => (0, amount_cents),
+            AttackResult::Pending => (0, 0),
+        };
+        Outcome { result, amount_cents, protected_cents, bad_cents, detail, evals: None }
+    }
 }
 
 fn targeted(attack_type: AttackType, flags: &[Flag]) -> (Vec<Flag>, Vec<Flag>) {
@@ -739,7 +769,7 @@ fn targeted(attack_type: AttackType, flags: &[Flag]) -> (Vec<Flag>, Vec<Flag>) {
     flags.iter().cloned().partition(|f| targets.contains(&f.check))
 }
 
-fn execute_insider(ctx: &ReducerContext, fixture: &AttackFixture, attacker: Identity) -> Outcome {
+fn execute_insider(ctx: &ReducerContext, session_id: u64, configs: &(Config, Config), fixture: &AttackFixture, attacker: Identity) -> Outcome {
     let params = &fixture.attack_params;
     let value: i64 = extract_param(params, "value").and_then(|s| s.parse().ok()).unwrap_or(0);
     let action = extract_param(params, "action").unwrap_or_default();
@@ -749,21 +779,29 @@ fn execute_insider(ctx: &ReducerContext, fixture: &AttackFixture, attacker: Iden
     } else {
         apply_limit_raise(ctx, attacker, value)
     };
-    match attempt {
-        Err(e) => Outcome { result: AttackResult::Caught, amount_cents: fixture.amount_cents, detail: format!("Blocked: {}", e) },
-        Ok(()) => Outcome {
-            result: AttackResult::Missed,
-            amount_cents: fixture.amount_cents,
-            detail: format!("{} accepted ({} now {})", fixture.description, if action == "edit_policy" { "claim cap" } else { "payout limit" }, dollars(value)),
-        },
-    }
+    let role = extract_param(params, "role").unwrap_or_else(|| "customer".to_string());
+    let blocked = attempt.as_ref().err().map(|e| e.as_str());
+    let evals = (
+        eval::insider(ctx, session_id, &configs.0, fixture, blocked, &role),
+        eval::insider(ctx, session_id, &configs.1, fixture, blocked, &role),
+    );
+    let mut outcome = match &attempt {
+        Err(e) => Outcome::plain(AttackResult::Caught, fixture.amount_cents, format!("Blocked: {}", e)),
+        Ok(()) => Outcome::plain(
+            AttackResult::Missed,
+            fixture.amount_cents,
+            format!("{} accepted ({} now {})", fixture.description, if action == "edit_policy" { "claim cap" } else { "payout limit" }, dollars(value)),
+        ),
+    };
+    outcome.evals = Some(evals);
+    outcome
 }
 
-fn execute_claim(ctx: &ReducerContext, fixture: &AttackFixture, attacker: Identity) -> Outcome {
+fn execute_claim(ctx: &ReducerContext, session_id: u64, configs: &(Config, Config), fixture: &AttackFixture, attacker: Identity) -> Outcome {
     let passes = load_passes(ctx);
     let plan = match plan_claim(fixture.amount_cents, &fixture.attack_params, &passes) {
         Ok(plan) => plan,
-        Err(e) => return Outcome { result: AttackResult::Missed, amount_cents: 0, detail: format!("not run: {}", e) },
+        Err(e) => return Outcome::plain(AttackResult::Missed, 0, format!("not run: {}", e)),
     };
     let now = ctx.timestamp.to_micros_since_unix_epoch();
     let (prior, filed_micros) = plan_filing(&plan, attacker, sibling_identity(attacker, 0xD0D0), now);
@@ -796,6 +834,9 @@ fn execute_claim(ctx: &ReducerContext, fixture: &AttackFixture, attacker: Identi
         &load_priors(ctx, plan.pass_id),
     );
     let (on_target, off_target) = targeted(fixture.attack_type, &flags);
+    let attack = ClaimAttack { fixture, plan: &plan, pass, flags: &flags, on_target: &on_target };
+    let before = eval::claim(ctx, session_id, &configs.0, &attack);
+    let after = eval::claim(ctx, session_id, &configs.1, &attack);
 
     ctx.db.attack_claim().insert(AttackClaim {
         id: 0,
@@ -804,27 +845,41 @@ fn execute_claim(ctx: &ReducerContext, fixture: &AttackFixture, attacker: Identi
         station_id: plan.station_id.clone(),
         amount_cents: plan.amount_cents,
         claimed_reason: plan.reason.to_string(),
-        status: if flags.is_empty() { AttackClaimStatus::Approved } else { AttackClaimStatus::Flagged },
+        status: match after.outcome.as_str() {
+            eval::CAUGHT if after.decided_by == "screen" => AttackClaimStatus::Flagged,
+            eval::CAUGHT if after.paid_cents == 0 => AttackClaimStatus::Denied,
+            eval::ESCALATED => AttackClaimStatus::Pending,
+            _ => AttackClaimStatus::Approved,
+        },
         fraud_flags: join_flags(&flags),
         created_at: Timestamp::from_micros_since_unix_epoch(filed_micros),
     });
 
     let off_note = if off_target.is_empty() { String::new() } else { format!(" [off-target: {}]", join_flags(&off_target)) };
     let subject = format!("{} on pass {} ({})", dollars(plan.amount_cents), plan.pass_id, plan.station_id);
-    let (result, detail) = match (on_target.is_empty(), plan.audit) {
-        (false, true) => (AttackResult::Caught, format!("Recovered {}: {}", subject, join_flags(&on_target))),
-        (false, false) => (AttackResult::Caught, format!("Blocked {}: {}", subject, join_flags(&on_target))),
-        (true, true) => (AttackResult::Missed, format!("Re-audit cleared {} - {}", subject, fixture.description)),
-        (true, false) => (AttackResult::Missed, format!("Approved {} - {}", subject, fixture.description)),
+    let (result, detail) = match (on_target.is_empty(), plan.audit, after.outcome.as_str()) {
+        (false, true, _) => (AttackResult::Caught, format!("Recovered {}: {}", subject, join_flags(&on_target))),
+        (false, false, _) => (AttackResult::Caught, format!("Blocked {}: {}", subject, join_flags(&on_target))),
+        (true, _, eval::CAUGHT) => (AttackResult::Caught, format!("{} {} for {} - {}", if plan.audit { "Re-audit settled" } else { "Settled" }, subject, dollars(after.paid_cents), after.why)),
+        (true, _, eval::ESCALATED) => (AttackResult::Pending, format!("Held for review {} at {}% confidence - {}", subject, after.confidence, fixture.description)),
+        (true, true, _) => (AttackResult::Missed, format!("Re-audit cleared {} - {}", subject, after.why)),
+        (true, false, _) => (AttackResult::Missed, format!("Approved {} - {}", subject, after.why)),
     };
-    Outcome { result, amount_cents: plan.amount_cents, detail: format!("{}{}", detail, off_note) }
+    Outcome {
+        result,
+        amount_cents: plan.amount_cents,
+        protected_cents: after.protected_cents,
+        bad_cents: after.bad_cents,
+        detail: format!("{}{}", detail, off_note),
+        evals: Some((before, after)),
+    }
 }
 
-fn execute_attack(ctx: &ReducerContext, fixture: &AttackFixture, attacker: Identity) -> Outcome {
+fn execute_attack(ctx: &ReducerContext, session_id: u64, configs: &(Config, Config), fixture: &AttackFixture, attacker: Identity) -> Outcome {
     if fixture.attack_type == AttackType::InsiderRaisesOwnLimit {
-        execute_insider(ctx, fixture, attacker)
+        execute_insider(ctx, session_id, configs, fixture, attacker)
     } else {
-        execute_claim(ctx, fixture, attacker)
+        execute_claim(ctx, session_id, configs, fixture, attacker)
     }
 }
 
@@ -853,7 +908,7 @@ fn open_session(ctx: &ReducerContext) -> AttackRunSession {
     })
 }
 
-fn record_attack(ctx: &ReducerContext, session_id: u64, fixture: &AttackFixture, attacker: Identity) -> Result<(), String> {
+fn record_attack(ctx: &ReducerContext, session_id: u64, configs: &(Config, Config), fixture: &AttackFixture, attacker: Identity) -> Result<(), String> {
     let session = ctx
         .db
         .attack_run_session()
@@ -864,15 +919,16 @@ fn record_attack(ctx: &ReducerContext, session_id: u64, fixture: &AttackFixture,
         return Err(format!("attack run {} is already complete", session_id));
     }
     register_role(ctx, attacker, fixture_role(fixture));
-    let outcome = execute_attack(ctx, fixture, attacker);
+    let outcome = execute_attack(ctx, session.id, configs, fixture, attacker);
     let seq = session.total_attacks as i64 + 1;
 
-    let (result_str, caught, missed, protected, bad) = match outcome.result {
-        AttackResult::Caught => ("caught", 1, 0, outcome.amount_cents, 0),
-        AttackResult::Missed => ("MISSED", 0, 1, 0, outcome.amount_cents),
-        AttackResult::Pending => ("pending", 0, 0, 0, 0),
+    let (result_str, caught, missed) = match outcome.result {
+        AttackResult::Caught => ("caught", 1, 0),
+        AttackResult::Missed => ("MISSED", 0, 1),
+        AttackResult::Pending => ("held", 0, 0),
     };
-    ctx.db.attack_run().insert(AttackRun {
+    let (protected, bad) = (outcome.protected_cents, outcome.bad_cents);
+    let run = ctx.db.attack_run().insert(AttackRun {
         id: 0,
         run_id: session.id,
         attack_type: fixture.attack_type,
@@ -882,6 +938,10 @@ fn record_attack(ctx: &ReducerContext, session_id: u64, fixture: &AttackFixture,
         log_message: format!("{}: {} - {}", attack_type_name(fixture.attack_type), result_str, outcome.detail),
         attacker_identity: Some(attacker.to_hex().to_string()),
     });
+    if let Some((before, after)) = outcome.evals {
+        ctx.db.attack_eval().insert(before);
+        ctx.db.attack_eval().insert(AttackEval { attack_run_id: Some(run.id), ..after });
+    }
     ctx.db.attack_run_session().id().update(AttackRunSession {
         total_attacks: session.total_attacks + 1,
         caught: session.caught + caught,
@@ -904,7 +964,13 @@ fn close_session(ctx: &ReducerContext, session_id: u64) -> Result<(), String> {
         return Ok(());
     }
     let end = sequence_time(session.started_at, session.total_attacks as i64 + 1);
-    for message in [format!("{} of {} caught", session.caught, session.total_attacks), "Run complete".to_string()] {
+    let held = session.total_attacks.saturating_sub(session.caught + session.missed);
+    let tally = if held > 0 {
+        format!("{} of {} caught, {} held for review", session.caught, session.total_attacks, held)
+    } else {
+        format!("{} of {} caught", session.caught, session.total_attacks)
+    };
+    for message in [tally, "Run complete".to_string()] {
         ctx.db.attack_run().insert(AttackRun {
             id: 0,
             run_id: session.id,
@@ -931,8 +997,9 @@ fn run_fixtures(ctx: &ReducerContext, filter: Option<AttackType>) -> Result<(), 
         .filter(|f| filter.is_none_or(|t| f.attack_type == t))
         .collect();
     fixtures.sort_by_key(|f| f.id);
+    let configs = eval::configs(ctx);
     for fixture in &fixtures {
-        record_attack(ctx, session.id, fixture, sibling_identity(ctx.sender(), fixture.id))?;
+        record_attack(ctx, session.id, &configs, fixture, sibling_identity(ctx.sender(), fixture.id))?;
     }
     close_session(ctx, session.id)
 }
@@ -964,7 +1031,7 @@ pub fn run_attack_fixture(ctx: &ReducerContext, session_id: u64, fixture_id: u64
         .id()
         .find(fixture_id)
         .ok_or_else(|| format!("attack fixture {} not found", fixture_id))?;
-    record_attack(ctx, session_id, &fixture, ctx.sender())
+    record_attack(ctx, session_id, &eval::configs(ctx), &fixture, ctx.sender())
 }
 
 #[spacetimedb::reducer]
@@ -983,6 +1050,7 @@ pub fn clear_attack_runs(ctx: &ReducerContext) {
     for claim in ctx.db.attack_claim().iter() {
         ctx.db.attack_claim().id().delete(claim.id);
     }
+    eval::clear(ctx);
     log::info!("Cleared all attack runs and claims");
 }
 
