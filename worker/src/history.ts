@@ -44,8 +44,13 @@ export interface HistoryRow {
 
 export const REVIEWERS = ['a.okafor', 'm.lindqvist', 'r.sato', 'j.alvarez', 'p.nair', 'k.brandt', 'e.moreau', 's.haddad'];
 const DAY = 86_400_000_000;
-/** Contacts are billed per minute at the AWS Ground Station narrowband or wideband rate (fixtures/contracts.json). */
+const PRICING: { pricing: { narrowband_cents_per_minute: number; wideband_cents_per_minute: number }; fleet_multiplier?: number } = JSON.parse(
+  readFileSync(fileURLToPath(new URL('../../server/fixtures/contracts.json', import.meta.url)), 'utf8'),
+);
+/** Contacts are billed per minute at the AWS Ground Station narrowband or wideband rate times the fleet multiplier (fixtures/contracts.json). */
 const PASS_MINUTES = 12;
+const NARROWBAND_PASS = PASS_MINUTES * PRICING.pricing.narrowband_cents_per_minute * (PRICING.fleet_multiplier ?? 1);
+const WIDEBAND_PASS = PASS_MINUTES * PRICING.pricing.wideband_cents_per_minute * (PRICING.fleet_multiplier ?? 1);
 
 function rng(seed: number) {
   let a = seed >>> 0;
@@ -196,7 +201,7 @@ export function generateHistory(opts: HistoryOptions = {}): HistoryRow[] {
       amountFactor: rand() < 0.06 ? 2.5 + rand() * 1.5 : 0.8 + rand() * 0.5,
       dropRate: rand() * 0.3,
       elevation: 15 + rand() * 70,
-      revenue: PASS_MINUTES * (rand() < 0.5 ? 1500 : 2500),
+      revenue: rand() < 0.5 ? NARROWBAND_PASS : WIDEBAND_PASS,
       at: now - Math.floor((180 * (count - i)) / count * DAY) - Math.floor(rand() * DAY),
     };
     const draft = snapshotFor(spec, 'probe');
@@ -209,7 +214,7 @@ export function generateHistory(opts: HistoryOptions = {}): HistoryRow[] {
   const niche = (contract: string, lossPct: number, approve: boolean, reason: string, decisive: string[], reviewer: string, daysAgo: number) => {
     const spec: Spec = {
       claimType: 'degraded_link', contract: CONTRACTS.find(c => c.customer === contract)!, storm: true, lossPct, passOk: true,
-      maintenance: false, withinWindow: true, amountFactor: 1, dropRate: 0.08, elevation: 38, revenue: PASS_MINUTES * 2500, at: now - daysAgo * DAY,
+      maintenance: false, withinWindow: true, amountFactor: 1, dropRate: 0.08, elevation: 38, revenue: WIDEBAND_PASS, at: now - daysAgo * DAY,
     };
     rows.push(row(spec, rows.length, approve, reason, decisive, reviewer));
   };

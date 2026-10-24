@@ -17,7 +17,7 @@ fn cents_per_minute(norad_id: u32) -> i64 {
         .find(|s| s["norad_id"].as_u64() == Some(norad_id as u64))
         .is_some_and(|s| s["band"] == "narrowband");
     let key = if narrowband { "narrowband_cents_per_minute" } else { "wideband_cents_per_minute" };
-    contracts["pricing"][key].as_i64().unwrap()
+    contracts["pricing"][key].as_i64().unwrap() * contracts["fleet_multiplier"].as_i64().unwrap_or(1)
 }
 
 /// The hand-written passes plus the Claim page's NOAA-20 SvalSat pass, which
