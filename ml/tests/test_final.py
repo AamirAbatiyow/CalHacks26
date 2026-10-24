@@ -116,6 +116,8 @@ def test_pick_threshold_wilson_is_conservative():
     y = (rng.random(2000) < s ** 0.3).astype(int)
     t_point = fm.pick_threshold(s, y, 0.95, "point")
     t_w = fm.pick_threshold(s, y, 0.95, "wilson")
+    t_w80 = fm.pick_threshold(s, y, 0.95, "wilson", z=1.2816)
+    assert t_point <= t_w80 <= t_w
     assert t_w is not None and t_point is not None and t_w >= t_point
     flagged = s >= t_w
     assert fm.wilson(y[flagged].sum(), flagged.sum())[0] >= 0.95
@@ -124,12 +126,15 @@ def test_pick_threshold_wilson_is_conservative():
 
 def test_gate_finds_outages_with_high_precision(synth):
     _, _, _, df = synth
-    m, dec = fm.eval_station_cv(df, "full_causal_mono", k=3, rule="point")
+    ms, dec = fm.eval_station_cv(df, "full_causal_mono", k=3, rules=("point95", "wilson95"))
+    m = ms["point95"]
+    assert ms["wilson95"]["fail_flagged"] <= m["fail_flagged"]
     assert m["fail_flagged"] > 20
     assert m["fail_precision"] >= 0.85
     assert m["recall_failed_class"] > m["recall_bad_class"]
     mt, _, _ = fm.eval_time(df, "full_causal_mono")
-    assert mt["n"] > 0 and "unseen_stations" in mt
+    assert set(mt) == set(fm.RULES)
+    assert mt[fm.DEFAULT_RULE]["n"] > 0 and "unseen_stations" in mt[fm.DEFAULT_RULE]
 
 
 def test_save_load_and_gate_fields(synth, tmp_path):

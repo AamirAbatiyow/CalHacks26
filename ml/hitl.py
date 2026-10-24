@@ -117,7 +117,8 @@ class HitlLearner:
             chunk = pd.concat([replay, new], ignore_index=True, sort=False)
             b = fm.Booster(self.variant).fit(chunk, init=self.gm.booster, n_trees=WARM_TREES)
             b.numeric = self.gm.booster.numeric
-            gm = fm.GatedModel(b, self.gm.calibrator, self.gm.t_fail, self.gm.t_ok, self.gm.targets, self.gm.inner)
+            gm = fm.GatedModel(b, self.gm.calibrator, self.gm.t_fail, self.gm.t_ok, self.gm.targets, self.gm.inner,
+                              {}, self.gm.rule)
             # Continued boosting shifts raw scores; keep the gate at the same calibrated
             # operating point until the next full refit re-derives it from OOF scores.
             gm = _realign_thresholds(self.gm, gm, train)

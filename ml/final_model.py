@@ -146,7 +146,8 @@ def matrix(df: pd.DataFrame, numeric: Sequence[str], cats: Dict[str, List[str]])
     for c in numeric:
         X[c] = pd.to_numeric(df[c], errors="coerce").astype(float) if c in df else np.nan
     for c, levels in cats.items():
-        X[c] = pd.Categorical(df[c].astype(str) if c in df else "unknown", categories=levels)
+        vals = df[c].astype(str) if c in df else pd.Series("unknown", index=df.index)
+        X[c] = pd.Categorical(vals.where(vals.isin(levels)), categories=levels)
     return X
 
 
@@ -203,11 +204,23 @@ def station_folds(stations: np.ndarray, k: int, seed: int) -> np.ndarray:
     return np.array([fold_of[s] for s in stations])
 
 
+# In-fold threshold rules: (kind, target, z). The flagged set {score >= t} on the
+# training fold's inner out-of-fold scores must satisfy precision >= target
+# ("point") or Wilson lower bound (z) >= target ("wilson").
+RULES = {
+    "wilson95": ("wilson", 0.95, 1.96),
+    "wilson80": ("wilson", 0.95, 1.2816),
+    "point97": ("point", 0.97, 0.0),
+    "point95": ("point", 0.95, 0.0),
+}
+DEFAULT_RULE = "wilson80"
+
+
 def pick_threshold(scores: np.ndarray, y: np.ndarray, target: float, rule: str = "wilson",
-                   min_flagged: int = 5) -> Optional[float]:
+                   min_flagged: int = 5, z: float = 1.96) -> Optional[float]:
     """Lowest score threshold whose flagged set {score >= t} meets the precision rule.
 
-    rule="wilson": Wilson 95% lower bound >= target; rule="point": precision >= target.
+    rule="wilson": Wilson lower bound (z) >= target; rule="point": precision >= target.
     Ties are kept together, so the returned threshold flags exactly the evaluated set.
     """
     order = np.argsort(-scores, kind="stable")
@@ -218,10 +231,20 @@ def pick_threshold(scores: np.ndarray, y: np.ndarray, target: float, rule: str =
     best = None
     for i in np.where(last_of_tie & (n >= min_flagged))[0]:
         k, m = tp[i], n[i]
-        ok = wilson(k, m)[0] >= target if rule == "wilson" else k / m >= target
+        ok = wilson(k, m, z)[0] >= target if rule == "wilson" else k / m >= target
         if ok:
             best = s[i]
     return None if best is None else float(best)
+
+
+def rule_thresholds(oof: np.ndarray, y: np.ndarray, rule: str, ok_side: bool = True):
+    kind, target, z = RULES[rule]
+    t_fail = pick_threshold(oof, y, target, kind, z=z)
+    t_ok = None
+    if ok_side:
+        neg = pick_threshold(-oof, 1 - y, target, kind, z=z)
+        t_ok = -neg if neg is not None else None
+    return t_fail, t_ok
 
 
 @dataclass
@@ -232,23 +255,25 @@ class GatedModel:
     t_ok: Optional[float]         # raw-score threshold for auto "fine" (score <= t_ok)
     targets: Dict[str, Optional[float]] = field(default_factory=dict)
     inner: Dict = field(default_factory=dict)
+    rules: Dict[str, Tuple[Optional[float], Optional[float]]] = field(default_factory=dict)
+    rule: str = DEFAULT_RULE
 
     def proba(self, df: pd.DataFrame) -> np.ndarray:
         return self.calibrator.predict(self.booster.raw(df))
 
-    def decide(self, df: pd.DataFrame) -> pd.DataFrame:
-        raw = self.booster.raw(df)
+    def decide(self, df: pd.DataFrame, rule: Optional[str] = None, raw: Optional[np.ndarray] = None) -> pd.DataFrame:
+        raw = self.booster.raw(df) if raw is None else raw
         p = self.calibrator.predict(raw)
-        fail = (raw >= self.t_fail) if self.t_fail is not None else np.zeros(len(df), bool)
-        ok = (raw <= self.t_ok) if self.t_ok is not None else np.zeros(len(df), bool)
+        t_fail, t_ok = (self.rules[rule] if rule else (self.t_fail, self.t_ok))
+        fail = (raw >= t_fail) if t_fail is not None else np.zeros(len(df), bool)
+        ok = (raw <= t_ok) if t_ok is not None else np.zeros(len(df), bool)
         ok &= ~fail
         return pd.DataFrame({"raw": raw, "p_fail": p, "auto_fail": fail, "auto_ok": ok}, index=df.index)
 
 
-def fit_gated(train: pd.DataFrame, variant: str, target: float = 0.95, rule: str = "wilson",
-              inner_folds: int = 4, seed: int = 0, extra_targets: Sequence[float] = (0.90, 0.98),
-              ok_side: bool = True) -> GatedModel:
-    """Inner station-grouped OOF -> isotonic + thresholds; final booster on all of `train`."""
+def fit_gated(train: pd.DataFrame, variant: str, rule: str = DEFAULT_RULE, inner_folds: int = 4, seed: int = 0,
+              extra_targets: Sequence[float] = (0.90, 0.98), ok_side: bool = True) -> GatedModel:
+    """Inner station-grouped OOF -> isotonic + thresholds for every rule; final booster on all of `train`."""
     y = train["y"].to_numpy()
     folds = station_folds(train["ground_station"].to_numpy(), inner_folds, seed + 101)
     oof = np.zeros(len(train))
@@ -259,17 +284,15 @@ def fit_gated(train: pd.DataFrame, variant: str, target: float = 0.95, rule: str
         b = Booster(variant).fit(train[tr])
         oof[va] = b.raw(train[va])
     iso = IsotonicRegression(out_of_bounds="clip", y_min=0.0, y_max=1.0).fit(oof, y)
-    t_fail = pick_threshold(oof, y, target, rule)
-    t_ok = None
-    if ok_side:
-        neg = pick_threshold(-oof, 1 - y, target, rule)
-        t_ok = -neg if neg is not None else None
-    targets = {f"{t:.2f}": pick_threshold(oof, y, t, rule) for t in extra_targets}
-    targets[f"{target:.2f}"] = t_fail
+    rules = {r: rule_thresholds(oof, y, r, ok_side) for r in RULES}
+    t_fail, t_ok = rules[rule]
+    kind, _, z = RULES[rule]
+    targets = {f"{t:.2f}": pick_threshold(oof, y, t, kind, z=z) for t in extra_targets}
+    targets["0.95"] = t_fail
     booster = Booster(variant).fit(train)
     inner = {"oof_auc": float(roc_auc_score(y, oof)) if 0 < y.mean() < 1 else None,
-             "oof_flagged": int((oof >= t_fail).sum()) if t_fail is not None else 0}
-    return GatedModel(booster, iso, t_fail, t_ok, targets, inner)
+             "oof_flagged": int((oof >= t_fail).sum()) if t_fail is not None else 0, "rule": rule}
+    return GatedModel(booster, iso, t_fail, t_ok, targets, inner, rules, rule)
 
 
 # --------------------------------------------------------------------------- metrics
@@ -326,23 +349,29 @@ def gate_metrics(df: pd.DataFrame, dec: pd.DataFrame) -> Dict:
 # --------------------------------------------------------------------------- evaluation
 
 
-def eval_station_cv(df: pd.DataFrame, variant: str, k: int = 5, seed: int = 0, **kw) -> Tuple[Dict, pd.DataFrame]:
+def eval_station_cv(df: pd.DataFrame, variant: str, k: int = 5, seed: int = 0,
+                    rules: Sequence[str] = tuple(RULES), **kw) -> Tuple[Dict, pd.DataFrame]:
+    """Outer station-grouped folds; returns {rule: metrics} and the decisions of the first rule."""
     folds = station_folds(df["ground_station"].to_numpy(), k, seed)
-    decs, per_fold = [], []
+    decs = {r: [] for r in rules}
+    per_fold = {r: [] for r in rules}
     for f in range(k):
         tr, te = df[folds != f], df[folds == f]
         gm = fit_gated(tr, variant, seed=seed + f, **kw)
-        d = gm.decide(te)
-        d["fold"] = f
-        d["p_cal"] = d["p_fail"]
-        decs.append(d)
-        m = gate_metrics(te, d)
-        per_fold.append({"fold": f, "fail_precision": m["fail_precision"], "fail_flagged": m["fail_flagged"],
-                         "fail_recall": m["fail_recall"], "t_fail": gm.t_fail, "inner": gm.inner})
-    dec = pd.concat(decs).loc[df.index]
-    m = gate_metrics(df, dec)
-    m["per_fold"] = per_fold
-    return m, dec
+        raw = gm.booster.raw(te)
+        for r in rules:
+            d = gm.decide(te, r, raw)
+            d["fold"] = f
+            decs[r].append(d)
+            m = gate_metrics(te, d)
+            per_fold[r].append({"fold": f, "fail_precision": m["fail_precision"], "fail_flagged": m["fail_flagged"],
+                                "fail_recall": m["fail_recall"], "t_fail": gm.rules[r][0], "inner": gm.inner})
+    out = {}
+    for r in rules:
+        dec = pd.concat(decs[r]).loc[df.index]
+        out[r] = gate_metrics(df, dec)
+        out[r]["per_fold"] = per_fold[r]
+    return out, pd.concat(decs[rules[0]]).loc[df.index]
 
 
 def time_split(df: pd.DataFrame, frac: float = 0.7, embargo_hours: float = 3.0):
@@ -352,16 +381,21 @@ def time_split(df: pd.DataFrame, frac: float = 0.7, embargo_hours: float = 3.0):
     return tr, te, pd.Timestamp(int(cut), tz="UTC")
 
 
-def eval_time(df: pd.DataFrame, variant: str, frac: float = 0.7, seed: int = 0, **kw):
+def eval_time(df: pd.DataFrame, variant: str, frac: float = 0.7, seed: int = 0,
+              rules: Sequence[str] = tuple(RULES), **kw):
     tr, te, cut = time_split(df, frac)
     gm = fit_gated(tr, variant, seed=seed, **kw)
-    dec = gm.decide(te)
-    m = gate_metrics(te, dec)
+    raw = gm.booster.raw(te)
     unseen = ~te["ground_station"].isin(set(tr["ground_station"]))
-    m["cut"] = cut.isoformat()
-    m["n_train"] = int(len(tr))
-    m["unseen_stations"] = gate_metrics(te[unseen], dec[unseen]) if unseen.sum() > 20 else {"n": int(unseen.sum())}
-    return m, dec, te
+    out = {}
+    for r in rules:
+        dec = gm.decide(te, r, raw)
+        m = gate_metrics(te, dec)
+        m["cut"] = cut.isoformat()
+        m["n_train"] = int(len(tr))
+        m["unseen_stations"] = gate_metrics(te[unseen], dec[unseen]) if unseen.sum() > 20 else {"n": int(unseen.sum())}
+        out[r] = m
+    return out, gm.decide(te, rules[0], raw), te
 
 
 def fmt(x, nd=3, pct=False):
@@ -402,11 +436,13 @@ def plot_pr(curves: Dict[str, Tuple[np.ndarray, np.ndarray, Optional[Tuple[float
     plt.close(fig)
 
 
-def evaluate(lags=(1.0, 3.0), variants: Sequence[str] = tuple(VARIANTS), rule: str = "wilson",
+def evaluate(lags=(1.0, 3.0), variants: Sequence[str] = tuple(VARIANTS), rule: str = DEFAULT_RULE,
              out_name: str = "final_v3") -> Dict:
+    """All variants x all in-fold threshold rules; `rule` is the one shown in the main tables."""
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     raw, hours = load_raw()
-    results = {"generated_at": datetime.now(timezone.utc).isoformat(), "rule": rule, "lags": {}}
+    rules = [rule] + [r for r in RULES if r != rule]
+    results = {"generated_at": datetime.now(timezone.utc).isoformat(), "rule": rule, "rules": RULES, "lags": {}}
     curves_station, curves_time = {}, {}
     for lag in lags:
         t0 = time.time()
@@ -419,48 +455,56 @@ def evaluate(lags=(1.0, 3.0), variants: Sequence[str] = tuple(VARIANTS), rule: s
         print(f"lag {lag}h: {len(df)} labeled covered passes, {info['stations']} stations", flush=True)
         for v in variants:
             t1 = time.time()
-            ms, dec_s = eval_station_cv(df, v, rule=rule)
-            mt, dec_t, te = eval_time(df, v, rule=rule)
+            ms, dec_s = eval_station_cv(df, v, rules=rules)
+            mt, dec_t, te = eval_time(df, v, rules=rules)
             info["variants"][v] = {"station_cv": ms, "time": mt, "seconds": round(time.time() - t1, 1)}
-            print(f"  {v:18s} station: prec {fmt(ms['fail_precision'])} rec {fmt(ms['fail_recall'])} "
-                  f"n={ms['fail_flagged']} | time: prec {fmt(mt['fail_precision'])} rec {fmt(mt['fail_recall'])} "
-                  f"n={mt['fail_flagged']} ({time.time() - t1:.0f}s)", flush=True)
+            a, b = ms[rule], mt[rule]
+            print(f"  {v:18s} station: prec {fmt(a['fail_precision'])} rec {fmt(a['fail_recall'])} "
+                  f"n={a['fail_flagged']} | time: prec {fmt(b['fail_precision'])} rec {fmt(b['fail_recall'])} "
+                  f"n={b['fail_flagged']} ({time.time() - t1:.0f}s)", flush=True)
             if lag == lags[0]:
                 curves_station[v] = (df["y"].to_numpy(), dec_s["p_fail"].to_numpy(),
-                                     (ms["fail_precision"], ms["fail_recall"]))
+                                     (a["fail_precision"], a["fail_recall"]))
                 curves_time[v] = (te["y"].to_numpy(), dec_t["p_fail"].to_numpy(),
-                                  (mt["fail_precision"], mt["fail_recall"]))
+                                  (b["fail_precision"], b["fail_recall"]))
         results["lags"][f"{lag:g}h"] = info
     plot_pr(curves_station, REPORT_DIR / f"{out_name}_pr_station.png",
-            f"Held-out stations (lag {lags[0]:g}h): PR curves, dots = in-fold 0.95 gate")
+            f"Held-out stations (lag {lags[0]:g}h): dots = gate picked inside training folds ({rule})")
     plot_pr(curves_time, REPORT_DIR / f"{out_name}_pr_time.png",
-            f"Future-time split (lag {lags[0]:g}h): PR curves, dots = in-fold 0.95 gate")
+            f"Future-time split (lag {lags[0]:g}h): dots = gate picked inside training folds ({rule})")
     json.dump(results, open(REPORT_DIR / f"{out_name}.json", "w"), indent=1, default=float)
     (REPORT_DIR / f"{out_name}.md").write_text(render_report(results, out_name))
     return results
 
 
+def _rule_desc(r: str) -> str:
+    kind, target, z = RULES[r]
+    return (f"Wilson lower bound (z={z:g}) of inner OOF precision >= {target}" if kind == "wilson"
+            else f"inner OOF precision >= {target}")
+
+
 def render_report(res: Dict, out_name: str) -> str:
-    L = [f"# Final pass-failure classifier (v3): held-out evaluation", "",
+    rule = res["rule"]
+    L = ["# Final pass-failure classifier (v3): held-out evaluation", "",
          f"Generated {res['generated_at']} by `python -m ml.final_model evaluate`. "
-         f"Threshold rule inside each training fold: `{res['rule']}` "
-         "(Wilson 95% lower bound of inner out-of-fold precision >= 0.95). "
-         "Failure = SatNOGS status `failed` or `bad`. Precision CI: Wilson (binomial) and "
-         "station-cluster bootstrap (resampling stations).", ""]
+         f"Main tables use in-fold threshold rule `{rule}` ({_rule_desc(rule)}); the gate threshold is always "
+         "picked on station-grouped out-of-fold scores *inside the training fold* and then applied once to the test fold. "
+         "Failure = SatNOGS status `failed` or `bad`. Precision CIs: Wilson (binomial) and station-cluster "
+         "bootstrap (resampling stations, 1,000 reps). Coverage = share of all test passes auto-decided as failed.", ""]
     for lag, info in res["lags"].items():
         L += [f"## Label latency {lag}", "",
               f"{info['n']} labeled passes with full {lag}+{LOOKBACK_H:g}h history coverage "
-              f"(of {info['n_obs_all']} stored observations, all statuses), {info['stations']} stations, "
+              f"(of {info['n_obs_all']} stored observations), {info['stations']} stations, "
               f"span {info['span'][0][:16]} to {info['span'][1][:16]} UTC. Status mix: {info['status_counts']}.", ""]
         for split, title in (("station_cv", "Held-out stations (5 station-grouped folds)"),
                              ("time", "Future time (train first 70%, 3h embargo)")):
             L += [f"### {title}", "",
                   "| variant | AUC | auto 'failed' calls | precision | 95% CI (Wilson) | 95% CI (station bootstrap) "
-                  "| recall (all failures) | recall failed / bad | coverage | OK-side precision / coverage "
-                  "| accuracy on auto-decided (two-sided) |",
+                  "| recall (all failures) | recall failed / bad | coverage | OK side: precision / coverage "
+                  "| accuracy on auto-decided (both sides) |",
                   "|---|---|---|---|---|---|---|---|---|---|---|"]
             for v, r in info["variants"].items():
-                m = r[split]
+                m = r[split][rule]
                 L.append(f"| {v} | {fmt(m['auc'])} | {m['fail_flagged']} | {fmt(m['fail_precision'])} | "
                          f"{fmt_ci(m['fail_precision_wilson'])} | {fmt_ci(m['fail_precision_cluster_ci'])} | "
                          f"{fmt(m['fail_recall'], pct=True)} | {fmt(m['recall_failed_class'], pct=True)} / "
@@ -469,20 +513,33 @@ def render_report(res: Dict, out_name: str) -> str:
                          f"{fmt(m['accuracy_auto_two_sided'])} |")
             L.append("")
             if split == "time":
-                L += ["Future time, stations never seen in training:", "",
+                L += ["Future time, test stations never seen in training:", "",
                       "| variant | n | auto 'failed' calls | precision | 95% CI (Wilson) | recall |", "|---|---|---|---|---|---|"]
                 for v, r in info["variants"].items():
-                    u = r["time"].get("unseen_stations", {})
+                    u = r["time"][rule].get("unseen_stations", {})
                     if "fail_flagged" not in u:
                         L.append(f"| {v} | {u.get('n')} | – | – | – | – |")
                         continue
                     L.append(f"| {v} | {u['n']} | {u['fail_flagged']} | {fmt(u['fail_precision'])} | "
                              f"{fmt_ci(u['fail_precision_wilson'])} | {fmt(u['fail_recall'], pct=True)} |")
                 L.append("")
+        L += ["### In-fold threshold rule comparison (failed side)", "",
+              "| variant | rule | held-out stations: calls / precision (Wilson CI) / recall | "
+              "future time: calls / precision (Wilson CI) / recall |", "|---|---|---|---|"]
+        for v, r in info["variants"].items():
+            for rr in res["rules"]:
+                a, b = r["station_cv"].get(rr), r["time"].get(rr)
+                if a is None:
+                    continue
+                L.append(f"| {v} | {rr} | {a['fail_flagged']} / {fmt(a['fail_precision'])} "
+                         f"({fmt_ci(a['fail_precision_wilson'])}) / {fmt(a['fail_recall'], pct=True)} | "
+                         f"{b['fail_flagged']} / {fmt(b['fail_precision'])} ({fmt_ci(b['fail_precision_wilson'])}) / "
+                         f"{fmt(b['fail_recall'], pct=True)} |")
+        L.append("")
         fin = info["variants"].get(FINAL_VARIANT)
         if fin:
-            L += [f"Per-fold precision of `{FINAL_VARIANT}` on held-out stations: " + ", ".join(
-                f"{fmt(p['fail_precision'])} (n={p['fail_flagged']})" for p in fin["station_cv"]["per_fold"]), ""]
+            L += [f"Per-fold precision of `{FINAL_VARIANT}` on held-out stations ({rule}): " + ", ".join(
+                f"{fmt(p['fail_precision'])} (n={p['fail_flagged']})" for p in fin["station_cv"][rule]["per_fold"]), ""]
     L += [f"![held-out stations PR]({out_name}_pr_station.png)", "",
           f"![future time PR]({out_name}_pr_time.png)", ""]
     return "\n".join(L)
@@ -513,7 +570,8 @@ def save_artifacts(gm: GatedModel, version: str, meta: Dict, model_dir: Optional
     model_dir.mkdir(parents=True, exist_ok=True)
     joblib.dump({"booster_variant": gm.booster.variant, "numeric": gm.booster.numeric, "cats": gm.booster.cats,
                  "model_str": gm.booster.model.model_to_string() if gm.booster.model else None,
-                 "calibrator": gm.calibrator, "t_fail": gm.t_fail, "t_ok": gm.t_ok, "targets": gm.targets},
+                 "calibrator": gm.calibrator, "t_fail": gm.t_fail, "t_ok": gm.t_ok, "targets": gm.targets,
+                 "rules": gm.rules, "rule": gm.rule},
                 model_dir / f"model_{version}.joblib", compress=3)
     cfg = {"version": version, "variant": gm.booster.variant, "feature_names": gm.booster.feature_names,
            "numeric_features": gm.booster.numeric, "categories": gm.booster.cats,
@@ -536,7 +594,8 @@ def load_gated(version: Optional[str] = None, model_dir: Optional[Path] = None) 
     b = Booster(blob["booster_variant"], blob["numeric"], blob["cats"],
                 lgb.Booster(model_str=blob["model_str"]) if blob["model_str"] else None)
     cfg = json.load(open(model_dir / f"config_{version}.json"))
-    return GatedModel(b, blob["calibrator"], blob["t_fail"], blob["t_ok"], blob["targets"]), cfg
+    return GatedModel(b, blob["calibrator"], blob["t_fail"], blob["t_ok"], blob["targets"], {},
+                      blob.get("rules", {}), blob.get("rule", DEFAULT_RULE)), cfg
 
 
 def gate_fields(gm: GatedModel, cfg: Dict, dec_row) -> Dict:
@@ -608,18 +667,20 @@ def train_final(lag_hours: float = 1.0, variant: str = FINAL_VARIANT, reason: st
     t0 = time.time()
     gm = fit_gated(df, variant, inner_folds=5)
     fit_s = time.time() - t0
-    meta = {"reason": reason, "lag_hours": lag_hours, "lookback_hours": LOOKBACK_H, "n_train": len(df),
+    meta = {"reason": reason, "rule": gm.rule, "rule_spec": RULES[gm.rule], "lag_hours": lag_hours, "lookback_hours": LOOKBACK_H, "n_train": len(df),
             "n_human_labels": 0, "fit_seconds": round(fit_s, 2), "trained_at": datetime.now(timezone.utc).isoformat(),
             "status_counts": df["status"].value_counts().to_dict(), "inner": gm.inner}
     ev = eval_json or REPORT_DIR / "final_v3.json"
     if Path(ev).exists():
         r = json.load(open(ev))["lags"].get(f"{lag_hours:g}h", {}).get("variants", {}).get(variant)
-        if r:
-            meta["heldout_fail_precision"] = r["station_cv"]["fail_precision"]
-            meta["heldout_fail_precision_wilson"] = r["station_cv"]["fail_precision_wilson"]
-            meta["heldout_fail_recall"] = r["station_cv"]["fail_recall"]
-            meta["heldout_ok_precision"] = r["station_cv"]["ok_precision"]
-            meta["time_fail_precision"] = r["time"]["fail_precision"]
+        if r and gm.rule in r["station_cv"]:
+            st, tm = r["station_cv"][gm.rule], r["time"][gm.rule]
+            meta["heldout_fail_precision"] = st["fail_precision"]
+            meta["heldout_fail_precision_wilson"] = st["fail_precision_wilson"]
+            meta["heldout_fail_recall"] = st["fail_recall"]
+            meta["heldout_ok_precision"] = st["ok_precision"]
+            meta["time_fail_precision"] = tm["fail_precision"]
+            meta["time_fail_recall"] = tm["fail_recall"]
     reg = load_registry()
     version = version or (BASE_VERSION if reg["current"] is None else _next_version(reg["current"]))
     cfg = save_artifacts(gm, version, meta)
@@ -633,7 +694,7 @@ def main(argv=None) -> int:
     e = sub.add_parser("evaluate")
     e.add_argument("--lags", default="1,3")
     e.add_argument("--variants", default=",".join(VARIANTS))
-    e.add_argument("--rule", default="wilson", choices=["wilson", "point"])
+    e.add_argument("--rule", default=DEFAULT_RULE, choices=list(RULES))
     e.add_argument("--out", default="final_v3")
     t = sub.add_parser("train")
     t.add_argument("--lag", type=float, default=1.0)
