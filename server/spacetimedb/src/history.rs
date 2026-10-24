@@ -436,11 +436,11 @@ use serde_json::json;
 use spacetimedb::{ReducerContext, Table, Timestamp};
 
 use crate::authority::cedar_policy_store;
-use crate::contracts::{customer_contract, station_maintenance, StationMaintenance};
+use crate::contracts::{customer_contract, maintenance_log, MaintenanceLog};
 use crate::evidence::assess;
 use crate::learning::{
-    active_policy_set, all_labeled, create_proposal, gate, insert_labeled, labeled_decision, mine, parse_policies, policy_proposal, replay,
-    LabeledDecision, PolicyProposal, ProposalTrigger,
+    active_policy_set, all_labeled, create_proposal, gate, insert_labeled, audit_decision, mine, parse_policies, policy_proposal, replay,
+    AuditDecision, PolicyProposal, ProposalTrigger,
 };
 use crate::policy::{policy_replay, PolicyReplay, ReplayStatus};
 use crate::{pass, station};
@@ -468,7 +468,7 @@ fn station_volumes(ctx: &ReducerContext) -> Vec<StationVolume> {
 /// passes, contracts, `init_authority`.
 #[spacetimedb::reducer]
 pub fn seed_learning_history(ctx: &ReducerContext) {
-    if ctx.db.labeled_decision().iter().next().is_some() {
+    if ctx.db.audit_decision().iter().next().is_some() {
         log::info!("Learning history already seeded");
         return;
     }
@@ -480,7 +480,7 @@ pub fn seed_learning_history(ctx: &ReducerContext) {
     for (n, station) in ctx.db.station().iter().map(|s| s.id).collect::<Vec<_>>().iter().enumerate() {
         for m in 0..6i64 {
             let start = now - (m * 30 + 4 + n as i64 % 7) * DAY_MICROS;
-            ctx.db.station_maintenance().insert(StationMaintenance {
+            ctx.db.maintenance_log().insert(MaintenanceLog {
                 id: 0,
                 station_id: station.clone(),
                 start_time: Timestamp::from_micros_since_unix_epoch(start),
@@ -499,7 +499,7 @@ pub fn seed_learning_history(ctx: &ReducerContext) {
         let decided = now - (h.days_ago * DAY_MICROS as f64) as i64;
         if f.maintenance != "none" {
             let start = decided - 2 * DAY_MICROS;
-            ctx.db.station_maintenance().insert(StationMaintenance {
+            ctx.db.maintenance_log().insert(MaintenanceLog {
                 id: 0,
                 station_id: f.station_id.clone(),
                 start_time: Timestamp::from_micros_since_unix_epoch(start),
@@ -524,7 +524,7 @@ pub fn seed_learning_history(ctx: &ReducerContext) {
             "gate": g,
         })
         .to_string();
-        insert_labeled(ctx, LabeledDecision {
+        insert_labeled(ctx, AuditDecision {
             id: 0,
             source: "history".to_string(),
             case_id: format!("H-{:05}", i + 1),

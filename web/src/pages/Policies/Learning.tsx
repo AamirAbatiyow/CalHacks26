@@ -8,9 +8,9 @@ import {
   signedDollars,
   submitSimilarClaim,
   useClaimCases,
-  useLearnedRules,
+  useMinedRules,
   useMiningResults,
-  type LabeledDecision,
+  type AuditDecision,
   type PolicyProposal,
 } from '../../hooks/useCases';
 import './Learning.css';
@@ -42,11 +42,11 @@ const ORIGIN_LABEL: Record<string, string> = {
 
 interface ProposalProps {
   proposal: PolicyProposal;
-  decisions: LabeledDecision[];
+  decisions: AuditDecision[];
 }
 
 export function ProposalPanel({ proposal: p, decisions }: ProposalProps) {
-  const rules = useLearnedRules().filter(r => r.policyVersionId === p.versionId).sort((a, b) => a.ruleId.localeCompare(b.ruleId));
+  const rules = useMinedRules().filter(r => r.policyVersionId === p.versionId).sort((a, b) => a.ruleId.localeCompare(b.ruleId));
   const cases = useClaimCases();
   const byId = useMemo(() => new Map(decisions.map(d => [d.id, d])), [decisions]);
   const trigger = p.triggerDecisionId !== undefined ? byId.get(p.triggerDecisionId) : undefined;
@@ -165,7 +165,7 @@ const MONTH = (us: bigint) => {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 };
 
-export function HistoryView({ decisions }: { decisions: LabeledDecision[] }) {
+export function HistoryView({ decisions }: { decisions: AuditDecision[] }) {
   const mining = useMiningResults();
   const months = useMemo(() => {
     const m = new Map<string, { n: number; esc: number; approve: number; partial: number; deny: number; credit: number }>();

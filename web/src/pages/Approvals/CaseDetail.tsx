@@ -13,7 +13,7 @@ import {
   useCaseEvidence,
   type ClaimCase,
   type CustomerContract,
-  type LabeledDecision,
+  type AuditDecision,
 } from '../../hooks/useCases';
 import './CaseDetail.css';
 
@@ -113,7 +113,7 @@ function KpSpark({ c, contract }: { c: ClaimCase; contract?: CustomerContract })
   );
 }
 
-function OutcomeMix({ decisions }: { decisions: LabeledDecision[] }) {
+function OutcomeMix({ decisions }: { decisions: AuditDecision[] }) {
   const n = decisions.length || 1;
   const count = (o: string) => decisions.filter(d => d.outcome === o).length;
   return (
@@ -133,13 +133,13 @@ export interface DecisionNotice {
 interface Props {
   c: ClaimCase;
   contract?: CustomerContract;
-  decisions: LabeledDecision[];
+  decisions: AuditDecision[];
   onDecided: (notice: DecisionNotice) => void;
 }
 
 export default function CaseDetail({ c, contract, decisions, onDecided }: Props) {
   const ev = useCaseEvidence(c.caseId, decisions);
-  const maintenanceRows = useTable('stationMaintenance');
+  const maintenanceRows = useTable('maintenanceLog');
   const stationMaint = useMemo(() => maintenanceRows
     .filter(m => m.stationId === c.stationId)
     .sort((a, b) => Number(micros(b.startTime) - micros(a.startTime))), [maintenanceRows, c.stationId]);

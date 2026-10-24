@@ -1,7 +1,7 @@
 //! Policy learning from labeled human decisions.
 //!
 //! Two channels learn from every human decision. Model retraining (System 1) is
-//! owned elsewhere and reads `labeled_decision`. This module owns policies: it
+//! owned elsewhere and reads `audit_decision`. This module owns policies: it
 //! proposes a Cedar rule only when at least `MIN_SUPPORT` labeled decisions share
 //! the same deciding features and outcome and no labeled decision with those
 //! features went the other way. Rules are data in `cedar_policy_store`, replayed
@@ -23,8 +23,8 @@ pub const MIN_SUPPORT: usize = 3;
 pub const AUTO_DECIDE_CONFIDENCE: i64 = 95;
 
 #[derive(Clone, Debug)]
-#[spacetimedb::table(accessor = labeled_decision, public)]
-pub struct LabeledDecision {
+#[spacetimedb::table(accessor = audit_decision, public)]
+pub struct AuditDecision {
     #[primary_key]
     #[auto_inc]
     pub id: u64,
@@ -72,7 +72,7 @@ pub struct LabeledDecision {
     pub model_version: String,
 }
 
-impl LabeledDecision {
+impl AuditDecision {
     pub fn features(&self) -> Features {
         Features {
             claim_type: self.claim_type.clone(),
@@ -110,8 +110,8 @@ pub struct DecisionSnapshot {
 }
 
 #[derive(Clone, Debug)]
-#[spacetimedb::table(accessor = learned_rule, public)]
-pub struct LearnedRule {
+#[spacetimedb::table(accessor = mined_rule, public)]
+pub struct MinedRule {
     #[primary_key]
     pub rule_id: String,
     #[index(btree)]
@@ -200,8 +200,8 @@ pub struct Labeled {
     pub history: bool,
 }
 
-impl From<&LabeledDecision> for Labeled {
-    fn from(d: &LabeledDecision) -> Self {
+impl From<&AuditDecision> for Labeled {
+    fn from(d: &AuditDecision) -> Self {
         Labeled {
             id: d.id,
             features: d.features(),
@@ -567,7 +567,7 @@ pub fn parse_policies(text: &str) -> Result<PolicySet, String> {
 // ---------------------------------------------------------------- reducers
 
 pub fn all_labeled(ctx: &ReducerContext) -> Vec<Labeled> {
-    let mut rows: Vec<Labeled> = ctx.db.labeled_decision().iter().map(|d| Labeled::from(&d)).collect();
+    let mut rows: Vec<Labeled> = ctx.db.audit_decision().iter().map(|d| Labeled::from(&d)).collect();
     rows.sort_by_key(|l| l.id);
     rows
 }
@@ -674,7 +674,7 @@ pub fn create_proposal(ctx: &ReducerContext, patterns: &[Pattern], trigger: Prop
             enabled: true,
             order_index: order + i as u32,
         });
-        ctx.db.learned_rule().insert(LearnedRule {
+        ctx.db.mined_rule().insert(MinedRule {
             rule_id: rule_id.clone(),
             policy_version_id: version_id.clone(),
             outcome: pattern.outcome.clone(),
@@ -784,7 +784,7 @@ pub fn learn_from_decision(ctx: &ReducerContext, decision_id: u64, case_id: &str
 /// Marks a promoted proposal's rules active and retires rules of the version it replaced.
 pub fn on_promoted(ctx: &ReducerContext, version_id: &str) {
     let text = ctx.db.cedar_policy_store().version().find(version_id.to_string()).map(|p| p.policy_text).unwrap_or_default();
-    let rules: Vec<LearnedRule> = ctx.db.learned_rule().iter().collect();
+    let rules: Vec<MinedRule> = ctx.db.mined_rule().iter().collect();
     for rule in rules {
         let carried = text.contains(&format!("@id(\"{}\")", rule.rule_id));
         let status = if rule.policy_version_id == version_id || (carried && rule.status == "active") {
@@ -794,7 +794,7 @@ pub fn on_promoted(ctx: &ReducerContext, version_id: &str) {
         } else {
             continue;
         };
-        ctx.db.learned_rule().rule_id().update(LearnedRule { status: status.to_string(), ..rule });
+        ctx.db.mined_rule().rule_id().update(MinedRule { status: status.to_string(), ..rule });
     }
     if let Some(p) = ctx.db.policy_proposal().version_id().find(version_id.to_string()) {
         ctx.db.policy_proposal().version_id().update(PolicyProposal {
@@ -805,8 +805,8 @@ pub fn on_promoted(ctx: &ReducerContext, version_id: &str) {
     }
 }
 
-pub fn insert_labeled(ctx: &ReducerContext, row: LabeledDecision, evidence_json: String) -> u64 {
-    let id = ctx.db.labeled_decision().insert(row).id;
+pub fn insert_labeled(ctx: &ReducerContext, row: AuditDecision, evidence_json: String) -> u64 {
+    let id = ctx.db.audit_decision().insert(row).id;
     ctx.db.decision_snapshot().insert(DecisionSnapshot { decision_id: id, evidence_json });
     id
 }

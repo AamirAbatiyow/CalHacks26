@@ -34,8 +34,8 @@ pub fn fixture_contracts() -> Vec<CustomerContract> {
 }
 
 #[derive(Clone, Debug)]
-#[spacetimedb::table(accessor = station_maintenance, public)]
-pub struct StationMaintenance {
+#[spacetimedb::table(accessor = maintenance_log, public)]
+pub struct MaintenanceLog {
     #[primary_key]
     #[auto_inc]
     pub id: u64,
@@ -51,8 +51,8 @@ pub struct StationMaintenance {
 }
 
 #[derive(Clone, Debug)]
-#[spacetimedb::table(accessor = dispute_message, public)]
-pub struct DisputeMessage {
+#[spacetimedb::table(accessor = claim_message, public)]
+pub struct ClaimMessage {
     #[primary_key]
     #[auto_inc]
     pub id: u64,

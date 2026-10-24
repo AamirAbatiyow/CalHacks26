@@ -2,10 +2,10 @@ import { useMemo } from 'react';
 import { useTable, reducers, micros, type RowOf } from './useTable';
 
 export type ClaimCase = RowOf<'claimCase'>;
-export type LabeledDecision = RowOf<'labeledDecision'>;
+export type AuditDecision = RowOf<'auditDecision'>;
 export type PolicyProposal = RowOf<'policyProposal'>;
 export type MiningResult = RowOf<'miningResult'>;
-export type LearnedRule = RowOf<'learnedRule'>;
+export type MinedRule = RowOf<'minedRule'>;
 export type CustomerContract = RowOf<'customerContract'>;
 
 export const AUTO_DECIDE_CONFIDENCE = 95;
@@ -98,8 +98,8 @@ export function useContracts(): Map<string, CustomerContract> {
   return useMemo(() => new Map(rows.map(r => [r.customerId, r])), [rows]);
 }
 
-export function useLabeledDecisions(): LabeledDecision[] {
-  const rows = useTable('labeledDecision');
+export function useAuditDecisions(): AuditDecision[] {
+  const rows = useTable('auditDecision');
   return useMemo(() => [...rows].sort((a, b) => Number(micros(b.decidedAt) - micros(a.decidedAt))), [rows]);
 }
 
@@ -112,8 +112,8 @@ export function useProposals(): PolicyProposal[] {
   return useTable('policyProposal');
 }
 
-export function useLearnedRules(): LearnedRule[] {
-  return useTable('learnedRule');
+export function useMinedRules(): MinedRule[] {
+  return useTable('minedRule');
 }
 
 export interface CaseEvidence {
@@ -121,19 +121,19 @@ export interface CaseEvidence {
   shap: RowOf<'caseShap'>[];
   rules: RowOf<'caseRule'>[];
   conflicts: RowOf<'caseConflict'>[];
-  similar: { row: RowOf<'caseSimilar'>; decision?: LabeledDecision }[];
+  similar: { row: RowOf<'caseSimilar'>; decision?: AuditDecision }[];
   options: RowOf<'caseOption'>[];
-  messages: RowOf<'disputeMessage'>[];
+  messages: RowOf<'claimMessage'>[];
 }
 
-export function useCaseEvidence(caseId: string | undefined, decisions: LabeledDecision[]): CaseEvidence {
+export function useCaseEvidence(caseId: string | undefined, decisions: AuditDecision[]): CaseEvidence {
   const scores = useTable('caseScore');
   const shap = useTable('caseShap');
   const rules = useTable('caseRule');
   const conflicts = useTable('caseConflict');
   const similar = useTable('caseSimilar');
   const options = useTable('caseOption');
-  const messages = useTable('disputeMessage');
+  const messages = useTable('claimMessage');
   const byId = useMemo(() => new Map(decisions.map(d => [d.id, d])), [decisions]);
 
   return useMemo(() => {

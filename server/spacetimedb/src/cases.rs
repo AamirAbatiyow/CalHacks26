@@ -11,9 +11,9 @@ use crate::claim::{
     claim, claim_decision, claim_evidence, claim_outcome, claim_pass, claim_reason, claim_weather, Claim, ClaimDecision,
     ClaimEvidence, ClaimGate, ClaimOutcome, ClaimPass, ClaimReason, ClaimWeather, DataIntegrityStatus,
 };
-use crate::contracts::{customer_contract, dispute_message, extract_message_fields, station_maintenance, CustomerContract, DisputeMessage, StationMaintenance};
+use crate::contracts::{customer_contract, claim_message, extract_message_fields, maintenance_log, CustomerContract, ClaimMessage, MaintenanceLog};
 use crate::evidence::{assess, format_dollars, Assessment, Features, APPROVE, DENY, DECIDING_KEYS, PARTIAL};
-use crate::learning::{active_policy_set, gate, insert_labeled, labeled_decision, learn_from_decision, learned_rule, parse_conditions, GateResult, LabeledDecision};
+use crate::learning::{active_policy_set, gate, insert_labeled, audit_decision, learn_from_decision, mined_rule, parse_conditions, GateResult, AuditDecision};
 use crate::ledger::{ledger_entry, LedgerEntry, LedgerEntryType};
 use crate::{decision_record, pass, satellite, space_weather, station, DecisionOutcome, DecisionRecord, DecisionType, FlareClass, Pass, PassStatus};
 
@@ -254,8 +254,8 @@ fn similarity(a: &Features, b: &Features) -> f32 {
     1.0 / (1.0 + d)
 }
 
-fn nearest(ctx: &ReducerContext, f: &Features, k: usize) -> Vec<(LabeledDecision, f32)> {
-    let mut scored: Vec<(LabeledDecision, f32)> = ctx.db.labeled_decision().iter().map(|d| {
+fn nearest(ctx: &ReducerContext, f: &Features, k: usize) -> Vec<(AuditDecision, f32)> {
+    let mut scored: Vec<(AuditDecision, f32)> = ctx.db.audit_decision().iter().map(|d| {
         let s = similarity(f, &d.features());
         (d, s)
     }).collect();
@@ -298,7 +298,7 @@ fn analyze(ctx: &ReducerContext, intake: Intake) -> ClaimCase {
 
     let maintenance_id = if intake.maintenance != "none" {
         let lead = if intake.maintenance == "unplanned" { 0 } else { intake.notice_hours };
-        let row = ctx.db.station_maintenance().insert(StationMaintenance {
+        let row = ctx.db.maintenance_log().insert(MaintenanceLog {
             id: 0,
             station_id: pass.station_id.clone(),
             start_time: Timestamp::from_micros_since_unix_epoch(micros(pass.start_time) - 20 * MINUTE),
@@ -334,7 +334,7 @@ fn analyze(ctx: &ReducerContext, intake: Intake) -> ClaimCase {
     let (policy_version, policies) = active_policy_set(ctx);
     let g = gate(&policies, &f, &a);
 
-    ctx.db.dispute_message().insert(DisputeMessage {
+    ctx.db.claim_message().insert(ClaimMessage {
         id: 0,
         case_id: intake.case_id.clone(),
         received_at: Timestamp::from_micros_since_unix_epoch(micros(pass.end_time) + 50 * MINUTE),
@@ -499,7 +499,7 @@ fn record_evidence(ctx: &ReducerContext, case_id: &str, f: &Features, a: &Assess
             detail: format!("requires confidence >= 95%; this claim is {}%", g.confidence),
         });
     }
-    for rule in ctx.db.learned_rule().iter().filter(|r| r.status == "active") {
+    for rule in ctx.db.mined_rule().iter().filter(|r| r.status == "active") {
         if g.fired.iter().any(|r| r.policy == rule.rule_id) {
             continue;
         }
@@ -664,7 +664,7 @@ fn next_case_id(ctx: &ReducerContext) -> String {
 #[spacetimedb::reducer]
 pub fn submit_similar_claim(ctx: &ReducerContext, source_case_id: String) -> Result<(), String> {
     let source = ctx.db.claim_case().case_id().find(&source_case_id).ok_or("unknown case")?;
-    let source_message = ctx.db.dispute_message().case_id().filter(&source_case_id).next();
+    let source_message = ctx.db.claim_message().case_id().filter(&source_case_id).next();
     let source_contract = ctx.db.customer_contract().customer_id().find(&source.customer_id).ok_or("unknown contract")?;
     let source_features = Features::new(&source_contract, &source.station_id, source.pass_fee_cents, source.claimed_cents, source.lost_pct, source.max_elevation_deg, source.kp, &source.maintenance, source.notice_hours, &source.integrity, extract_message_fields(source_message.as_ref().map(|m| m.body.as_str()).unwrap_or("")));
     let keys = ["claim_type", "weather_band", "maintenance", "integrity", "lost_band", "claim_vs_contract", "elevation_band", "account"];
@@ -704,16 +704,16 @@ pub fn submit_similar_claim(ctx: &ReducerContext, source_case_id: String) -> Res
 
 fn case_snapshot(ctx: &ReducerContext, case: &ClaimCase, contract: &CustomerContract) -> String {
     let id = case.case_id.clone();
-    let station_history: Vec<LabeledDecision> = ctx.db.labeled_decision().station_id().filter(&case.station_id).collect();
+    let station_history: Vec<AuditDecision> = ctx.db.audit_decision().station_id().filter(&case.station_id).collect();
     let approved = station_history.iter().filter(|d| d.outcome != DENY).count();
     let maintenance: Vec<_> = ctx
         .db
-        .station_maintenance()
+        .maintenance_log()
         .station_id()
         .filter(&case.station_id)
         .map(|m| json!({"kind": m.kind, "start_micros": micros(m.start_time), "end_micros": micros(m.end_time), "notice_hours": m.notice_hours, "description": m.description}))
         .collect();
-    let message = ctx.db.dispute_message().case_id().filter(&id).next();
+    let message = ctx.db.claim_message().case_id().filter(&id).next();
     let score = ctx.db.case_score().case_id().find(&id);
     json!({
         "case_id": id,
@@ -788,7 +788,7 @@ pub fn decide_case(
     let evidence_json = case_snapshot(ctx, &case, &contract);
     let decisive: Vec<String> = decisive.into_iter().filter(|k| DECIDING_KEYS.contains(&k.as_str())).collect();
     let score = ctx.db.case_score().case_id().find(&case_id);
-    let decision_id = insert_labeled(ctx, LabeledDecision {
+    let decision_id = insert_labeled(ctx, AuditDecision {
         id: 0,
         source: "live".to_string(),
         case_id: case_id.clone(),

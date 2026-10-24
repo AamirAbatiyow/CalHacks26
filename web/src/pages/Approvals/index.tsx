@@ -5,7 +5,7 @@ import { usePendingApprovals, useApprovalActions } from '../../hooks/useApproval
 import { useDecisionData, CLAIM_TYPE_LABELS } from '../../hooks/useDecisions';
 import { tag, useConnected } from '../../hooks/useTable';
 import { CaseReview, escalationChip } from './CaseReview';
-import { useClaimCases, useContracts, useLabeledDecisions, useMiningResults, humanize, type MiningResult } from '../../hooks/useCases';
+import { useClaimCases, useContracts, useAuditDecisions, useMiningResults, humanize, type MiningResult } from '../../hooks/useCases';
 import CaseDetail, { type DecisionNotice } from './CaseDetail';
 import { useTechMode } from '../../hooks/useTechMode';
 import { plainEscalation } from '../../utils/plainReason';
@@ -218,7 +218,7 @@ export default function ApprovalsPage() {
   );
   const claimCases = useClaimCases();
   const contracts = useContracts();
-  const decisions = useLabeledDecisions();
+  const decisions = useAuditDecisions();
   const miningResults = useMiningResults();
   const [notice, setNotice] = useState<DecisionNotice | null>(null);
   const caseByEscalation = useMemo(

@@ -18,7 +18,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { DataTable, type Column } from '../../ui/DataTable';
 import { useTechMode } from '../../hooks/useTechMode';
 import { SkeletonGraph, SkeletonRows } from '../../ui/Skeleton';
-import { useLabeledDecisions, useProposals } from '../../hooks/useCases';
+import { useAuditDecisions, useProposals } from '../../hooks/useCases';
 import { HistoryView, ProposalPanel } from './Learning';
 import './Policies.css';
 
@@ -237,7 +237,7 @@ export default function Policies() {
   } = usePoliciesDB();
   const learnedRows = useTable('learnedRule');
   const labelRows = useTable('labeledDecision');
-  const decisions = useLabeledDecisions();
+  const decisions = useAuditDecisions();
   const proposals = useProposals();
 
   const linkedVersionId = useHashParam();

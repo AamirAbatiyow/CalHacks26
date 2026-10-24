@@ -126,7 +126,7 @@ jq -c '.[]' "$FIXTURES_DIR/claims.json" | while read -r claim; do
     "$(echo "$claim" | jq '.model_version')" || true
 done
 
-# SLA terms (fixtures/sla_terms.json), six months of labeled human decisions (mined into the
+# SLA contracts (fixtures/sla_contracts.json), six months of labeled human decisions (mined into the
 # promoted learned policy), then live claims analyzed against all three sources.
 # Escalated ones land in Approvals with their full evidence.
 echo "Seeding contracts, decision history and incoming claims..."
