@@ -306,3 +306,12 @@
   max-height: 160px;
   overflow-y: auto;
 }
+
+.dz-body-simple {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.dz-body-simple .dz-col {
+  overflow: visible;
+}

@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { motion } from 'motion/react';
 import {
   Bot, CheckCircle2, CloudLightning, Cpu, FileText, Inbox, Info, Play, ScrollText, ShieldCheck, ShieldX, UserCheck, Wifi, WifiOff, Zap,
   type LucideIcon,
@@ -16,6 +15,9 @@ import { Meter, TrendLine } from '../../ui/charts';
 import { CountUp, compactUsd, usd } from '../../ui/CountUp';
 import { EmptyState } from '../../ui/EmptyState';
 import { escalationChip } from '../Approvals/CaseReview';
+import { useTechMode } from '../../hooks/useTechMode';
+import { plainEscalation, plainReason } from '../../utils/plainReason';
+import { DataTable, type Column } from '../../ui/DataTable';
 import './Decisions.css';
 
 const SCENARIOS: readonly (readonly [string, string, LucideIcon])[] = [
@@ -62,34 +64,35 @@ function Stat({ label, children, sub }: { label: string; children: React.ReactNo
   );
 }
 
-function verdictChip(c: DecisionCaseRow) {
+function verdictChip(c: DecisionCaseRow, tech: boolean) {
   const status = tag(c.status);
   const verdict = tag(c.finalVerdict);
-  if (status === 'Escalated') return <Chip tone="warn" icon={Inbox} title={c.escalationReason}>{escalationChip(c.escalationReason)}</Chip>;
+  if (status === 'Escalated') {
+    return <Chip tone="warn" icon={Inbox} title={tech ? c.escalationReason : undefined}>{tech ? escalationChip(c.escalationReason) : plainEscalation(c.escalationReason)}</Chip>;
+  }
   if (verdict === 'Approve') return <Chip tone="pass">{usd(c.finalCreditCents)}</Chip>;
   if (verdict) return <Chip>{verdict}</Chip>;
   return <Chip tone="accent">Deciding</Chip>;
 }
 
-function CaseRow({ c, onOpen, index }: { c: DecisionCaseRow; onOpen: () => void; index: number }) {
-  const status = tag(c.status);
-  const by = tag(c.decidedBy);
-  return (
-    <motion.button
-      className="dz-case ui-row-hover"
-      onClick={onOpen}
-      title={[c.modelVersion, c.policyVersion].filter(Boolean).join(' · ') + (c.attackName ? ` · Attack: ${c.attackName}` : '')}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.25, delay: Math.min(index, 12) * 0.02 }}
-    >
-      <span className="dz-mono">{c.claimRef}</span>
-      <span className="dz-ellipsis">{c.customer}</span>
-      <span className="dz-num">{usd(c.amountClaimedCents)}</span>
-      <span>{by ? <SystemChip system={by} /> : <span className="dz-muted">{status === 'Queued' ? 'System 1…' : 'System 2…'}</span>}</span>
-      <span>{verdictChip(c)}</span>
-    </motion.button>
-  );
+function caseColumns(tech: boolean): Column<DecisionCaseRow>[] {
+  return [
+    { key: 'ref', label: 'Claim', width: '96px', sort: c => c.claimRef, render: c => <span className="dz-mono">{c.claimRef}</span> },
+    { key: 'customer', label: 'Customer', width: 'minmax(0, 1fr)', sort: c => c.customer, render: c => c.customer },
+    { key: 'type', label: 'Type', width: '110px', sort: c => tag(c.claimType), render: c => <span className="ui-table-muted">{CLAIM_TYPE_LABELS[tag(c.claimType)] ?? ''}</span> },
+    { key: 'amount', label: 'Claimed', width: '84px', align: 'right', sort: c => Number(c.amountClaimedCents), render: c => usd(c.amountClaimedCents) },
+    {
+      key: 'by', label: 'Decided by', width: '110px', sort: c => tag(c.decidedBy) ?? '',
+      render: c => {
+        const by = tag(c.decidedBy);
+        if (!by) return <span className="dz-muted">{tech ? (tag(c.status) === 'Queued' ? 'System 1…' : 'System 2…') : 'Deciding…'}</span>;
+        if (tech) return <SystemChip system={by} />;
+        if (tag(c.status) === 'Escalated') return <span className="dz-muted">Awaiting review</span>;
+        return <span className="dz-muted">{by === 'Human' ? 'Reviewer' : 'Automatic'}</span>;
+      },
+    },
+    { key: 'result', label: 'Result', width: '130px', sort: c => Number(c.finalCreditCents), render: c => verdictChip(c, tech) },
+  ];
 }
 
 function StepCard({ d }: { d: CaseDecisionRow }) {
@@ -128,6 +131,8 @@ export default function DecisionsPage() {
   const d = useDecisionData();
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<Open | null>(null);
+  const tech = useTechMode();
+  const columns = useMemo(() => caseColumns(tech), [tech]);
   const active = d.active;
   const lastLive = d.models.find(m => m.triggeredByLabel !== undefined) ?? null;
   const promoted = d.rules.filter(r => tag(r.status) === 'Promoted');
@@ -181,7 +186,7 @@ export default function DecisionsPage() {
 
   return (
     <div className="dz-page">
-      <div className="dz-strip">
+      {tech && <div className="dz-strip">
         <div className="dz-title">Decisions</div>
         <Stat label="System 1" sub={active ? `${active.liveLabels} live labels` : 'no model'}>{active ? `s1-v${active.version}` : '—'}</Stat>
         <Stat label="Auto-approve precision" sub={active ? `coverage ${active.coveragePct.toFixed(1)}%` : ''}>
@@ -196,10 +201,22 @@ export default function DecisionsPage() {
             Worker {d.workerOnline ? 'online' : 'offline'}
           </Chip>
         </span>
-      </div>
+      </div>}
 
-      <div className="dz-body">
+      <div className={`dz-body ${tech ? '' : 'dz-body-simple'}`}>
         <div className="dz-col">
+          {!tech && (
+            <section className="dz-section">
+              <span className="ui-section-title">File a claim</span>
+              <div className="dz-actions">
+                {SCENARIOS.map(([k, v, Icon]) => (
+                  <button key={k} className="dz-btn" onClick={() => file(k)}><Icon size={12} /> {v}</button>
+                ))}
+              </div>
+              {error && <div className="dz-error">{error}</div>}
+            </section>
+          )}
+          {tech && (<>
           <section className="dz-section">
             <div className="dz-section-head">
               <span className="ui-section-title">Pipeline</span>
@@ -278,12 +295,23 @@ export default function DecisionsPage() {
               </div>
             )}
           </section>
+          </>)}
         </div>
 
         <section className="dz-section dz-feed">
-          <span className="ui-section-title">Decision audit</span>
-          {d.cases.length === 0 && <EmptyState art="inbox" compact title="No claims filed yet" hint="File one from the pipeline panel." />}
-          {d.cases.slice(0, 60).map((c, i) => <CaseRow key={String(c.id)} c={c} index={i} onOpen={() => setOpen({ kind: 'case', c })} />)}
+          <span className="ui-section-title">Decisions</span>
+          {d.cases.length === 0 ? <EmptyState art="inbox" compact title="No claims filed yet" hint="File one above." /> : (
+            <DataTable
+              rows={d.cases}
+              columns={columns}
+              rowKey={c => String(c.id)}
+              defaultSort={{ key: 'ref', dir: 'desc' }}
+              onRowClick={c => setOpen({ kind: 'case', c })}
+              rowTitle={c => (tech ? [c.modelVersion, c.policyVersion].filter(Boolean).join(' · ') : undefined)}
+              limit={60}
+              label="Decided claims"
+            />
+          )}
         </section>
       </div>
 
@@ -296,14 +324,14 @@ export default function DecisionsPage() {
         {openCase && (
           <>
             <div className="ui-chips">
-              {verdictChip(openCase)}
+              {verdictChip(openCase, tech)}
               <Chip>{usd(openCase.amountClaimedCents)} claimed</Chip>
               {openCase.attackName && <Chip tone="block">Attack: {openCase.attackName}</Chip>}
               {openCase.similarTo !== undefined && <Chip>Similar claim</Chip>}
             </div>
             <button className="dz-btn dz-replay" onClick={() => openReplay(`case:${openCase.claimRef}`)}><Play size={12} /> Replay path</button>
-            {openCase.escalationReason && <p className="ui-quote">{openCase.escalationReason}</p>}
-            {(d.stepsByCase.get(openCase.id) ?? []).map(s => <StepCard key={String(s.id)} d={s} />)}
+            {openCase.escalationReason && <p className="ui-quote">{tech ? openCase.escalationReason : plainReason(openCase.escalationReason)}</p>}
+            {tech && (d.stepsByCase.get(openCase.id) ?? []).map(s => <StepCard key={String(s.id)} d={s} />)}
           </>
         )}
         {openRule && (
