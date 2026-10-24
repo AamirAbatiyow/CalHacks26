@@ -9,6 +9,7 @@ import { useHashPage } from './hooks/useHashPage';
 import ClaimPage from './pages/Claim';
 import FinancePage from './pages/Finance';
 import PoliciesPage from './pages/Policies';
+import BreakItPage from './pages/BreakIt';
 import type { LayerState, PlaybackSpeed } from './types';
 import './App.css';
 
@@ -94,6 +95,8 @@ function App() {
         return <FinancePage key="audit" initialTab="audit" />;
       case 'policies':
         return <PoliciesPage />;
+      case 'breakit':
+        return <BreakItPage />;
       default:
         return null;
     }

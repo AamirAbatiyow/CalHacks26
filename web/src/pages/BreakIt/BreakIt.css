@@ -1,0 +1,252 @@
+.breakit-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: var(--color-bg);
+  color: var(--color-primary);
+}
+
+.breakit-header {
+  height: var(--kpi-strip-height);
+  border-bottom: 1px solid var(--color-muted);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 48px;
+  flex-shrink: 0;
+}
+
+.breakit-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.breakit-title {
+  font-size: var(--font-heading-md);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.breakit-status {
+  font-size: 10px;
+  color: var(--color-muted);
+}
+
+.breakit-status.connected {
+  color: var(--color-green);
+}
+
+.breakit-kpi-strip {
+  display: flex;
+  gap: 32px;
+  margin-left: auto;
+}
+
+.breakit-kpi-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.breakit-kpi-label {
+  font-size: var(--font-metadata);
+  color: var(--color-secondary);
+  margin-bottom: 2px;
+}
+
+.breakit-kpi-value {
+  font-size: var(--font-heading-md);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.breakit-kpi-item.alert .breakit-kpi-value {
+  color: var(--color-amber);
+}
+
+.breakit-content {
+  flex: 1;
+  display: flex;
+  padding: 24px;
+  gap: 32px;
+  overflow: hidden;
+}
+
+.breakit-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
+.breakit-stats-row {
+  display: flex;
+  gap: 48px;
+}
+
+.breakit-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.breakit-stat-label {
+  font-size: var(--font-metadata);
+  color: var(--color-secondary);
+  margin-bottom: 4px;
+}
+
+.breakit-stat-value {
+  font-size: 36px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.breakit-stat-sub {
+  color: var(--color-secondary);
+}
+
+.breakit-attacks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.breakit-attack-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-muted);
+}
+
+.breakit-attack-row:last-child {
+  border-bottom: none;
+}
+
+.breakit-attack-name {
+  flex: 1;
+  font-size: var(--font-body);
+}
+
+.breakit-run-btn {
+  padding: 4px 16px;
+  border: 1px solid var(--color-muted);
+  border-radius: 4px;
+  font-size: var(--font-metadata);
+  color: var(--color-primary);
+  background: transparent;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.breakit-run-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--color-secondary);
+}
+
+.breakit-run-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.breakit-attack-result {
+  width: 80px;
+  text-align: right;
+  font-size: var(--font-body);
+  font-weight: 500;
+}
+
+.breakit-attack-result.caught {
+  color: var(--color-primary);
+}
+
+.breakit-attack-result.missed {
+  color: var(--color-amber);
+}
+
+.breakit-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+.breakit-run-all-btn {
+  padding: 8px 24px;
+  border: 1px solid var(--color-muted);
+  border-radius: 4px;
+  font-size: var(--font-body);
+  color: var(--color-primary);
+  background: transparent;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.breakit-run-all-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--color-secondary);
+}
+
+.breakit-run-all-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.breakit-clear-btn {
+  padding: 8px 16px;
+  border: 1px solid var(--color-muted);
+  border-radius: 4px;
+  font-size: var(--font-body);
+  color: var(--color-secondary);
+  background: transparent;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.breakit-clear-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--color-secondary);
+}
+
+.breakit-clear-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.breakit-log {
+  width: 320px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--color-muted);
+  border-radius: 4px;
+  padding: 16px;
+  overflow-y: auto;
+  font-family: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.breakit-log-entry {
+  display: flex;
+  gap: 12px;
+  white-space: nowrap;
+}
+
+.breakit-log-time {
+  color: var(--color-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.breakit-log-message {
+  color: var(--color-primary);
+}
+
+.breakit-log-message.missed {
+  color: var(--color-primary);
+}
+
+.breakit-log-missed {
+  color: var(--color-amber);
+  font-weight: 500;
+}

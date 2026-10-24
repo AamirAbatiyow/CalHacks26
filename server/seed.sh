@@ -87,4 +87,9 @@ else
   "$SPACETIME" call "$MODULE" seed_demo_claim --server "$SERVER" || true
 fi
 
+# Break It: answer-key fixtures plus one completed run
+echo "Seeding attack fixtures..."
+"$SPACETIME" call "$MODULE" seed_attack_fixtures --server "$SERVER" || true
+"$SPACETIME" call "$MODULE" run_all_attacks --server "$SERVER" || true
+
 echo "Seeding complete!"

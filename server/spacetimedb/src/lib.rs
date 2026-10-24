@@ -3,6 +3,7 @@ use std::time::Duration;
 
 use ledger::{ledger_entry, LedgerEntry, LedgerEntryType};
 
+pub mod attack_run;
 pub mod authority;
 pub mod claim;
 pub mod confidence_gate;

@@ -19,7 +19,7 @@ const navItems: NavItem[] = [
   { id: 'ledger', label: 'Ledger', icon: '≡', enabled: true },
   { id: 'audit', label: 'Audit', icon: '⊙', enabled: true },
   { id: 'policies', label: 'Policies', icon: '⚙', enabled: true },
-  { id: 'breakit', label: 'Break It', icon: '⊕', enabled: false },
+  { id: 'breakit', label: 'Break It', icon: '⊕', enabled: true },
 ];
 
 interface SidebarProps {
