@@ -1,0 +1,28 @@
+.kpi-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.kpi-card-label {
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
+  line-height: 1;
+}
+
+.kpi-card-value {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+
+.kpi-card--warning .kpi-card-value {
+  color: var(--color-amber);
+}
