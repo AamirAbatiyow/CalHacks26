@@ -26,6 +26,7 @@ export interface AttackRun {
   amountCents: bigint;
   timestamp: bigint;
   logMessage: string;
+  attackerIdentity: string | null;
 }
 
 export interface AttackRunSession {
@@ -43,8 +44,8 @@ export interface AttackFixture {
   id: bigint;
   attackType: AttackType;
   amountCents: bigint;
-  shouldCatch: boolean;
   description: string;
+  attackParams: string;
 }
 
 export const ATTACK_TYPE_LABELS: Record<AttackType, string> = {

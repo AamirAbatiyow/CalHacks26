@@ -80,6 +80,7 @@ export function useBreakItDB() {
                       amountCents: BigInt((row.amount_cents as number) || 0),
                       timestamp: BigInt(((row.timestamp as { microseconds?: number })?.microseconds) || 0),
                       logMessage: row.log_message as string,
+                      attackerIdentity: (row.attacker_identity as string) || null,
                     }));
                     return [...filtered, ...newRuns];
                   });
@@ -113,8 +114,8 @@ export function useBreakItDB() {
                       id: BigInt((row.id as number) || 0),
                       attackType: mapAttackType(row.attack_type as string),
                       amountCents: BigInt((row.amount_cents as number) || 0),
-                      shouldCatch: row.should_catch as boolean,
                       description: row.description as string,
+                      attackParams: (row.attack_params as string) || '',
                     }));
                     return [...filtered, ...newFixtures];
                   });
