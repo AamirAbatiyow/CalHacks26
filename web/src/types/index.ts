@@ -173,3 +173,19 @@ export interface ClaimWeather {
   kpIndex: number;
   stormActive: boolean;
 }
+
+export const LedgerEntryType = {
+  Credit: 'Credit',
+  Invoice: 'Invoice',
+  Recovery: 'Recovery',
+} as const;
+export type LedgerEntryType = (typeof LedgerEntryType)[keyof typeof LedgerEntryType];
+
+export interface LedgerEntry {
+  id: bigint;
+  createdAt: bigint;
+  entryType: LedgerEntryType;
+  description: string;
+  referenceId: string | null;
+  amountCents: bigint;
+}

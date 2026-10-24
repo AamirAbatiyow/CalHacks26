@@ -13,6 +13,7 @@ use spacetimedb::{ReducerContext, ScheduleAt, SpacetimeType, Table, Timestamp};
 use std::time::Duration;
 
 use crate::events::{EventType, record_event};
+use crate::ledger::{ledger_entry, station_credits_cents, LedgerEntry, LedgerEntryType};
 
 /// SLA tier determines response deadlines and credit percentages
 #[derive(SpacetimeType, Clone, Copy, PartialEq, Eq, Debug)]
@@ -66,32 +67,6 @@ pub struct SlaDeadlineSchedule {
     pub dispute_id: u64,
 }
 
-/// Ledger entry for all financial transactions (append-only)
-#[spacetimedb::table(accessor = ledger_entry, public)]
-pub struct LedgerEntry {
-    #[primary_key]
-    #[auto_inc]
-    pub id: u64,
-    pub created_at: Timestamp,
-    pub dispute_id: Option<u64>,
-    pub pass_id: Option<u64>,
-    pub station_id: String,
-    pub entry_type: LedgerEntryType,
-    /// Amount in cents (positive = credit to customer, negative = charge)
-    pub amount_cents: i64,
-    pub description: String,
-    pub running_balance_cents: i64,
-}
-
-#[derive(SpacetimeType, Clone, Copy, PartialEq, Eq, Debug)]
-pub enum LedgerEntryType {
-    PassRevenue,
-    SlaCredit,
-    ManualAdjustment,
-    EscalationCredit,
-    AutoApprovalCredit,
-}
-
 /// Audit log for all SLA-related actions (append-only)
 #[spacetimedb::table(accessor = audit_log, public)]
 pub struct AuditLog {
@@ -135,15 +110,6 @@ fn get_credit_percentage(tier: SlaTier) -> f64 {
         SlaTier::Premium => 0.15,     // 15%
         SlaTier::Enterprise => 0.25,  // 25%
     }
-}
-
-/// Get current ledger balance for a station
-fn get_station_balance(ctx: &ReducerContext, station_id: &str) -> i64 {
-    ctx.db.ledger_entry()
-        .iter()
-        .filter(|e| e.station_id == station_id)
-        .map(|e| e.amount_cents)
-        .sum()
 }
 
 /// File a new dispute and schedule its SLA deadline
@@ -233,10 +199,6 @@ pub fn check_sla_deadline(ctx: &ReducerContext, timer: SlaDeadlineSchedule) {
             let credit_percentage = get_credit_percentage(dispute.sla_tier);
             let credit_amount = (dispute.claim_amount_cents as f64 * credit_percentage) as i64;
             
-            // Get current balance for running total
-            let current_balance = get_station_balance(ctx, &dispute.station_id);
-            let new_balance = current_balance + credit_amount;
-            
             // Update dispute to escalated with auto-credit
             ctx.db.dispute().id().update(Dispute {
                 status: DisputeStatus::Escalated,
@@ -254,16 +216,16 @@ pub fn check_sla_deadline(ctx: &ReducerContext, timer: SlaDeadlineSchedule) {
             ctx.db.ledger_entry().insert(LedgerEntry {
                 id: 0,
                 created_at: ctx.timestamp,
-                dispute_id: Some(dispute.id),
-                pass_id: Some(dispute.pass_id),
-                station_id: dispute.station_id.clone(),
-                entry_type: LedgerEntryType::EscalationCredit,
-                amount_cents: credit_amount,
+                entry_type: LedgerEntryType::Credit,
                 description: format!(
                     "SLA escalation credit for dispute {} (deadline expired)",
                     dispute.id
                 ),
-                running_balance_cents: new_balance,
+                reference_id: Some(format!("DSP-{}", dispute.id)),
+                amount_cents: -credit_amount,
+                dispute_id: Some(dispute.id),
+                pass_id: Some(dispute.pass_id),
+                station_id: Some(dispute.station_id.clone()),
             });
             
             // Record audit log
@@ -315,8 +277,6 @@ pub fn approve_dispute(ctx: &ReducerContext, dispute_id: u64, notes: String) {
         }
         
         let credit_amount = dispute.claim_amount_cents;
-        let current_balance = get_station_balance(ctx, &dispute.station_id);
-        let new_balance = current_balance + credit_amount;
         
         ctx.db.dispute().id().update(Dispute {
             status: DisputeStatus::Approved,
@@ -329,13 +289,13 @@ pub fn approve_dispute(ctx: &ReducerContext, dispute_id: u64, notes: String) {
         ctx.db.ledger_entry().insert(LedgerEntry {
             id: 0,
             created_at: ctx.timestamp,
+            entry_type: LedgerEntryType::Credit,
+            description: format!("SLA credit for approved dispute {}", dispute.id),
+            reference_id: Some(format!("DSP-{}", dispute.id)),
+            amount_cents: -credit_amount,
             dispute_id: Some(dispute.id),
             pass_id: Some(dispute.pass_id),
-            station_id: dispute.station_id.clone(),
-            entry_type: LedgerEntryType::SlaCredit,
-            amount_cents: credit_amount,
-            description: format!("SLA credit for approved dispute {}", dispute.id),
-            running_balance_cents: new_balance,
+            station_id: Some(dispute.station_id.clone()),
         });
         
         ctx.db.audit_log().insert(AuditLog {
@@ -425,19 +385,19 @@ pub fn issue_manual_credit(
     amount_cents: i64,
     description: String,
 ) {
-    let current_balance = get_station_balance(ctx, &station_id);
-    let new_balance = current_balance + amount_cents;
-    
+    let credits_before = station_credits_cents(ctx, &station_id);
+    let credits_after = credits_before + amount_cents;
+
     ctx.db.ledger_entry().insert(LedgerEntry {
         id: 0,
         created_at: ctx.timestamp,
+        entry_type: LedgerEntryType::Credit,
+        description: description.clone(),
+        reference_id: None,
+        amount_cents: -amount_cents,
         dispute_id: None,
         pass_id,
-        station_id: station_id.clone(),
-        entry_type: LedgerEntryType::ManualAdjustment,
-        amount_cents,
-        description: description.clone(),
-        running_balance_cents: new_balance,
+        station_id: Some(station_id.clone()),
     });
     
     ctx.db.audit_log().insert(AuditLog {
@@ -447,8 +407,8 @@ pub fn issue_manual_credit(
         dispute_id: None,
         actor: "operator".to_string(),
         details: format!("Manual credit issued: ${:.2} - {}", amount_cents as f64 / 100.0, description),
-        previous_state: format!("balance: ${:.2}", current_balance as f64 / 100.0),
-        new_state: format!("balance: ${:.2}", new_balance as f64 / 100.0),
+        previous_state: format!("credits: ${:.2}", credits_before as f64 / 100.0),
+        new_state: format!("credits: ${:.2}", credits_after as f64 / 100.0),
     });
     
     record_event(
@@ -467,6 +427,6 @@ pub fn issue_manual_credit(
 /// Get the current total credits for a station (helper for UI)
 #[spacetimedb::reducer]
 pub fn get_station_credits(ctx: &ReducerContext, station_id: String) {
-    let balance = get_station_balance(ctx, &station_id);
-    log::info!("Station {} balance: ${:.2}", station_id, balance as f64 / 100.0);
+    let credits = station_credits_cents(ctx, &station_id);
+    log::info!("Station {} credits: ${:.2}", station_id, credits as f64 / 100.0);
 }

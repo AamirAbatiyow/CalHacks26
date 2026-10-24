@@ -1,10 +1,13 @@
 use spacetimedb::{ReducerContext, ScheduleAt, SpacetimeType, Table, Timestamp};
 use std::time::Duration;
 
+use ledger::{ledger_entry, LedgerEntry, LedgerEntryType};
+
 pub mod authority;
 pub mod claim;
 pub mod confidence_gate;
 pub mod events;
+pub mod ledger;
 pub mod sla;
 
 #[cfg(test)]
@@ -159,6 +162,145 @@ pub fn init(ctx: &ReducerContext) {
     ctx.db.sim_tick_schedule().insert(SimTickSchedule {
         scheduled_id: 0,
         scheduled_at: ScheduleAt::Interval(Duration::from_millis(1000).into()),
+    });
+
+    let base_time = ctx.timestamp.to_micros_since_unix_epoch();
+    
+    ctx.db.decision_record().insert(DecisionRecord {
+        id: 0,
+        created_at: Timestamp::from_micros_since_unix_epoch(base_time - 3600_000_000),
+        decision_type: DecisionType::CreditIssued,
+        outcome: DecisionOutcome::AutoApproved,
+        pass_id: Some(1042),
+        station_id: Some("svalsat".to_string()),
+        amount_cents: 245000,
+        reason: "Pass dropped due to solar interference".to_string(),
+        policy_version: "v4".to_string(),
+        model_version: "v2".to_string(),
+    });
+
+    ctx.db.decision_record().insert(DecisionRecord {
+        id: 0,
+        created_at: Timestamp::from_micros_since_unix_epoch(base_time - 7200_000_000),
+        decision_type: DecisionType::DisputeResolved,
+        outcome: DecisionOutcome::Approved,
+        pass_id: Some(1038),
+        station_id: Some("trollsat".to_string()),
+        amount_cents: 18500,
+        reason: "Customer dispute approved after manual review".to_string(),
+        policy_version: "v4".to_string(),
+        model_version: "v2".to_string(),
+    });
+
+    ctx.db.decision_record().insert(DecisionRecord {
+        id: 0,
+        created_at: Timestamp::from_micros_since_unix_epoch(base_time - 14400_000_000),
+        decision_type: DecisionType::DisputeCreated,
+        outcome: DecisionOutcome::Pending,
+        pass_id: Some(1055),
+        station_id: Some("svalsat".to_string()),
+        amount_cents: 32000,
+        reason: "Customer reported incomplete data transfer".to_string(),
+        policy_version: "v4".to_string(),
+        model_version: "v2".to_string(),
+    });
+
+    ctx.db.decision_record().insert(DecisionRecord {
+        id: 0,
+        created_at: Timestamp::from_micros_since_unix_epoch(base_time - 21600_000_000),
+        decision_type: DecisionType::PassRecovered,
+        outcome: DecisionOutcome::AutoApproved,
+        pass_id: Some(1029),
+        station_id: Some("trollsat".to_string()),
+        amount_cents: 89000,
+        reason: "Backup ground station captured pass data".to_string(),
+        policy_version: "v3".to_string(),
+        model_version: "v2".to_string(),
+    });
+
+    ctx.db.decision_record().insert(DecisionRecord {
+        id: 0,
+        created_at: Timestamp::from_micros_since_unix_epoch(base_time - 43200_000_000),
+        decision_type: DecisionType::CreditIssued,
+        outcome: DecisionOutcome::Denied,
+        pass_id: Some(1015),
+        station_id: Some("svalsat".to_string()),
+        amount_cents: 156000,
+        reason: "Claim exceeds policy threshold, escalated".to_string(),
+        policy_version: "v3".to_string(),
+        model_version: "v2".to_string(),
+    });
+
+    ctx.db.ledger_entry().insert(LedgerEntry {
+        id: 0,
+        created_at: Timestamp::from_micros_since_unix_epoch(base_time - 1800_000_000),
+        entry_type: LedgerEntryType::Credit,
+        description: "Credit issued for Pass #1042 - solar interference".to_string(),
+        reference_id: Some("CR-2026-1042".to_string()),
+        amount_cents: -245000,
+        dispute_id: None,
+        pass_id: None,
+        station_id: None,
+    });
+
+    ctx.db.ledger_entry().insert(LedgerEntry {
+        id: 0,
+        created_at: Timestamp::from_micros_since_unix_epoch(base_time - 5400_000_000),
+        entry_type: LedgerEntryType::Invoice,
+        description: "Monthly service invoice - SvalSat".to_string(),
+        reference_id: Some("INV-2026-SVB-10".to_string()),
+        amount_cents: 4850000,
+        dispute_id: None,
+        pass_id: None,
+        station_id: None,
+    });
+
+    ctx.db.ledger_entry().insert(LedgerEntry {
+        id: 0,
+        created_at: Timestamp::from_micros_since_unix_epoch(base_time - 10800_000_000),
+        entry_type: LedgerEntryType::Recovery,
+        description: "Recovered revenue from backup pass capture".to_string(),
+        reference_id: Some("REC-2026-1029".to_string()),
+        amount_cents: 89000,
+        dispute_id: None,
+        pass_id: None,
+        station_id: None,
+    });
+
+    ctx.db.ledger_entry().insert(LedgerEntry {
+        id: 0,
+        created_at: Timestamp::from_micros_since_unix_epoch(base_time - 18000_000_000),
+        entry_type: LedgerEntryType::Credit,
+        description: "Credit issued for Pass #1038 - dispute resolution".to_string(),
+        reference_id: Some("CR-2026-1038".to_string()),
+        amount_cents: -18500,
+        dispute_id: None,
+        pass_id: None,
+        station_id: None,
+    });
+
+    ctx.db.ledger_entry().insert(LedgerEntry {
+        id: 0,
+        created_at: Timestamp::from_micros_since_unix_epoch(base_time - 86400_000_000),
+        entry_type: LedgerEntryType::Invoice,
+        description: "Monthly service invoice - TrollSat".to_string(),
+        reference_id: Some("INV-2026-ANT-10".to_string()),
+        amount_cents: 3200000,
+        dispute_id: None,
+        pass_id: None,
+        station_id: None,
+    });
+
+    ctx.db.ledger_entry().insert(LedgerEntry {
+        id: 0,
+        created_at: Timestamp::from_micros_since_unix_epoch(base_time - 172800_000_000),
+        entry_type: LedgerEntryType::Recovery,
+        description: "Insurance recovery for storm damage claim".to_string(),
+        reference_id: Some("REC-2026-INS-07".to_string()),
+        amount_cents: 425000,
+        dispute_id: None,
+        pass_id: None,
+        station_id: None,
     });
     
     log::info!("Ground Truth module initialized");

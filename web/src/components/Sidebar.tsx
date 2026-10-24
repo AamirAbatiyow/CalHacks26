@@ -15,9 +15,9 @@ const navItems: NavItem[] = [
   { id: 'claims', label: 'Claims', icon: '⚡', enabled: true },
   { id: 'approvals', label: 'Approvals', icon: '☐', enabled: false },
   { id: 'customers', label: 'Customers', icon: '⚇', enabled: false },
-  { id: 'finance', label: 'Finance', icon: '$', enabled: false },
-  { id: 'ledger', label: 'Ledger', icon: '≡', enabled: false },
-  { id: 'audit', label: 'Audit', icon: '⊙', enabled: false },
+  { id: 'finance', label: 'Finance', icon: '$', enabled: true },
+  { id: 'ledger', label: 'Ledger', icon: '≡', enabled: true },
+  { id: 'audit', label: 'Audit', icon: '⊙', enabled: true },
   { id: 'policies', label: 'Policies', icon: '⚙', enabled: false },
   { id: 'breakit', label: 'Break It', icon: '⊕', enabled: false },
 ];

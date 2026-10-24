@@ -7,6 +7,7 @@ import { PlaybackBar } from './components/PlaybackBar';
 import { useSpacetimeDB } from './hooks/useSpacetimeDB';
 import { useHashPage } from './hooks/useHashPage';
 import ClaimPage from './pages/Claim';
+import FinancePage from './pages/Finance';
 import type { LayerState, PlaybackSpeed } from './types';
 import './App.css';
 
@@ -84,6 +85,12 @@ function App() {
     switch (page) {
       case 'claims':
         return <ClaimPage />;
+      case 'finance':
+        return <FinancePage key="summary" initialTab="summary" />;
+      case 'ledger':
+        return <FinancePage key="ledger" initialTab="ledger" />;
+      case 'audit':
+        return <FinancePage key="audit" initialTab="audit" />;
       default:
         return null;
     }
