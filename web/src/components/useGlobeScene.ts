@@ -30,6 +30,10 @@ export function useGlobeScene(options: GlobeSceneOptions, onFrame?: (scene: Glob
     onFrameRef.current = onFrame;
   });
   const { autoRotate = false, cameraDistance = 3.2 } = options;
+  const autoRotateRef = useRef(autoRotate);
+  useEffect(() => {
+    autoRotateRef.current = autoRotate;
+  }, [autoRotate]);
   const focusLat = options.focus?.lat;
   const focusLon = options.focus?.lon;
 
@@ -71,7 +75,7 @@ export function useGlobeScene(options: GlobeSceneOptions, onFrame?: (scene: Glob
     const animate = () => {
       frame = requestAnimationFrame(animate);
       if (!dragging) {
-        if (autoRotate && !prefersReducedMotion) group.rotation.y += (2 * Math.PI) / (GLOBE_ROTATION_PERIOD_MS / 16.67);
+        if (autoRotateRef.current && !prefersReducedMotion) group.rotation.y += (2 * Math.PI) / (GLOBE_ROTATION_PERIOD_MS / 16.67);
         group.rotation.x += velocity.x;
         group.rotation.y += velocity.y;
         velocity = { x: velocity.x * 0.95, y: velocity.y * 0.95 };
@@ -120,7 +124,7 @@ export function useGlobeScene(options: GlobeSceneOptions, onFrame?: (scene: Glob
       renderer.domElement.remove();
       setScene(null);
     };
-  }, [autoRotate, cameraDistance, focusLat, focusLon, prefersReducedMotion]);
+  }, [cameraDistance, focusLat, focusLon, prefersReducedMotion]);
 
   return { containerRef, scene };
 }
