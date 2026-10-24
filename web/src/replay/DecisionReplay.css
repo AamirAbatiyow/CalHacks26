@@ -143,6 +143,10 @@
   cursor: default;
 }
 
+.replay-canvas .react-flow__node:hover {
+  z-index: 20 !important;
+}
+
 .replay-canvas .react-flow__edges {
   overflow: visible;
 }
@@ -194,9 +198,10 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 10px 12px;
+  padding: 11px 12px;
   border-radius: 5px;
   background: #050505;
+  transition: box-shadow 0.4s ease, background 0.4s ease;
   will-change: opacity, transform;
 }
 
@@ -210,6 +215,7 @@
 }
 
 .stage-title {
+  flex-shrink: 0;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -245,7 +251,10 @@
 }
 
 .stage-version {
-  flex-shrink: 0;
+  min-width: 0;
+  max-width: 64px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 10px;
@@ -253,7 +262,7 @@
 }
 
 .stage-headline {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 500;
   line-height: 18px;
   letter-spacing: -0.01em;
@@ -471,4 +480,92 @@
 
 .replay-trigger-glyph {
   font-size: 9px;
+}
+
+/* Final stage: soft glow so the outcome reads first */
+
+.stage-node.is-final .stage-body {
+  background: radial-gradient(120% 140% at 0% 0%, rgba(77, 163, 255, 0.12) 0%, #050505 62%);
+  box-shadow: 0 0 28px rgba(77, 163, 255, 0.16);
+}
+
+.stage-node.is-final.tone-warn .stage-body {
+  background: radial-gradient(120% 140% at 0% 0%, rgba(245, 158, 11, 0.13) 0%, #050505 62%);
+  box-shadow: 0 0 28px rgba(245, 158, 11, 0.15);
+}
+
+.stage-node.is-final.tone-block .stage-body {
+  background: radial-gradient(120% 140% at 0% 0%, rgba(239, 68, 68, 0.13) 0%, #050505 62%);
+  box-shadow: 0 0 28px rgba(239, 68, 68, 0.15);
+}
+
+/* Re-verify checks as dots; labels are in the hover card */
+
+.stage-check-dots {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.stage-check-dot {
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-accent);
+}
+
+.stage-check-dot.fail {
+  background: var(--color-amber);
+}
+
+/* Hover card: caption, rationale and checks */
+
+.stage-hover {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  width: 240px;
+  padding: 10px 12px;
+  transform: translate(-50%, 4px);
+  background: rgba(8, 8, 8, 0.97);
+  border: 1px solid var(--color-muted);
+  border-radius: 5px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.stage-node:hover .stage-hover {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.stage-hover-system {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-secondary);
+  margin-bottom: 4px;
+}
+
+.stage-hover-caption {
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--color-primary);
+}
+
+.stage-hover .stage-note {
+  -webkit-line-clamp: 6;
+}
+
+.stage-hover .stage-checks li {
+  white-space: normal;
+}
+
+.replay-route {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }

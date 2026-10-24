@@ -166,12 +166,12 @@ function untakenBranch(s: PipelineStepRow, next: PipelineStepRow | undefined): s
   const pass = toneOf(s.verdict) === 'pass';
   switch (s.stage) {
     case 'system1':
-      if (next?.stage === 'cedar' && next.system !== 'Cedar') return 'no rule → System 2';
-      if (next?.stage === 'cedar') return `< ${AUTO_CONFIDENCE_PCT}% → System 2`;
-      return (s.confidencePct ?? 0) >= AUTO_CONFIDENCE_PCT ? 'no text needed → Cedar' : `≥ ${AUTO_CONFIDENCE_PCT}% → Cedar`;
-    case 'cedar': return pass ? 'deny → human' : 'allow → decided';
-    case 'injection': return pass ? 'flagged → human' : 'clean → System 2';
-    case 'reverify': return pass ? 'fail → human' : 'pass → decided';
+      if (next?.stage === 'cedar' && next.system !== 'Cedar') return 'no rule';
+      if (next?.stage === 'cedar') return `< ${AUTO_CONFIDENCE_PCT}%`;
+      return (s.confidencePct ?? 0) >= AUTO_CONFIDENCE_PCT ? 'Cedar' : `≥ ${AUTO_CONFIDENCE_PCT}%`;
+    case 'cedar': return pass ? 'deny' : 'allow';
+    case 'injection': return pass ? 'flagged' : 'clean';
+    case 'reverify': return pass ? 'fail' : 'pass';
     default: return undefined;
   }
 }
@@ -303,7 +303,7 @@ function seededTrace(row: DecisionRow): DecisionTrace {
     headline: { kind: 'pct', value: s1Confidence, digits: Number.isInteger(s1Confidence) ? 0 : 1 },
     caption: row.topFeature ? `confidence · ${row.topFeature}` : 'confidence · features only',
     tone: toCedar ? 'pass' : 'neutral',
-    untaken: toCedar ? '< 95% → injection screen' : '≥ 95% → Cedar',
+    untaken: toCedar ? '< 95%' : '≥ 95%',
   });
 
   if (toCedar) {
@@ -317,7 +317,7 @@ function seededTrace(row: DecisionRow): DecisionTrace {
       caption: allow ? `credit::issue · ${usd(row.creditCents)}` : `${ruleName} · ${usd(row.creditCents)}`,
       note: allow ? undefined : ruleWhy || undefined,
       tone: allow ? 'pass' : 'block',
-      untaken: allow ? 'deny → human' : 'allow → decided',
+      untaken: allow ? 'deny' : 'allow',
     });
     if (allow) {
       push({
@@ -339,7 +339,7 @@ function seededTrace(row: DecisionRow): DecisionTrace {
       headline: { kind: 'text', text: 'Clean' },
       caption: `0 / ${patterns} patterns matched`,
       tone: 'pass',
-      untaken: 'flagged → human',
+      untaken: 'flagged',
     });
 
     const proposed = route === 'system2' || row.creditCents > 0 ? row.creditCents : row.claimedCents;
@@ -370,7 +370,7 @@ function seededTrace(row: DecisionRow): DecisionTrace {
       caption: humanBound ? 'check failed · escalate' : 'all checks pass',
       checks,
       tone: humanBound ? 'warn' : 'pass',
-      untaken: humanBound ? 'pass → decided' : 'fail → human',
+      untaken: humanBound ? 'pass' : 'fail',
     });
 
     if (!humanBound) {
@@ -477,14 +477,14 @@ function finish(row: DecisionRow, decidedBy: DecidedBy, stages: TraceStage[]): D
 export const STAGE_TITLES: Record<StageKind, string> = {
   claim: 'Claim',
   system1: 'System 1',
-  cedar: 'Cedar check',
-  injection: 'Injection screen',
+  cedar: 'Cedar',
+  injection: 'Screen',
   system2: 'System 2',
   reverify: 'Re-verify',
   decided: 'Decided',
   human: 'Human',
-  label: 'Labeled',
-  retrain: 'Retrain + replay',
-  model: 'New model',
-  proposal: 'Policy proposal',
+  label: 'Label',
+  retrain: 'Retrain',
+  model: 'Model',
+  proposal: 'Proposal',
 };

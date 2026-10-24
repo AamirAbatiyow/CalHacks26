@@ -1,6 +1,7 @@
 import type { Kpi } from '../types';
 import type { ConnectionState } from '../hooks/useSpacetimeDB';
-import { formatDollars } from '../utils/money';
+import { CountUp, compactUsd } from '../ui/CountUp';
+import { Skeleton } from '../ui/Skeleton';
 import './KpiStrip.css';
 
 interface KpiStripProps {
@@ -10,15 +11,17 @@ interface KpiStripProps {
 
 interface KpiItemProps {
   label: string;
-  value: string;
+  cents: bigint | null;
   isAlert?: boolean;
 }
 
-function KpiItem({ label, value, isAlert }: KpiItemProps) {
+function KpiItem({ label, cents, isAlert }: KpiItemProps) {
   return (
     <div className={`kpi-item ${isAlert ? 'alert' : ''}`}>
       <span className="kpi-label">{label}</span>
-      <span className="kpi-value">{value}</span>
+      <span className="kpi-value">
+        {cents === null ? <Skeleton width={72} height={18} /> : <CountUp value={Number(cents)} format={compactUsd} />}
+      </span>
     </div>
   );
 }
@@ -51,23 +54,10 @@ export function KpiStrip({ kpi, connectionState }: KpiStripProps) {
         <ConnectionIndicator state={connectionState} />
       </div>
       <div className="kpi-metrics">
-        <KpiItem
-          label="Billed this month"
-          value={isConnected && kpi ? formatDollars(kpi.billedThisMonthCents) : '—'}
-        />
-        <KpiItem
-          label="Revenue at risk"
-          value={isConnected && kpi ? formatDollars(kpi.revenueAtRiskCents) : '—'}
-          isAlert
-        />
-        <KpiItem
-          label="Credits paid"
-          value={isConnected && kpi ? formatDollars(kpi.creditsPaidCents) : '—'}
-        />
-        <KpiItem
-          label="Recovered"
-          value={isConnected && kpi ? formatDollars(kpi.recoveredCents) : '—'}
-        />
+        <KpiItem label="Billed this month" cents={isConnected && kpi ? kpi.billedThisMonthCents : null} />
+        <KpiItem label="Revenue at risk" cents={isConnected && kpi ? kpi.revenueAtRiskCents : null} isAlert />
+        <KpiItem label="Credits paid" cents={isConnected && kpi ? kpi.creditsPaidCents : null} />
+        <KpiItem label="Recovered" cents={isConnected && kpi ? kpi.recoveredCents : null} />
       </div>
     </header>
   );

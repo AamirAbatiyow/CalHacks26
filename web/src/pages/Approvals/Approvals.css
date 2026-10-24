@@ -40,11 +40,13 @@
 }
 
 .claim-row {
+  position: relative;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
+  gap: 6px;
   width: 100%;
-  padding: 16px 20px;
+  padding: 14px 20px;
   border-bottom: 1px solid var(--color-muted);
   text-align: left;
   transition: background 0.15s ease;
@@ -54,28 +56,62 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
-.claim-row.selected {
-  background: rgba(255, 255, 255, 0.08);
+.claim-row-bg {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 2px 0 0 var(--color-primary);
+  pointer-events: none;
+}
+
+.claim-row > * {
+  position: relative;
+}
+
+.claim-row-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.approvals-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px 10px;
+  border-bottom: 1px solid var(--color-muted);
+}
+
+.approvals-count {
+  font-size: 11px;
+  color: var(--color-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 .claim-customer {
   font-size: 14px;
   font-weight: 500;
   color: var(--color-primary);
-  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .claim-amount {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--color-primary);
-  margin-bottom: 4px;
+  font-variant-numeric: tabular-nums;
 }
 
 .claim-confidence {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: 11px;
   color: var(--color-secondary);
-  margin-bottom: 6px;
+  font-variant-numeric: tabular-nums;
 }
 
 .claim-tag {
@@ -159,11 +195,14 @@
 .detail-actions {
   display: flex;
   gap: 12px;
-  margin-top: 32px;
 }
 
 .btn {
-  padding: 12px 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 24px;
   border-radius: 4px;
   font-size: 14px;
   font-weight: 500;
@@ -254,4 +293,12 @@
 .detail-replay {
   margin-left: 16px;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+}
+
+.claim-row .claim-source {
+  font-size: 10px;
+  color: var(--color-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 500;
 }
