@@ -1,0 +1,57 @@
+.app {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  background: var(--color-bg);
+}
+
+/* Main area */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Top bar */
+.topbar {
+  height: var(--topbar-height);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  border-bottom: 1px solid var(--color-border-subtle);
+  gap: var(--space-8);
+  flex-shrink: 0;
+}
+
+.topbar-title {
+  font-size: var(--text-xl);
+  font-weight: 500;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+
+/* Viewport */
+.viewport {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Kp storm chip */
+.kp-storm-chip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -150px);
+  padding: var(--space-2) var(--space-4);
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid var(--color-amber);
+  border-radius: 4px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-amber);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 20;
+}
