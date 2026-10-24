@@ -60,13 +60,13 @@
 }
 
 .claim-detail-panel {
-  width: 360px;
+  width: 420px;
   flex-shrink: 0;
   border-left: 1px solid var(--color-muted);
-  padding: 24px;
+  padding: 24px 24px 20px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 26px;
   overflow-y: auto;
 }
 
@@ -388,4 +388,73 @@
 .scrubber-label-btn.signal-lost:hover {
   color: var(--color-amber);
   text-decoration: underline;
+}
+
+.claim-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.claim-head-amount {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: var(--font-heading-lg);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.claim-head-unit {
+  font-size: var(--font-metadata);
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--color-secondary);
+}
+
+.claim-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.claim-gauge-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 28px;
+}
+
+.claim-gauge-value {
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.claim-credit {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding-bottom: 4px;
+}
+
+.claim-legend {
+  margin-top: 10px;
+}
+
+.claim-foot {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.claim-globe-skeleton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
