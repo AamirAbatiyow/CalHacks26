@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { motion, useTransform, type MotionValue } from 'motion/react';
+import { useTechMode } from '../hooks/useTechMode';
 import { CONTENT, DRAW, useTimelineContext } from './timeline';
 import { STAGE_TITLES } from './adapter';
 import { showsSystem, type StageNode } from './layout';
@@ -35,6 +36,7 @@ function HeadlineValue({ headline, progress }: { headline: Headline; progress: M
 function StageNodeView({ data }: NodeProps<StageNode>) {
   const { stage, index, width, height, final } = data;
   const { t, active } = useTimelineContext();
+  const tech = useTechMode();
   const shown = useTransform(t, [index - 0.001, index], [0, 1]);
   const draw = useTransform(t, [index + DRAW[0], index + DRAW[1]], [0, 1]);
   const content = useTransform(t, [index + CONTENT[0], index + CONTENT[1]], [0, 1]);
@@ -43,7 +45,7 @@ function StageNodeView({ data }: NodeProps<StageNode>) {
   const stub = useTransform(t, [index + 0.38, index + 0.52], [0, 1]);
 
   const state = index === active ? 'is-active' : index < active ? 'is-past' : 'is-future';
-  const hasDetail = Boolean(stage.caption || stage.detail || stage.note || stage.checks || showsSystem(stage));
+  const hasDetail = tech && Boolean(stage.caption || stage.detail || stage.note || stage.checks || showsSystem(stage));
 
   return (
     <motion.div
@@ -67,7 +69,7 @@ function StageNodeView({ data }: NodeProps<StageNode>) {
             <span className="stage-dot" />
             {STAGE_TITLES[stage.kind]}
           </span>
-          {stage.version && <span className="stage-version" title={stage.version}>{stage.version}</span>}
+          {tech && stage.version && <span className="stage-version" title={stage.version}>{stage.version}</span>}
         </div>
         <div className="stage-headline">
           {stage.href ? (
@@ -78,7 +80,7 @@ function StageNodeView({ data }: NodeProps<StageNode>) {
             <HeadlineValue headline={stage.headline} progress={count} />
           )}
         </div>
-        {stage.checks && (
+        {tech && stage.checks && (
           <div className="stage-check-dots" aria-label={`${stage.checks.filter(c => c.ok).length} of ${stage.checks.length} checks passed`}>
             {stage.checks.map(check => (
               <span key={check.label} className={`stage-check-dot ${check.ok ? 'ok' : 'fail'}`} />

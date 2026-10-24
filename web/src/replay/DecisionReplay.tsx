@@ -17,6 +17,7 @@ import { STAGE_TITLES } from './adapter';
 import { useDecisionTrace, useReplayParam } from './useDecisionTrace';
 import { Bot, Cpu, Hourglass, ScrollText, UserCheck, type LucideIcon } from 'lucide-react';
 import { SkeletonGraph } from '../ui/Skeleton';
+import { useTechMode } from '../hooks/useTechMode';
 import type { DecidedBy, DecisionTrace, TraceStage } from './types';
 import './DecisionReplay.css';
 
@@ -36,6 +37,14 @@ const ROUTE_LABELS: Record<DecidedBy, string> = {
   system2: 'System 2 decided',
   human: 'Human decided · retrained',
   pending: 'Escalated · awaiting human',
+};
+
+const PLAIN_ROUTE_LABELS: Record<DecidedBy, string> = {
+  system1: 'Auto-decided',
+  rule: 'Auto-decided',
+  system2: 'AI reviewed',
+  human: 'Reviewer decided',
+  pending: 'Awaiting review',
 };
 
 const ROUTE_ICONS: Record<DecidedBy, LucideIcon> = {
@@ -185,6 +194,7 @@ function ReplayPanel({ trace, onClose }: { trace: DecisionTrace; onClose: () => 
   const contextValue = useMemo(() => ({ t: timeline.t, active: timeline.active }), [timeline.t, timeline.active]);
   const routeTone = trace.decidedBy === 'human' || trace.decidedBy === 'pending' ? 'warn' : 'neutral';
   const RouteIcon = ROUTE_ICONS[trace.decidedBy];
+  const tech = useTechMode();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -211,15 +221,17 @@ function ReplayPanel({ trace, onClose }: { trace: DecisionTrace; onClose: () => 
             <span className="replay-amount">
               {trace.decidedBy === 'pending' ? `${usd(trace.claimedCents)} claimed` : `${usd(trace.amountCents)} credit`}
             </span>
-            <span className="replay-sep">·</span>
-            <span>Policy {trace.policyVersion}</span>
-            <span className="replay-sep">·</span>
-            <span>Model {trace.modelVersion}</span>
+            {tech && <>
+              <span className="replay-sep">·</span>
+              <span>Policy {trace.policyVersion}</span>
+              <span className="replay-sep">·</span>
+              <span>Model {trace.modelVersion}</span>
+            </>}
           </div>
         </div>
         <div className="replay-header-right">
-          <span className={`replay-route tone-${routeTone}`}><RouteIcon size={12} aria-hidden />{ROUTE_LABELS[trace.decidedBy]}</span>
-          {trace.source === 'seeded' ? (
+          <span className={`replay-route tone-${routeTone}`}><RouteIcon size={12} aria-hidden />{(tech ? ROUTE_LABELS : PLAIN_ROUTE_LABELS)[trace.decidedBy]}</span>
+          {!tech ? null : trace.source === 'seeded' ? (
             <span className="replay-source" title="This historical decision has no recorded pipeline steps; the path is an example seeded from its row">
               seeded path
             </span>
