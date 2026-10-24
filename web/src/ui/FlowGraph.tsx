@@ -43,11 +43,13 @@ export interface GraphEdge {
 }
 
 const NODE_W = 150;
+export const COMPACT_NODE_W = 118;
 const NODE_H = 60;
 const NODE_H_SUB = 74;
 
 interface GNodeData extends Record<string, unknown> {
   node: GraphNode;
+  width: number;
   rank: number;
   selected: boolean;
   clickable: boolean;
@@ -57,13 +59,13 @@ type GNode = Node<GNodeData, 'g'>;
 type GEdge = Edge<{ tone?: Tone; dashed?: boolean; rank: number }, 'g'>;
 
 function GraphNodeView({ data }: NodeProps<GNode>) {
-  const { node, rank, selected, clickable } = data;
+  const { node, rank, selected, clickable, width } = data;
   const reduce = useReducedMotion();
   const Icon = node.icon;
   return (
     <motion.div
       className={`gnode tone-${node.tone ?? 'neutral'} ${node.emphasis ? 'emphasis' : ''} ${selected ? 'selected' : ''} ${clickable ? 'clickable' : ''} ${node.ghost ? 'ghost' : ''}`}
-      style={{ width: NODE_W, height: node.sub ? NODE_H_SUB : NODE_H }}
+      style={{ width, height: node.sub ? NODE_H_SUB : NODE_H }}
       initial={reduce ? false : { opacity: 0, y: 4 }}
       animate={{ opacity: node.ghost ? 0.45 : 1, y: 0 }}
       transition={{ duration: 0.32, delay: rank * 0.09, ease: [0.2, 0, 0, 1] }}
@@ -102,11 +104,11 @@ function GraphEdgeView({ id, sourceX, sourceY, targetX, targetY, sourcePosition,
 const nodeTypes = { g: memo(GraphNodeView) };
 const edgeTypes = { g: memo(GraphEdgeView) };
 
-function layout(nodes: GraphNode[], edges: GraphEdge[], selectedId: string | null, clickable: boolean, rankSep: number) {
+function layout(nodes: GraphNode[], edges: GraphEdge[], selectedId: string | null, clickable: boolean, rankSep: number, nodeW: number) {
   const g = new dagre.graphlib.Graph();
   g.setGraph({ rankdir: 'LR', nodesep: 14, ranksep: rankSep, marginx: 0, marginy: 0 });
   g.setDefaultEdgeLabel(() => ({}));
-  for (const n of nodes) g.setNode(n.id, { width: NODE_W, height: n.sub ? NODE_H_SUB : NODE_H });
+  for (const n of nodes) g.setNode(n.id, { width: nodeW, height: n.sub ? NODE_H_SUB : NODE_H });
   for (const e of edges) g.setEdge(e.from, e.to);
   dagre.layout(g);
   const xs = [...new Set(nodes.map(n => Math.round(g.node(n.id).x)))].sort((a, b) => a - b);
@@ -124,10 +126,10 @@ function layout(nodes: GraphNode[], edges: GraphEdge[], selectedId: string | nul
     return {
       id: n.id,
       type: 'g',
-      position: { x: p.x - NODE_W / 2, y: p.y - h / 2 },
-      width: NODE_W,
+      position: { x: p.x - nodeW / 2, y: p.y - h / 2 },
+      width: nodeW,
       height: h,
-      data: { node: n, rank: rankOf(n.id), selected: n.id === selectedId, clickable },
+      data: { node: n, width: nodeW, rank: rankOf(n.id), selected: n.id === selectedId, clickable },
       draggable: false,
       selectable: false,
       connectable: false,
@@ -151,14 +153,15 @@ interface FlowGraphProps {
   onSelect?: (id: string) => void;
   label: string;
   rankSep?: number;
+  nodeWidth?: number;
 }
 
-function Canvas({ nodes, edges, selectedId = null, onSelect, rankSep = 40 }: Omit<FlowGraphProps, 'height' | 'label'>) {
+function Canvas({ nodes, edges, selectedId = null, onSelect, rankSep = 40, nodeWidth = NODE_W }: Omit<FlowGraphProps, 'height' | 'label'>) {
   // Callers rebuild node arrays on every live update; keying the layout on content keeps React Flow
   // from re-measuring and remounting edges each time.
-  const signature = JSON.stringify([nodes.map(({ icon, ...n }) => [n, icon?.displayName]), edges, selectedId, rankSep, !!onSelect]);
+  const signature = JSON.stringify([nodes.map(({ icon, ...n }) => [n, icon?.displayName]), edges, selectedId, rankSep, nodeWidth, !!onSelect]);
   const { rfNodes, rfEdges } = useMemo(
-    () => layout(nodes, edges, selectedId, !!onSelect, rankSep),
+    () => layout(nodes, edges, selectedId, !!onSelect, rankSep, nodeWidth),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [signature],
   );

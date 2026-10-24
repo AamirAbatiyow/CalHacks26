@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from 'react';
+import { motion } from 'motion/react';
 import {
   Area,
   AreaChart,
@@ -26,6 +27,13 @@ export const C = {
   red: '#ef4444',
   green: '#22c55e',
 } as const;
+
+/** Recharts restarts its own entry animation whenever a live table re-renders the chart, so charts fade in once here instead. */
+const fadeIn = {
+  initial: { opacity: 0, y: 4 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.4, ease: [0.2, 0, 0, 1] as const },
+};
 
 export function ChartTooltip({ active, payload, label, format }: Partial<TooltipContentProps<number, string>> & { format?: (v: number, name: string) => string }) {
   if (!active || !payload || payload.length === 0) return null;
@@ -55,7 +63,7 @@ interface SparklineProps {
 export function Sparkline({ data, color = C.accent, height = 36, format, label }: SparklineProps) {
   const id = useId().replace(/:/g, '');
   return (
-    <div className="ui-spark" role="img" aria-label={label} style={{ height }}>
+    <motion.div className="ui-spark" role="img" aria-label={label} style={{ height }} {...fadeIn}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
           <defs>
@@ -70,10 +78,10 @@ export function Sparkline({ data, color = C.accent, height = 36, format, label }
             cursor={{ stroke: C.muted, strokeWidth: 1 }}
             content={<ChartTooltip format={v => (format ? format(v) : String(v))} />}
           />
-          <Area type="monotone" dataKey="y" name={label} stroke={color} strokeWidth={1.5} fill={`url(#spark-${id})`} isAnimationActive animationDuration={700} />
+          <Area type="monotone" dataKey="y" name={label} stroke={color} strokeWidth={1.5} fill={`url(#spark-${id})`} isAnimationActive={false} />
         </AreaChart>
       </ResponsiveContainer>
-    </div>
+    </motion.div>
   );
 }
 
@@ -100,26 +108,23 @@ export function Gauge({ value, threshold = 95, size = 132, label = 'Confidence',
   };
   return (
     <div className="ui-gauge" style={{ width: size, height: r + 6 }} role="img" aria-label={`${label} ${value.toFixed(1)}%, auto-decide threshold ${threshold}%`}>
-      <ResponsiveContainer width="100%" height={r + 6}>
-        <PieChart>
-          <Pie
-            data={[{ v: clamped }, { v: 100 - clamped }]}
-            dataKey="v"
-            cx="50%"
-            cy={r}
-            startAngle={180}
-            endAngle={0}
-            innerRadius={r * 0.82}
-            outerRadius={r}
-            stroke="none"
-            isAnimationActive
-            animationDuration={800}
-          >
-            <Cell fill={color} style={{ filter: `drop-shadow(0 0 6px ${color}55)` }} />
-            <Cell fill="#1a1a1a" />
-          </Pie>
-        </PieChart>
-      </ResponsiveContainer>
+      <PieChart width={size} height={r + 6}>
+        <Pie
+          data={[{ v: clamped }, { v: 100 - clamped }]}
+          dataKey="v"
+          cx={r}
+          cy={r}
+          startAngle={180}
+          endAngle={0}
+          innerRadius={r * 0.82}
+          outerRadius={r}
+          stroke="none"
+          isAnimationActive={false}
+        >
+          <Cell fill={color} style={{ filter: `drop-shadow(0 0 6px ${color}55)` }} />
+          <Cell fill="#1a1a1a" />
+        </Pie>
+      </PieChart>
       <svg className="ui-gauge-tick" width={size} height={r + 6} aria-hidden>
         <line {...tick} stroke={C.secondary} strokeWidth={1.5} />
       </svg>
@@ -154,16 +159,26 @@ interface DivergingBarsProps {
   label: string;
 }
 
+function shortLabel(text: string, max = 24): string {
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
 /** SHAP contributions: bars grow from a zero line, positive right in accent, negative left in amber. */
 export function DivergingBars({ data, height, label }: DivergingBarsProps) {
-  const max = Math.max(0.01, ...data.map(d => Math.abs(d.value)));
+  const lo = Math.min(0, ...data.map(d => d.value));
+  const hi = Math.max(0.01, ...data.map(d => d.value));
   return (
-    <div role="img" aria-label={label} style={{ height: height ?? data.length * 26 + 8 }}>
+    <motion.div role="img" aria-label={label} style={{ height: height ?? data.length * 24 + 8 }} {...fadeIn}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} layout="vertical" margin={{ top: 4, right: 36, bottom: 4, left: 0 }} barCategoryGap={6}>
-          <XAxis type="number" hide domain={[-max, max]} />
-          <YAxis type="category" dataKey="name" width={128} tickLine={false} axisLine={false}
-            tick={{ fill: C.secondary, fontSize: 11 }} />
+        <BarChart data={data} layout="vertical" margin={{ top: 2, right: 40, bottom: 2, left: 0 }} barCategoryGap={7}>
+          <XAxis type="number" hide domain={[lo * 1.1, hi * 1.05]} />
+          <YAxis type="category" dataKey="name" width={156} tickLine={false} axisLine={false} interval={0}
+            tick={({ x, y, payload }) => (
+              <text x={Number(x) - 4} y={y} dy={4} textAnchor="end" fill={C.secondary} fontSize={11}>
+                <title>{String(payload.value)}</title>
+                {shortLabel(String(payload.value))}
+              </text>
+            )} />
           <ReferenceLine x={0} stroke={C.muted} />
           <Tooltip
             cursor={{ fill: 'rgba(255,255,255,0.03)' }}
@@ -179,13 +194,13 @@ export function DivergingBars({ data, height, label }: DivergingBarsProps) {
               );
             }}
           />
-          <Bar dataKey="value" radius={[2, 2, 2, 2]} isAnimationActive animationDuration={700}
+          <Bar dataKey="value" radius={[2, 2, 2, 2]} isAnimationActive={false} maxBarSize={10}
             label={{ position: 'right', fill: C.secondary, fontSize: 10, formatter: (v: unknown) => `${Number(v) >= 0 ? '+' : '−'}${Math.abs(Number(v)).toFixed(2)}` }}>
             {data.map(d => <Cell key={d.name} fill={d.value >= 0 ? C.accent : C.amber} />)}
           </Bar>
         </BarChart>
       </ResponsiveContainer>
-    </div>
+    </motion.div>
   );
 }
 
@@ -200,7 +215,7 @@ interface StackedBarsProps<K extends string> {
 /** Category or day columns stacked from a zero baseline, with a 2px gap between segments. */
 export function StackedBars<K extends string>({ data, series, height = 120, format, label }: StackedBarsProps<K>) {
   return (
-    <div role="img" aria-label={label} style={{ height }}>
+    <motion.div role="img" aria-label={label} style={{ height }} {...fadeIn}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 4, right: 0, bottom: 0, left: 0 }} barCategoryGap="22%">
           <XAxis dataKey="x" tickLine={false} axisLine={{ stroke: C.muted }} tick={{ fill: C.secondary, fontSize: 10 }} interval="preserveStartEnd" minTickGap={24} />
@@ -210,11 +225,11 @@ export function StackedBars<K extends string>({ data, series, height = 120, form
             <Bar key={s.key} dataKey={s.key} name={s.label} stackId="a" fill={s.color}
               stroke="#000" strokeWidth={i < series.length - 1 ? 0 : 0}
               radius={i === series.length - 1 ? [2, 2, 0, 0] : [0, 0, 0, 0]}
-              isAnimationActive animationDuration={600} />
+              isAnimationActive={false} />
           ))}
         </BarChart>
       </ResponsiveContainer>
-    </div>
+    </motion.div>
   );
 }
 
