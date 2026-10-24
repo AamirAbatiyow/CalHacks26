@@ -96,6 +96,7 @@ export function useSpacetimeDB() {
             const sub = connection.subscriptionBuilder()
               .onApplied(() => {
                 console.log('Subscription applied, syncing data...');
+                synced = true;
                 syncAllData(connection.db);
               })
               .onError((errCtx) => {
@@ -169,7 +170,7 @@ export function useSpacetimeDB() {
         });
         
         conn.db.pass.onInsert((_ctx, row) => {
-          console.log('Pass inserted:', row);
+          if (!synced) return;
           setPasses(prev => {
             const exists = prev.some(p => p.id === row.id);
             if (exists) return prev;
@@ -191,6 +192,7 @@ export function useSpacetimeDB() {
         });
         
         conn.db.pass.onUpdate((_ctx, oldRow, newRow) => {
+          if (!synced) return;
           setPasses(prev => prev.map(p => 
             p.id === oldRow.id ? {
               id: newRow.id,
@@ -314,6 +316,9 @@ export function useSpacetimeDB() {
     };
     
     let disposed = false;
+    // Initial rows arrive in bulk through syncAllData; per-row callbacks only
+    // apply live changes after that, so tens of thousands of passes load in one pass.
+    let synced = false;
     connect();
     
     return () => {

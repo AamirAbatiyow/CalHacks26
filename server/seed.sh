@@ -9,16 +9,27 @@ SPACETIME="${SPACETIME:-$(command -v spacetime || echo "$HOME/.local/bin/spaceti
 
 echo "Seeding SpacetimeDB module: $MODULE on server: $SERVER"
 
+# Get current time in microseconds for pass offsets
+NOW_MICROS=$(($(date +%s) * 1000000))
+
+# Pass history: contracted satellites' real contacts over the last 30 days and next
+# 24 hours, the hand-written passes and the Claim page pass, all priced at AWS Ground
+# Station rates (fixtures/contracts.json). Station revenue is summed from these passes.
+echo "Generating pass history (about 30s)..."
+GENERATED="$(mktemp)"
+trap 'rm -f "$GENERATED"' EXIT
+node "$SCRIPT_DIR/scripts/generate-passes.mjs" "$FIXTURES_DIR" "$NOW_MICROS" > "$GENERATED"
+
 # Seed stations
 echo "Seeding stations..."
-jq -c '.[]' "$FIXTURES_DIR/stations.json" | while read -r station; do
+jq -c '.stations[]' "$GENERATED" | while read -r station; do
   id=$(echo "$station" | jq -r '.id')
   name=$(echo "$station" | jq -r '.name')
   lat=$(echo "$station" | jq -r '.latitude')
   lon=$(echo "$station" | jq -r '.longitude')
   alt=$(echo "$station" | jq -r '.altitude_m')
   revenue=$(echo "$station" | jq -r '.monthly_revenue_cents')
-  
+
   "$SPACETIME" call "$MODULE" seed_station --server "$SERVER" -- "\"$id\"" "\"$name\"" "$lat" "$lon" "$alt" "$revenue" || true
 done
 
@@ -30,28 +41,14 @@ jq -c '.[]' "$FIXTURES_DIR/satellites.json" | while read -r sat; do
   tle1=$(echo "$sat" | jq -r '.tle_line1')
   tle2=$(echo "$sat" | jq -r '.tle_line2')
   operator=$(echo "$sat" | jq -r '.operator')
-  
+
   "$SPACETIME" call "$MODULE" seed_satellite --server "$SERVER" -- "$norad_id" "\"$name\"" "\"$tle1\"" "\"$tle2\"" "\"$operator\"" || true
 done
 
-# Get current time in microseconds for pass offsets
-NOW_MICROS=$(($(date +%s) * 1000000))
-
-# Seed passes
-echo "Seeding passes..."
-jq -c '.[]' "$FIXTURES_DIR/passes.json" | while read -r pass; do
-  sat_id=$(echo "$pass" | jq -r '.satellite_id')
-  station_id=$(echo "$pass" | jq -r '.station_id')
-  offset_mins=$(echo "$pass" | jq -r '.start_offset_minutes')
-  duration_mins=$(echo "$pass" | jq -r '.duration_minutes')
-  status=$(echo "$pass" | jq -r '.status')
-  max_el=$(echo "$pass" | jq -r '.max_elevation_deg')
-  revenue=$(echo "$pass" | jq -r '.revenue_cents')
-  
-  start_micros=$((NOW_MICROS + offset_mins * 60 * 1000000))
-  end_micros=$((start_micros + duration_mins * 60 * 1000000))
-  
-  "$SPACETIME" call "$MODULE" seed_pass --server "$SERVER" -- "$sat_id" "\"$station_id\"" "$start_micros" "$end_micros" "$status" "$max_el" "$revenue" || true
+# Seed passes in batches
+echo "Seeding $(jq '.passes | length' "$GENERATED") passes..."
+jq -c '.passes | _nwise(400)' "$GENERATED" | while read -r batch; do
+  "$SPACETIME" call "$MODULE" seed_passes --server "$SERVER" -- "$batch" > /dev/null || true
 done
 
 # Seed space weather
@@ -70,6 +67,8 @@ done
 # Audit trail + ledger, referencing the passes seeded above
 echo "Seeding finance history..."
 "$SPACETIME" call "$MODULE" seed_finance_history --server "$SERVER" || true
+SETTLEMENT=$(jq -c '.settlement + {norad_ids: [.contracts[].norad_ids[]]}' "$FIXTURES_DIR/contracts.json")
+"$SPACETIME" call "$MODULE" settle_pass_history --server "$SERVER" -- "$SETTLEMENT" || true
 
 # Cedar authority + confidence gate
 echo "Initializing authority..."
@@ -77,40 +76,50 @@ echo "Initializing authority..."
 "$SPACETIME" call "$MODULE" init_confidence_config --server "$SERVER" || true
 "$SPACETIME" call "$MODULE" register_actor --server "$SERVER" -- '"ops_reviewer"' 1 '"Ops Reviewer"' || true
 
-# Claim detail (CLM-10021): a real NOAA-20 pass over SvalSat during the fixture storm.
-# Credit, gate, rule and policy version are derived by the module from the evidence,
-# the confidence gate and the active Cedar policy; weather from space_weather.
+# Claim detail (CLM-10021): a real NOAA-20 pass over SvalSat during the fixture storm,
+# billed like every other pass. The customer claims the whole pass; the model's loss
+# estimate is the share of the contact without downlink, half of which station
+# telemetry corroborates. Credit, gate, rule and policy version are derived by the
+# module from the evidence, the confidence gate and the active Cedar policy.
 echo "Seeding claims..."
-if CLAIM_PASS=$(node "$SCRIPT_DIR/scripts/find-claim-pass.mjs" "$FIXTURES_DIR/satellites.json" "$FIXTURES_DIR/stations.json" 43013 svalsat 2>/dev/null); then
-  claim_pass() { echo "$CLAIM_PASS" | jq -r ".$1"; }
-  "$SPACETIME" call "$MODULE" seed_claim --server "$SERVER" -- '"CLM-10021"' '"Northpoint Orbital"' 1820000 10021 || true
-  "$SPACETIME" call "$MODULE" seed_claim_pass --server "$SERVER" -- 10021 '"CLM-10021"' "$(claim_pass latitude)" "$(claim_pass longitude)" "\"$(claim_pass station_name)\"" "$(claim_pass norad_id)" "\"$(claim_pass tle1)\"" "\"$(claim_pass tle2)\"" "$(claim_pass start_micros)" "$(claim_pass signal_lost_micros)" "$(claim_pass end_micros)" "$(claim_pass max_elevation_deg)" || true
-  "$SPACETIME" call "$MODULE" seed_claim_evidence --server "$SERVER" -- '"CLM-10021"' 0 240000 125000 || true
-  "$SPACETIME" call "$MODULE" seed_claim_weather --server "$SERVER" -- '"CLM-10021"' || true
-  "$SPACETIME" call "$MODULE" seed_claim_decision --server "$SERVER" -- '"CLM-10021"' 96 '"v2"' || true
-  "$SPACETIME" call "$MODULE" seed_claim_outcome --server "$SERVER" -- '"CLM-10021"' false false || true
+claim_pass() { jq -r ".claim_pass.$1" "$GENERATED"; }
+contact_us=$(( $(claim_pass end_micros) - $(claim_pass start_micros) ))
+gap_us=$(( $(claim_pass end_micros) - $(claim_pass signal_lost_micros) ))
+claim_revenue=$(claim_pass revenue_cents)
+est_loss=$(( claim_revenue * gap_us / contact_us ))
+unverified=$(( est_loss / 2 ))
+"$SPACETIME" call "$MODULE" seed_claim --server "$SERVER" -- '"CLM-10021"' '"Northpoint Orbital"' "$claim_revenue" 10021 || true
+"$SPACETIME" call "$MODULE" seed_claim_pass --server "$SERVER" -- 10021 '"CLM-10021"' "$(claim_pass latitude)" "$(claim_pass longitude)" "\"$(claim_pass station_name)\"" "$(claim_pass norad_id)" "\"$(claim_pass tle1)\"" "\"$(claim_pass tle2)\"" "$(claim_pass start_micros)" "$(claim_pass signal_lost_micros)" "$(claim_pass end_micros)" "$(claim_pass max_elevation_deg)" || true
+"$SPACETIME" call "$MODULE" seed_claim_evidence --server "$SERVER" -- '"CLM-10021"' 0 "$est_loss" "$unverified" || true
+"$SPACETIME" call "$MODULE" seed_claim_weather --server "$SERVER" -- '"CLM-10021"' || true
+"$SPACETIME" call "$MODULE" seed_claim_decision --server "$SERVER" -- '"CLM-10021"' 96 '"v2"' || true
+"$SPACETIME" call "$MODULE" seed_claim_outcome --server "$SERVER" -- '"CLM-10021"' false false || true
 
-  contact_min=$(( ($(claim_pass end_micros) - $(claim_pass start_micros)) / 60000000 ))
-  gap_min=$(( ($(claim_pass end_micros) - $(claim_pass signal_lost_micros)) / 60000000 ))
-  lost_offset_min=$(( ($(claim_pass signal_lost_micros) - NOW_MICROS) / 60000000 ))
-  claim_kp=$(jq --argjson t "$lost_offset_min" 'min_by((.offset_minutes - $t) | fabs) | .kp_index' "$FIXTURES_DIR/space_weather.json")
-  claim_reason() { "$SPACETIME" call "$MODULE" seed_claim_reason --server "$SERVER" -- '"CLM-10021"' "\"$1\"" "\"$2\"" "$3" || true; }
-  claim_reason "Downlink lost mid-contact" "$gap_min of $contact_min min without telemetry" 1.12
-  claim_reason "Geomagnetic storm at signal loss" "Kp $claim_kp" 0.64
-  claim_reason "Data integrity check" "passed" 0.41
-  claim_reason "Max elevation" "$(claim_pass max_elevation_deg) deg" 0.18
-  claim_reason "Unverified share of loss" "\$1,250 of \$2,400" -0.37
-else
-  "$SPACETIME" call "$MODULE" seed_demo_claim --server "$SERVER" || true
-fi
+contact_min=$(( contact_us / 60000000 ))
+gap_min=$(( gap_us / 60000000 ))
+lost_offset_min=$(( ($(claim_pass signal_lost_micros) - NOW_MICROS) / 60000000 ))
+claim_kp=$(jq --argjson t "$lost_offset_min" 'min_by((.offset_minutes - $t) | fabs) | .kp_index' "$FIXTURES_DIR/space_weather.json")
+claim_reason() { "$SPACETIME" call "$MODULE" seed_claim_reason --server "$SERVER" -- '"CLM-10021"' "\"$1\"" "\"$2\"" "$3" || true; }
+claim_reason "Downlink lost mid-contact" "$gap_min of $contact_min min without telemetry" 1.12
+claim_reason "Geomagnetic storm at signal loss" "Kp $claim_kp" 0.64
+claim_reason "Data integrity check" "passed" 0.41
+claim_reason "Max elevation" "$(claim_pass max_elevation_deg) deg" 0.18
+claim_reason "Unverified share of loss" "\$$(( unverified / 100 )) of \$$(( est_loss / 100 ))" -0.37
 
-# Approvals: claims the confidence gate escalated for human review
+# Approvals: claims the confidence gate escalated for human review, each over the
+# customer's open passes and sized from their billed revenue
 echo "Seeding escalated claims..."
 jq -c '.[]' "$FIXTURES_DIR/claims.json" | while read -r claim; do
+  customer=$(echo "$claim" | jq '.customer_name')
+  norad_ids=$(jq -c --argjson name "$customer" '[.contracts[] | select(.customer == $name) | .norad_ids[]]' "$FIXTURES_DIR/contracts.json")
   "$SPACETIME" call "$MODULE" seed_escalated_claim --server "$SERVER" -- \
-    "$(echo "$claim" | jq '.customer_name')" \
-    "$(echo "$claim" | jq '.amount_claimed_cents')" \
-    "$(echo "$claim" | jq '.proposed_amount_cents')" \
+    "$customer" \
+    "$norad_ids" \
+    "$(echo "$claim" | jq '.selection')" \
+    "$(echo "$claim" | jq '.pass_count')" \
+    "$(echo "$claim" | jq '.lookback_hours')" \
+    "$(echo "$claim" | jq '.claimed_pct')" \
+    "$(echo "$claim" | jq '.proposed_pct')" \
     "$(echo "$claim" | jq '.confidence_pct')" \
     "$(echo "$claim" | jq '.escalation_reason')" \
     "$(echo "$claim" | jq '.policy_version')" \

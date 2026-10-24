@@ -8,20 +8,44 @@ const NOW: i64 = 1_800_000_000_000_000;
 const MINUTE: i64 = 60_000_000;
 const HOUR: i64 = 60 * MINUTE;
 
+/// Per-minute price of a satellite's contacts, as `scripts/generate-passes.mjs` bills them.
+fn cents_per_minute(norad_id: u32) -> i64 {
+    let sats: Vec<serde_json::Value> = serde_json::from_str(include_str!("../../fixtures/satellites.json")).unwrap();
+    let contracts: serde_json::Value = serde_json::from_str(include_str!("../../fixtures/contracts.json")).unwrap();
+    let narrowband = sats
+        .iter()
+        .find(|s| s["norad_id"].as_u64() == Some(norad_id as u64))
+        .is_some_and(|s| s["band"] == "narrowband");
+    let key = if narrowband { "narrowband_cents_per_minute" } else { "wideband_cents_per_minute" };
+    contracts["pricing"][key].as_i64().unwrap()
+}
+
+/// The hand-written passes plus the Claim page's NOAA-20 SvalSat pass, which
+/// seed.sh always places inside the storm, between that pair's other two passes.
 fn seeded_passes() -> Vec<PassFacts> {
     let raw: Vec<serde_json::Value> = serde_json::from_str(include_str!("../../fixtures/passes.json")).unwrap();
-    raw.iter()
-        .enumerate()
-        .map(|(i, p)| {
+    let mut rows: Vec<(u32, String, i64, i64)> = raw
+        .iter()
+        .map(|p| {
             let start = NOW + p["start_offset_minutes"].as_i64().unwrap() * MINUTE;
-            PassFacts {
-                id: i as u64 + 1,
-                satellite_id: p["satellite_id"].as_u64().unwrap() as u32,
-                station_id: p["station_id"].as_str().unwrap().to_string(),
-                start_micros: start,
-                end_micros: start + p["duration_minutes"].as_i64().unwrap() * MINUTE,
-                revenue_cents: p["revenue_cents"].as_i64().unwrap(),
-            }
+            (
+                p["satellite_id"].as_u64().unwrap() as u32,
+                p["station_id"].as_str().unwrap().to_string(),
+                start,
+                start + p["duration_minutes"].as_i64().unwrap() * MINUTE,
+            )
+        })
+        .collect();
+    rows.push((43013, "svalsat".to_string(), NOW - 840 * MINUTE, NOW - 826 * MINUTE));
+    rows.into_iter()
+        .enumerate()
+        .map(|(i, (satellite_id, station_id, start_micros, end_micros))| PassFacts {
+            id: i as u64 + 1,
+            satellite_id,
+            station_id,
+            start_micros,
+            end_micros,
+            revenue_cents: (end_micros - start_micros + MINUTE - 1) / MINUTE * cents_per_minute(satellite_id),
         })
         .collect()
 }
@@ -130,9 +154,10 @@ fn claim<'a>(pass: &'a PassFacts, amount_cents: i64, reason: &'a str, filed_micr
 #[test]
 fn pass_multiple_is_exclusive() {
     let passes = seeded_passes();
-    let pass = passes.iter().find(|p| p.revenue_cents == 260_000).unwrap();
-    assert!(assess_claim(&claim(pass, 780_000, "Dropped", NOW), Some(pass), &[], &[]).is_empty());
-    let flags = assess_claim(&claim(pass, 780_001, "Dropped", NOW), Some(pass), &[], &[]);
+    let pass = passes.iter().find(|p| p.satellite_id == 40053 && p.station_id == "singapore").unwrap();
+    let limit = pass.revenue_cents * SUSPICIOUS_PASS_MULTIPLE;
+    assert!(assess_claim(&claim(pass, limit, "Dropped", NOW), Some(pass), &[], &[]).is_empty());
+    let flags = assess_claim(&claim(pass, limit + 1, "Dropped", NOW), Some(pass), &[], &[]);
     assert_eq!(flags.len(), 1);
     assert_eq!(flags[0].check, Check::Inflated);
 }

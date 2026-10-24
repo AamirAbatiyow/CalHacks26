@@ -19,6 +19,8 @@ interface GlobeProps {
 
 const EARTH_RADIUS = 1;
 const SATELLITE_ALTITUDE = 0.08;
+/** Dropped passes are linked on the globe for the playback bar's 24-hour window. */
+const PASS_LINK_WINDOW_MICROS = 24 * 60 * 60 * 1_000_000;
 
 function getSatellitePosition(sat: Satellite, time: Date): THREE.Vector3 | null {
   try {
@@ -290,8 +292,10 @@ export function Globe({ stations, satellites, passes, spaceWeather, currentTime,
     }
 
     if (layers.passTraffic && passes.length > 0) {
+      const linkWindowStart = currentTime - BigInt(PASS_LINK_WINDOW_MICROS);
       passes.forEach((pass) => {
         if (pass.status !== PassStatus.Active && pass.status !== PassStatus.Dropped) return;
+        if (pass.status === PassStatus.Dropped && (pass.startTime < linkWindowStart || pass.startTime > currentTime)) return;
         
         const station = stations.find(s => s.id === pass.stationId);
         const sat = satellites.find(s => s.noradId === pass.satelliteId);

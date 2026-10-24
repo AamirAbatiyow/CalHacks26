@@ -12,6 +12,7 @@ pub mod events;
 pub mod kpis;
 pub mod ledger;
 pub mod policy;
+pub mod settlement;
 pub mod sla;
 
 #[cfg(test)]
@@ -307,6 +308,41 @@ pub fn seed_pass(ctx: &ReducerContext, sat_id: u32, station_id: String, start_mi
         max_elevation_deg: max_el,
         revenue_cents: revenue,
     });
+    kpis::sync_kpis(ctx);
+}
+
+/// One row of a `seed_passes` batch; fields match `seed_pass`.
+#[derive(SpacetimeType, Clone, Debug)]
+pub struct PassSeed {
+    pub sat_id: u32,
+    pub station_id: String,
+    pub start_micros: i64,
+    pub end_micros: i64,
+    pub status: u8,
+    pub max_el: f64,
+    pub revenue: i64,
+}
+
+/// Bulk form of `seed_pass` for the generated pass history (tens of thousands of rows).
+#[spacetimedb::reducer]
+pub fn seed_passes(ctx: &ReducerContext, passes: Vec<PassSeed>) {
+    for p in passes {
+        ctx.db.pass().insert(Pass {
+            id: 0,
+            satellite_id: p.sat_id,
+            station_id: p.station_id,
+            start_time: Timestamp::from_micros_since_unix_epoch(p.start_micros),
+            end_time: Timestamp::from_micros_since_unix_epoch(p.end_micros),
+            status: match p.status {
+                0 => PassStatus::Scheduled,
+                1 => PassStatus::Active,
+                2 => PassStatus::Ok,
+                _ => PassStatus::Dropped,
+            },
+            max_elevation_deg: p.max_el,
+            revenue_cents: p.revenue,
+        });
+    }
     kpis::sync_kpis(ctx);
 }
 
