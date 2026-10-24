@@ -386,7 +386,7 @@ pub fn seed_finance_history(ctx: &ReducerContext) {
         (dropped.get(2), DecisionType::CreditIssued, DecisionOutcome::Approved, 3100000, "Pass dropped mid-contact; SLA credit approved after review"),
         (completed.get(3), DecisionType::DisputeResolved, DecisionOutcome::Approved, 1850000, "Customer dispute approved after manual review"),
         (completed.get(9), DecisionType::DisputeResolved, DecisionOutcome::Approved, 1180000, "Partial credit for degraded link quality"),
-        (completed.get(15), DecisionType::CreditIssued, DecisionOutcome::AutoApproved, 20000, "Short contact under SLA minimum; auto-approved under $300 cap"),
+        (completed.get(15), DecisionType::CreditIssued, DecisionOutcome::AutoApproved, 20000, "Short contact under SLA minimum; auto-approved at 97% confidence"),
     ];
     for (pass, decision_type, outcome, amount, reason) in credits {
         if let Some(pass) = pass {

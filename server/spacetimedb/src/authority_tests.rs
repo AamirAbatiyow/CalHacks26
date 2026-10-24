@@ -13,7 +13,7 @@ mod authority_tests {
     const POLICY_VERSION: &str = "test-1.0.0";
 
     #[test]
-    fn test_ai_analyst_auto_approve_under_cap() {
+    fn test_ai_analyst_auto_approve_high_confidence() {
         let policy = get_default_policy_text();
         let result = evaluate_authorization(
             policy,
@@ -22,36 +22,63 @@ mod authority_tests {
             "auto_approve",
             "Claim",
             "claim_001",
-            25000, // $250 - under $300 cap
-            96,    // 96% confidence - above 95% threshold
+            25000,
+            96,
         );
 
         assert_eq!(
             result.decision,
             AuthzDecision::Allow,
-            "AI analyst should be able to auto-approve claims under $300 with >=95% confidence"
+            "AI analyst should be able to auto-approve claims with >=95% confidence"
         );
     }
 
     #[test]
-    fn test_ai_analyst_forbidden_auto_approve_over_cap() {
+    fn test_ai_analyst_auto_approve_has_no_dollar_cap() {
         let policy = get_default_policy_text();
-        let result = evaluate_authorization(
-            policy,
-            POLICY_VERSION,
-            "ai_analyst",
-            "auto_approve",
-            "Claim",
-            "claim_002",
-            50000, // $500 - over $300 cap
-            98,    // High confidence
-        );
+        for amount in [30001, 50000, 2500001, 7500000, 1_000_000_000] {
+            let result = evaluate_authorization(
+                policy,
+                POLICY_VERSION,
+                "ai_analyst",
+                "auto_approve",
+                "Claim",
+                "claim_002",
+                amount,
+                95,
+            );
 
-        assert_eq!(
-            result.decision,
-            AuthzDecision::Deny,
-            "AI analyst should NOT be able to auto-approve claims over $300"
-        );
+            assert_eq!(
+                result.decision,
+                AuthzDecision::Allow,
+                "AI analyst at 95% confidence should auto-approve {} cents",
+                amount
+            );
+        }
+    }
+
+    #[test]
+    fn test_ai_analyst_forbidden_raise_own_limits() {
+        let policy = get_default_policy_text();
+        for (resource_type, resource_id) in [("Policy", "policy_v4"), ("Policy", "confidence_config")] {
+            let result = evaluate_authorization(
+                policy,
+                POLICY_VERSION,
+                "ai_analyst",
+                "edit_policy",
+                resource_type,
+                resource_id,
+                0,
+                100,
+            );
+
+            assert_eq!(
+                result.decision,
+                AuthzDecision::Deny,
+                "AI analyst must not be able to change its own authority via {}",
+                resource_id
+            );
+        }
     }
 
     #[test]
@@ -85,8 +112,8 @@ mod authority_tests {
             "auto_approve",
             "Claim",
             "claim_003",
-            15000, // Under cap
-            90,    // Below 95% threshold
+            15000,
+            94, // Below 95% threshold
         );
 
         assert_eq!(
@@ -276,119 +303,34 @@ mod authority_tests {
 
 #[cfg(test)]
 mod confidence_gate_tests {
-    use crate::confidence_gate::{
-        determine_route, DecisionRoute, CONFIDENCE_AUTO_APPROVE_THRESHOLD,
-        CONFIDENCE_HUMAN_APPROVE_THRESHOLD, COST_FLOOR_AUTO_REVIEW_CENTS,
-    };
+    use crate::confidence_gate::{determine_route, DecisionRoute, CONFIDENCE_AUTO_APPROVE_THRESHOLD};
 
     #[test]
-    fn test_route_auto_approve_high_confidence_low_amount() {
-        let route = determine_route(96, 20000); // 96% confidence, $200
-        assert_eq!(
-            route,
-            DecisionRoute::AutoApprove,
-            "High confidence + low amount should route to auto-approve"
-        );
+    fn test_route_auto_approve_high_confidence() {
+        assert_eq!(determine_route(96), DecisionRoute::AutoApprove);
+        assert_eq!(determine_route(100), DecisionRoute::AutoApprove);
     }
 
     #[test]
     fn test_route_auto_approve_threshold_exactly_95() {
-        let route = determine_route(95, 29999); // Exactly 95%, just under $300
         assert_eq!(
-            route,
+            determine_route(95),
             DecisionRoute::AutoApprove,
-            "Exactly 95% confidence with amount under $300 should auto-approve"
+            "Exactly 95% confidence should auto-approve"
         );
     }
 
     #[test]
-    fn test_route_human_approval_high_confidence_high_amount() {
-        let route = determine_route(97, 50000); // 97% confidence, $500
+    fn test_route_escalates_below_95() {
         assert_eq!(
-            route,
-            DecisionRoute::HumanApproval,
-            "High confidence + amount over $300 should require human approval"
-        );
-    }
-
-    #[test]
-    fn test_route_human_approval_medium_confidence() {
-        let route = determine_route(85, 15000); // 85% confidence, $150
-        assert_eq!(
-            route,
-            DecisionRoute::HumanApproval,
-            "Medium confidence (80-95%) should require human approval"
-        );
-    }
-
-    #[test]
-    fn test_route_escalation_low_confidence() {
-        let route = determine_route(79, 10000); // 79% confidence
-        assert_eq!(
-            route,
+            determine_route(94),
             DecisionRoute::Escalated,
-            "Confidence below 80% should escalate"
+            "Anything below 95% confidence should escalate to a human"
         );
-    }
-
-    #[test]
-    fn test_route_escalation_very_low_confidence() {
-        let route = determine_route(40, 5000); // 40% confidence
-        assert_eq!(
-            route,
-            DecisionRoute::Escalated,
-            "Very low confidence should escalate"
-        );
-    }
-
-    #[test]
-    fn test_route_escalation_medium_confidence_high_amount() {
-        let route = determine_route(85, 50000); // 85% confidence, $500
-        assert_eq!(
-            route,
-            DecisionRoute::Escalated,
-            "Medium confidence + high amount should escalate"
-        );
-    }
-
-    #[test]
-    fn test_route_boundary_80_percent() {
-        let route_at_80 = determine_route(80, 20000);
-        let route_below_80 = determine_route(79, 20000);
-
-        assert_eq!(
-            route_at_80,
-            DecisionRoute::HumanApproval,
-            "Exactly 80% confidence should require human approval"
-        );
-        assert_eq!(
-            route_below_80,
-            DecisionRoute::Escalated,
-            "Below 80% confidence should escalate"
-        );
-    }
-
-    #[test]
-    fn test_route_boundary_300_dollars() {
-        let route_under = determine_route(96, 29999);
-        let route_at = determine_route(96, 30000);
-        let route_over = determine_route(96, 30001);
-
-        assert_eq!(
-            route_under,
-            DecisionRoute::AutoApprove,
-            "Under $300 with high confidence should auto-approve"
-        );
-        assert_eq!(
-            route_at,
-            DecisionRoute::AutoApprove,
-            "At exactly $300 with high confidence should auto-approve"
-        );
-        assert_eq!(
-            route_over,
-            DecisionRoute::HumanApproval,
-            "Over $300 should require human approval even with high confidence"
-        );
+        assert_eq!(determine_route(85), DecisionRoute::Escalated);
+        assert_eq!(determine_route(79), DecisionRoute::Escalated);
+        assert_eq!(determine_route(40), DecisionRoute::Escalated);
+        assert_eq!(determine_route(0), DecisionRoute::Escalated);
     }
 
     #[test]
@@ -396,14 +338,6 @@ mod confidence_gate_tests {
         assert_eq!(
             CONFIDENCE_AUTO_APPROVE_THRESHOLD, 95,
             "Auto-approve threshold should be 95%"
-        );
-        assert_eq!(
-            CONFIDENCE_HUMAN_APPROVE_THRESHOLD, 80,
-            "Human approval threshold should be 80%"
-        );
-        assert_eq!(
-            COST_FLOOR_AUTO_REVIEW_CENTS, 30000,
-            "Cost floor should be $300 (30000 cents)"
         );
     }
 }
@@ -418,7 +352,7 @@ mod integration_tests {
     fn test_end_to_end_ai_analyst_happy_path() {
         let policy = get_default_policy_text();
 
-        let route = determine_route(98, 15000);
+        let route = determine_route(98);
         assert_eq!(route, DecisionRoute::AutoApprove);
 
         let authz = evaluate_authorization(
@@ -435,11 +369,11 @@ mod integration_tests {
     }
 
     #[test]
-    fn test_end_to_end_ai_analyst_blocked_by_amount() {
+    fn test_end_to_end_ai_analyst_large_claim_high_confidence() {
         let policy = get_default_policy_text();
 
-        let route = determine_route(98, 50000);
-        assert_eq!(route, DecisionRoute::HumanApproval);
+        let route = determine_route(98);
+        assert_eq!(route, DecisionRoute::AutoApprove);
 
         let authz = evaluate_authorization(
             policy,
@@ -448,13 +382,13 @@ mod integration_tests {
             "auto_approve",
             "Claim",
             "claim_e2e_002",
-            50000,
+            4200000,
             98,
         );
         assert_eq!(
             authz.decision,
-            AuthzDecision::Deny,
-            "Even with high confidence, AI cannot auto-approve over $300"
+            AuthzDecision::Allow,
+            "A $42K claim at 98% confidence is auto-approved; amount never gates"
         );
     }
 
@@ -462,8 +396,8 @@ mod integration_tests {
     fn test_end_to_end_ai_analyst_blocked_by_confidence() {
         let policy = get_default_policy_text();
 
-        let route = determine_route(85, 15000);
-        assert_eq!(route, DecisionRoute::HumanApproval);
+        let route = determine_route(85);
+        assert_eq!(route, DecisionRoute::Escalated);
 
         let authz = evaluate_authorization(
             policy,
@@ -486,7 +420,7 @@ mod integration_tests {
     fn test_end_to_end_escalation_flow() {
         let policy = get_default_policy_text();
 
-        let route = determine_route(60, 25000);
+        let route = determine_route(60);
         assert_eq!(route, DecisionRoute::Escalated);
 
         let ai_escalate = evaluate_authorization(

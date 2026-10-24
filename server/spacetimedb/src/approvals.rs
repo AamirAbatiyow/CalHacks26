@@ -12,7 +12,7 @@ pub enum EscalatedClaimStatus {
 }
 
 /// Human review queue behind the Approvals page. Only claims the confidence
-/// gate routes to `Escalated` are ever stored here.
+/// gate routes to `Escalated` (below 95% confidence) are ever stored here.
 #[derive(Clone)]
 #[spacetimedb::table(accessor = escalated_claim, public)]
 pub struct EscalatedClaim {
@@ -30,8 +30,8 @@ pub struct EscalatedClaim {
     pub created_at: Timestamp,
 }
 
-pub fn is_escalated(confidence_pct: u8, amount_cents: i64) -> bool {
-    determine_route(confidence_pct as i64, amount_cents) == DecisionRoute::Escalated
+pub fn is_escalated(confidence_pct: u8) -> bool {
+    determine_route(confidence_pct as i64) == DecisionRoute::Escalated
 }
 
 #[spacetimedb::reducer]
@@ -45,12 +45,11 @@ pub fn seed_escalated_claim(
     policy_version: String,
     model_version: String,
 ) {
-    if !is_escalated(confidence_pct, amount_claimed_cents) {
+    if !is_escalated(confidence_pct) {
         log::warn!(
-            "Skipping claim for {}: {}% on {} cents is not escalated by the confidence gate",
+            "Skipping claim for {}: {}% confidence is auto-approved, not escalated",
             customer_name,
-            confidence_pct,
-            amount_claimed_cents
+            confidence_pct
         );
         return;
     }
@@ -158,15 +157,18 @@ pub fn edit_escalated_claim(
 mod tests {
     use super::is_escalated;
 
+    fn fixtures() -> Vec<serde_json::Value> {
+        let parsed: serde_json::Value =
+            serde_json::from_str(include_str!("../../fixtures/claims.json")).unwrap();
+        parsed.as_array().unwrap().clone()
+    }
+
     #[test]
     fn approvals_fixtures_are_all_escalated() {
-        let fixtures: serde_json::Value =
-            serde_json::from_str(include_str!("../../fixtures/claims.json")).unwrap();
-        for claim in fixtures.as_array().unwrap() {
+        for claim in fixtures() {
             let confidence = claim["confidence_pct"].as_u64().unwrap() as u8;
-            let amount = claim["amount_claimed_cents"].as_i64().unwrap();
             assert!(
-                is_escalated(confidence, amount),
+                is_escalated(confidence),
                 "{} would not be escalated",
                 claim["customer_name"]
             );
@@ -174,11 +176,41 @@ mod tests {
     }
 
     #[test]
-    fn auto_and_human_approval_claims_are_not_escalated() {
-        assert!(!is_escalated(96, 11_500));
-        assert!(!is_escalated(97, 4_200_000));
-        assert!(!is_escalated(90, 20_000));
-        assert!(is_escalated(79, 10_000));
-        assert!(is_escalated(94, 30_001));
+    fn approvals_fixture_reasons_cite_confidence_not_amount() {
+        for claim in fixtures() {
+            let confidence = claim["confidence_pct"].as_u64().unwrap();
+            let reason = claim["escalation_reason"].as_str().unwrap();
+            assert!(
+                reason.starts_with(&format!("Confidence {}% below 95%", confidence)),
+                "{} reason does not cite its confidence: {}",
+                claim["customer_name"],
+                reason
+            );
+            assert!(
+                !reason.contains("$25K") && !reason.contains("limit"),
+                "{} reason still cites a dollar limit: {}",
+                claim["customer_name"],
+                reason
+            );
+        }
+    }
+
+    #[test]
+    fn approvals_badge_count_matches_fixtures() {
+        let pending = fixtures()
+            .iter()
+            .filter(|c| is_escalated(c["confidence_pct"].as_u64().unwrap() as u8))
+            .count();
+        assert_eq!(pending, 6);
+    }
+
+    #[test]
+    fn only_confidence_decides_escalation() {
+        assert!(!is_escalated(95));
+        assert!(!is_escalated(96));
+        assert!(!is_escalated(100));
+        assert!(is_escalated(94));
+        assert!(is_escalated(80));
+        assert!(is_escalated(45));
     }
 }
