@@ -7,8 +7,10 @@ import type {
   SimClock,
   Kpi,
   PlaybackSpeed,
+  DecisionRecord,
+  LedgerEntry,
 } from '../types';
-import { PassStatus, FlareClass } from '../types';
+import { PassStatus, FlareClass, DecisionType, DecisionOutcome, LedgerEntryType } from '../types';
 import { SPACETIMEDB_HOST, SPACETIMEDB_MODULE } from '../config';
 
 function mapPassStatus(status: string): PassStatus {
@@ -29,6 +31,34 @@ function mapFlareClass(flare: string): FlareClass {
   }
 }
 
+function mapDecisionType(dtype: string): DecisionType {
+  switch (dtype) {
+    case 'DisputeResolved': return DecisionType.DisputeResolved;
+    case 'CreditIssued': return DecisionType.CreditIssued;
+    case 'PassDropped': return DecisionType.PassDropped;
+    case 'PassRecovered': return DecisionType.PassRecovered;
+    default: return DecisionType.DisputeCreated;
+  }
+}
+
+function mapDecisionOutcome(outcome: string): DecisionOutcome {
+  switch (outcome) {
+    case 'Approved': return DecisionOutcome.Approved;
+    case 'Denied': return DecisionOutcome.Denied;
+    case 'AutoApproved': return DecisionOutcome.AutoApproved;
+    case 'Escalated': return DecisionOutcome.Escalated;
+    default: return DecisionOutcome.Pending;
+  }
+}
+
+function mapLedgerEntryType(etype: string): LedgerEntryType {
+  switch (etype) {
+    case 'Invoice': return LedgerEntryType.Invoice;
+    case 'Recovery': return LedgerEntryType.Recovery;
+    default: return LedgerEntryType.Credit;
+  }
+}
+
 interface WebSocketMessage {
   type: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -43,6 +73,8 @@ export function useSpacetimeDB() {
   const [spaceWeather, setSpaceWeather] = useState<SpaceWeather[]>([]);
   const [simClock, setSimClock] = useState<SimClock | null>(null);
   const [kpi, setKpi] = useState<Kpi | null>(null);
+  const [decisionRecords, setDecisionRecords] = useState<DecisionRecord[]>([]);
+  const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([]);
   
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
@@ -67,6 +99,8 @@ export function useSpacetimeDB() {
               'SELECT * FROM space_weather',
               'SELECT * FROM sim_clock',
               'SELECT * FROM kpi',
+              'SELECT * FROM decision_record',
+              'SELECT * FROM ledger_entry',
             ],
           },
         }));
@@ -174,6 +208,42 @@ export function useSpacetimeDB() {
                     });
                   }
                   break;
+
+                case 'decision_record':
+                  setDecisionRecords(prev => {
+                    const deleteIds = new Set(deletes.map((d: {id: number}) => BigInt(d.id)));
+                    const filtered = prev.filter(r => !deleteIds.has(r.id));
+                    const newRecords = inserts.map((row: Record<string, unknown>) => ({
+                      id: BigInt((row.id as number) || 0),
+                      createdAt: BigInt(((row.created_at as {microseconds?: number})?.microseconds) || Date.now() * 1000),
+                      decisionType: mapDecisionType(row.decision_type as string),
+                      outcome: mapDecisionOutcome(row.outcome as string),
+                      passId: row.pass_id != null ? BigInt(row.pass_id as number) : null,
+                      stationId: (row.station_id as string) || null,
+                      amountCents: BigInt((row.amount_cents as number) || 0),
+                      reason: row.reason as string,
+                      policyVersion: row.policy_version as string,
+                      modelVersion: row.model_version as string,
+                    }));
+                    return [...filtered, ...newRecords];
+                  });
+                  break;
+
+                case 'ledger_entry':
+                  setLedgerEntries(prev => {
+                    const deleteIds = new Set(deletes.map((d: {id: number}) => BigInt(d.id)));
+                    const filtered = prev.filter(e => !deleteIds.has(e.id));
+                    const newEntries = inserts.map((row: Record<string, unknown>) => ({
+                      id: BigInt((row.id as number) || 0),
+                      createdAt: BigInt(((row.created_at as {microseconds?: number})?.microseconds) || Date.now() * 1000),
+                      entryType: mapLedgerEntryType(row.entry_type as string),
+                      description: row.description as string,
+                      referenceId: (row.reference_id as string) || null,
+                      amountCents: BigInt((row.amount_cents as number) || 0),
+                    }));
+                    return [...filtered, ...newEntries];
+                  });
+                  break;
               }
             }
           }
@@ -243,6 +313,8 @@ export function useSpacetimeDB() {
     spaceWeather,
     simClock,
     kpi,
+    decisionRecords,
+    ledgerEntries,
     setPlaybackPlaying,
     setPlaybackSpeedDb,
     seekToTime,

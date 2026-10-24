@@ -105,3 +105,19 @@ export interface LayerState {
 }
 
 export type PlaybackSpeed = 1 | 4 | 16;
+
+export const LedgerEntryType = {
+  Credit: 'Credit',
+  Invoice: 'Invoice',
+  Recovery: 'Recovery',
+} as const;
+export type LedgerEntryType = (typeof LedgerEntryType)[keyof typeof LedgerEntryType];
+
+export interface LedgerEntry {
+  id: bigint;
+  createdAt: bigint;
+  entryType: LedgerEntryType;
+  description: string;
+  referenceId: string | null;
+  amountCents: bigint;
+}
