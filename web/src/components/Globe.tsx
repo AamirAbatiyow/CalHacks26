@@ -4,6 +4,7 @@ import * as satellite from 'satellite.js';
 import type { Station, Satellite, Pass, SpaceWeather, LayerState } from '../types';
 import { PassStatus } from '../types';
 import { GLOBE_ROTATION_PERIOD_MS, AURORAL_OVAL_BASE_LATITUDE, AURORAL_OVAL_KP_SCALE, COLORS } from '../config';
+import { CONTINENT_PATHS } from '../data/continents';
 import './Globe.css';
 
 interface GlobeProps {
@@ -16,7 +17,7 @@ interface GlobeProps {
 }
 
 const EARTH_RADIUS = 1;
-const SATELLITE_ALTITUDE = 0.1;
+const SATELLITE_ALTITUDE = 0.08;
 
 function latLonToVector3(lat: number, lon: number, radius: number): THREE.Vector3 {
   const phi = (90 - lat) * (Math.PI / 180);
@@ -50,8 +51,8 @@ function createDottedEarth(): THREE.Points {
   const geometry = new THREE.BufferGeometry();
   const positions: number[] = [];
   
-  const latCount = 80;
-  const lonCount = 160;
+  const latCount = 90;
+  const lonCount = 180;
   
   for (let latIdx = 0; latIdx < latCount; latIdx++) {
     const lat = (latIdx / (latCount - 1)) * 180 - 90;
@@ -68,30 +69,60 @@ function createDottedEarth(): THREE.Points {
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   
   const material = new THREE.PointsMaterial({
-    color: 0x444444,
-    size: 0.012,
+    color: 0x333333,
+    size: 0.008,
     sizeAttenuation: true,
   });
   
   return new THREE.Points(geometry, material);
 }
 
-function createAuroralOval(kpIndex: number): THREE.Line {
-  const baseLatitude = AURORAL_OVAL_BASE_LATITUDE - kpIndex * AURORAL_OVAL_KP_SCALE;
-  const points: THREE.Vector3[] = [];
+function createContinentOutlines(): THREE.Group {
+  const group = new THREE.Group();
   
-  for (let lon = 0; lon <= 360; lon += 5) {
-    points.push(latLonToVector3(baseLatitude, lon - 180, EARTH_RADIUS + 0.01));
+  for (const continent of CONTINENT_PATHS) {
+    const points: THREE.Vector3[] = [];
+    for (const [lon, lat] of continent) {
+      points.push(latLonToVector3(lat, lon, EARTH_RADIUS + 0.001));
+    }
+    
+    if (points.length > 1) {
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+      const material = new THREE.LineBasicMaterial({
+        color: 0x666666,
+        transparent: true,
+        opacity: 0.8,
+      });
+      const line = new THREE.Line(geometry, material);
+      group.add(line);
+    }
   }
   
-  const geometry = new THREE.BufferGeometry().setFromPoints(points);
-  const material = new THREE.LineBasicMaterial({
-    color: COLORS.amber,
-    transparent: true,
-    opacity: 0.6,
-  });
+  return group;
+}
+
+function createAuroralOval(kpIndex: number): THREE.Group {
+  const group = new THREE.Group();
+  const baseLatitude = AURORAL_OVAL_BASE_LATITUDE - kpIndex * AURORAL_OVAL_KP_SCALE;
   
-  return new THREE.Line(geometry, material);
+  const createOvalRing = (lat: number) => {
+    const points: THREE.Vector3[] = [];
+    for (let lon = 0; lon <= 360; lon += 3) {
+      points.push(latLonToVector3(lat, lon - 180, EARTH_RADIUS + 0.005));
+    }
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const material = new THREE.LineBasicMaterial({
+      color: COLORS.amber,
+      transparent: true,
+      opacity: 0.7,
+    });
+    return new THREE.Line(geometry, material);
+  };
+
+  group.add(createOvalRing(baseLatitude));
+  group.add(createOvalRing(-baseLatitude));
+  
+  return group;
 }
 
 export function Globe({ stations, satellites, passes, spaceWeather, currentTime, layers }: GlobeProps) {
@@ -99,7 +130,6 @@ export function Globe({ stations, satellites, passes, spaceWeather, currentTime,
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const earthRef = useRef<THREE.Points | null>(null);
   const groupRef = useRef<THREE.Group | null>(null);
   const frameRef = useRef<number>(0);
   const isDraggingRef = useRef(false);
@@ -122,7 +152,7 @@ export function Globe({ stations, satellites, passes, spaceWeather, currentTime,
       0.1,
       100
     );
-    camera.position.z = 3.5;
+    camera.position.z = 3.2;
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -133,12 +163,17 @@ export function Globe({ stations, satellites, passes, spaceWeather, currentTime,
     rendererRef.current = renderer;
 
     const group = new THREE.Group();
+    group.rotation.x = 0.1;
     scene.add(group);
     groupRef.current = group;
 
     const earth = createDottedEarth();
+    earth.userData.permanent = true;
     group.add(earth);
-    earthRef.current = earth;
+
+    const continents = createContinentOutlines();
+    continents.userData.permanent = true;
+    group.add(continents);
 
     const animate = () => {
       frameRef.current = requestAnimationFrame(animate);
@@ -175,6 +210,7 @@ export function Globe({ stations, satellites, passes, spaceWeather, currentTime,
       const deltaY = e.clientY - previousMouseRef.current.y;
       groupRef.current.rotation.y += deltaX * 0.005;
       groupRef.current.rotation.x += deltaY * 0.005;
+      groupRef.current.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, groupRef.current.rotation.x));
       rotationVelocityRef.current = { x: deltaY * 0.001, y: deltaX * 0.001 };
       previousMouseRef.current = { x: e.clientX, y: e.clientY };
     };
@@ -206,7 +242,7 @@ export function Globe({ stations, satellites, passes, spaceWeather, currentTime,
 
     const toRemove: THREE.Object3D[] = [];
     group.traverse((child) => {
-      if (child.userData.layerType) {
+      if (child.userData.layerType && !child.userData.permanent) {
         toRemove.push(child);
       }
     });
@@ -224,10 +260,10 @@ export function Globe({ stations, satellites, passes, spaceWeather, currentTime,
 
     const currentDate = new Date(Number(currentTime) / 1000);
 
-    if (layers.groundStations) {
+    if (layers.groundStations && stations.length > 0) {
       stations.forEach((station) => {
         const pos = latLonToVector3(station.latitude, station.longitude, EARTH_RADIUS);
-        const size = Math.max(0.02, Math.min(0.06, Number(station.monthlyRevenueCents) / 5000000000));
+        const size = Math.max(0.015, Math.min(0.045, Number(station.monthlyRevenueCents) / 5000000000));
         const geometry = new THREE.BoxGeometry(size, size, size);
         const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
         const mesh = new THREE.Mesh(geometry, material);
@@ -238,11 +274,11 @@ export function Globe({ stations, satellites, passes, spaceWeather, currentTime,
       });
     }
 
-    if (layers.satellitesAndRoutes) {
+    if (layers.satellitesAndRoutes && satellites.length > 0) {
       satellites.forEach((sat) => {
         const pos = getSatellitePosition(sat, currentDate);
         if (pos) {
-          const geometry = new THREE.BoxGeometry(0.015, 0.015, 0.015);
+          const geometry = new THREE.BoxGeometry(0.012, 0.012, 0.012);
           const material = new THREE.MeshBasicMaterial({ color: 0x888888 });
           const mesh = new THREE.Mesh(geometry, material);
           mesh.position.copy(pos);
@@ -250,8 +286,8 @@ export function Globe({ stations, satellites, passes, spaceWeather, currentTime,
           group.add(mesh);
 
           const orbitPoints: THREE.Vector3[] = [];
-          for (let i = 0; i <= 360; i += 3) {
-            const futureTime = new Date(currentDate.getTime() + (i / 360) * 90 * 60 * 1000);
+          for (let i = 0; i <= 360; i += 4) {
+            const futureTime = new Date(currentDate.getTime() + (i / 360) * 95 * 60 * 1000);
             const futurePos = getSatellitePosition(sat, futureTime);
             if (futurePos) orbitPoints.push(futurePos);
           }
@@ -260,7 +296,7 @@ export function Globe({ stations, satellites, passes, spaceWeather, currentTime,
             const orbitMaterial = new THREE.LineBasicMaterial({
               color: 0x444444,
               transparent: true,
-              opacity: 0.3,
+              opacity: 0.25,
             });
             const orbit = new THREE.Line(orbitGeometry, orbitMaterial);
             orbit.userData.layerType = 'orbit';
@@ -270,7 +306,7 @@ export function Globe({ stations, satellites, passes, spaceWeather, currentTime,
       });
     }
 
-    if (layers.passTraffic) {
+    if (layers.passTraffic && passes.length > 0) {
       passes.forEach((pass) => {
         if (pass.status !== PassStatus.Active && pass.status !== PassStatus.Dropped) return;
         
@@ -278,16 +314,22 @@ export function Globe({ stations, satellites, passes, spaceWeather, currentTime,
         const sat = satellites.find(s => s.noradId === pass.satelliteId);
         if (!station || !sat) return;
 
-        const stationPos = latLonToVector3(station.latitude, station.longitude, EARTH_RADIUS);
+        const stationPos = latLonToVector3(station.latitude, station.longitude, EARTH_RADIUS + 0.005);
         const satPos = getSatellitePosition(sat, currentDate);
         if (!satPos) return;
 
-        const points = [stationPos, satPos];
-        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const midPoint = new THREE.Vector3().addVectors(stationPos, satPos).multiplyScalar(0.5);
+        midPoint.normalize().multiplyScalar(EARTH_RADIUS + 0.15);
+
+        const curve = new THREE.QuadraticBezierCurve3(stationPos, midPoint, satPos);
+        const curvePoints = curve.getPoints(20);
+        const geometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
+        
+        const isDropped = pass.status === PassStatus.Dropped;
         const material = new THREE.LineBasicMaterial({
-          color: pass.status === PassStatus.Dropped ? COLORS.amber : 0xffffff,
+          color: isDropped ? parseInt(COLORS.amber.replace('#', ''), 16) : 0xffffff,
           transparent: true,
-          opacity: pass.status === PassStatus.Dropped ? 0.8 : 0.5,
+          opacity: isDropped ? 0.9 : 0.6,
         });
         const line = new THREE.Line(geometry, material);
         line.userData.layerType = 'passLink';
@@ -296,34 +338,22 @@ export function Globe({ stations, satellites, passes, spaceWeather, currentTime,
     }
 
     if (layers.spaceWeather && spaceWeather && spaceWeather.kpIndex >= 4) {
-      const oval = createAuroralOval(spaceWeather.kpIndex);
-      oval.userData.layerType = 'auroral';
-      group.add(oval);
-
-      const southOvalPoints: THREE.Vector3[] = [];
-      const baseLatitude = -(AURORAL_OVAL_BASE_LATITUDE - spaceWeather.kpIndex * AURORAL_OVAL_KP_SCALE);
-      for (let lon = 0; lon <= 360; lon += 5) {
-        southOvalPoints.push(latLonToVector3(baseLatitude, lon - 180, EARTH_RADIUS + 0.01));
-      }
-      const southOvalGeometry = new THREE.BufferGeometry().setFromPoints(southOvalPoints);
-      const southOval = new THREE.Line(southOvalGeometry, new THREE.LineBasicMaterial({
-        color: COLORS.amber,
-        transparent: true,
-        opacity: 0.6,
-      }));
-      southOval.userData.layerType = 'auroral';
-      group.add(southOval);
+      const auroral = createAuroralOval(spaceWeather.kpIndex);
+      auroral.traverse((child) => {
+        child.userData.layerType = 'auroral';
+      });
+      group.add(auroral);
 
       if (layers.groundStations) {
         const affectedLatitude = Math.abs(AURORAL_OVAL_BASE_LATITUDE - spaceWeather.kpIndex * AURORAL_OVAL_KP_SCALE);
         stations.forEach((station) => {
-          if (Math.abs(station.latitude) > affectedLatitude - 5) {
+          if (Math.abs(station.latitude) > affectedLatitude - 8) {
             const pos = latLonToVector3(station.latitude, station.longitude, EARTH_RADIUS);
-            const ringGeometry = new THREE.RingGeometry(0.04, 0.06, 16);
+            const ringGeometry = new THREE.RingGeometry(0.03, 0.045, 16);
             const ringMaterial = new THREE.MeshBasicMaterial({
-              color: COLORS.amber,
+              color: parseInt(COLORS.amber.replace('#', ''), 16),
               transparent: true,
-              opacity: 0.5,
+              opacity: 0.6,
               side: THREE.DoubleSide,
             });
             const ring = new THREE.Mesh(ringGeometry, ringMaterial);

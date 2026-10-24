@@ -22,7 +22,7 @@ function App() {
   const [isLive, setIsLive] = useState(true);
   
   const {
-    connected,
+    connectionState,
     stations,
     satellites,
     passes,
@@ -81,7 +81,7 @@ function App() {
     <div className="app">
       <Sidebar />
       <main className="main">
-        <KpiStrip kpi={kpi} connected={connected} />
+        <KpiStrip kpi={kpi} connectionState={connectionState} />
         <div className="globe-container">
           <Globe
             stations={stations}

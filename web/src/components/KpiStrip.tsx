@@ -1,9 +1,10 @@
 import type { Kpi } from '../types';
+import type { ConnectionState } from '../hooks/useSpacetimeDB';
 import './KpiStrip.css';
 
 interface KpiStripProps {
   kpi: Kpi | null;
-  connected: boolean;
+  connectionState: ConnectionState;
 }
 
 function formatDollars(cents: bigint): string {
@@ -32,32 +33,50 @@ function KpiItem({ label, value, isAlert }: KpiItemProps) {
   );
 }
 
-export function KpiStrip({ kpi, connected }: KpiStripProps) {
+function ConnectionIndicator({ state }: { state: ConnectionState }) {
+  const stateConfig = {
+    connecting: { className: 'connecting', label: 'Connecting...' },
+    connected: { className: 'connected', label: 'Live' },
+    disconnected: { className: 'disconnected', label: 'Disconnected' },
+    error: { className: 'error', label: 'Error' },
+  };
+  
+  const config = stateConfig[state];
+  
+  return (
+    <span className={`connection-status ${config.className}`} title={config.label}>
+      <span className="status-dot" />
+      <span className="status-label">{config.label}</span>
+    </span>
+  );
+}
+
+export function KpiStrip({ kpi, connectionState }: KpiStripProps) {
+  const isConnected = connectionState === 'connected';
+  
   return (
     <header className="kpi-strip">
       <div className="kpi-header">
         <h1 className="kpi-title">Ground Truth</h1>
-        <span className={`connection-status ${connected ? 'connected' : ''}`}>
-          {connected ? '●' : '○'}
-        </span>
+        <ConnectionIndicator state={connectionState} />
       </div>
       <div className="kpi-metrics">
         <KpiItem
           label="Billed this month"
-          value={kpi ? formatDollars(kpi.billedThisMonthCents) : '—'}
+          value={isConnected && kpi ? formatDollars(kpi.billedThisMonthCents) : '—'}
         />
         <KpiItem
           label="Revenue at risk"
-          value={kpi ? formatDollars(kpi.revenueAtRiskCents) : '—'}
+          value={isConnected && kpi ? formatDollars(kpi.revenueAtRiskCents) : '—'}
           isAlert
         />
         <KpiItem
           label="Credits paid"
-          value={kpi ? formatDollars(kpi.creditsPaidCents) : '—'}
+          value={isConnected && kpi ? formatDollars(kpi.creditsPaidCents) : '—'}
         />
         <KpiItem
           label="Recovered"
-          value={kpi ? formatDollars(kpi.recoveredCents) : '—'}
+          value={isConnected && kpi ? formatDollars(kpi.recoveredCents) : '—'}
         />
       </div>
     </header>

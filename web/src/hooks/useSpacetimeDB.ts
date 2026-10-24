@@ -11,54 +11,86 @@ import type {
 import { PassStatus, FlareClass } from '../types';
 import { SPACETIMEDB_HOST, SPACETIMEDB_MODULE } from '../config';
 
-function mapPassStatus(status: string): PassStatus {
-  switch (status) {
-    case 'Active': return PassStatus.Active;
-    case 'Ok': return PassStatus.Ok;
-    case 'Dropped': return PassStatus.Dropped;
-    default: return PassStatus.Scheduled;
+export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'error';
+
+function mapPassStatus(status: unknown): PassStatus {
+  if (typeof status === 'string') {
+    switch (status) {
+      case 'Active': return PassStatus.Active;
+      case 'Ok': return PassStatus.Ok;
+      case 'Dropped': return PassStatus.Dropped;
+      default: return PassStatus.Scheduled;
+    }
   }
+  if (typeof status === 'object' && status !== null) {
+    if ('active' in status) return PassStatus.Active;
+    if ('ok' in status) return PassStatus.Ok;
+    if ('dropped' in status) return PassStatus.Dropped;
+  }
+  return PassStatus.Scheduled;
 }
 
-function mapFlareClass(flare: string): FlareClass {
-  switch (flare) {
-    case 'C': return FlareClass.C;
-    case 'M': return FlareClass.M;
-    case 'X': return FlareClass.X;
-    default: return FlareClass.None;
+function mapFlareClass(flare: unknown): FlareClass {
+  if (typeof flare === 'string') {
+    switch (flare) {
+      case 'C': return FlareClass.C;
+      case 'M': return FlareClass.M;
+      case 'X': return FlareClass.X;
+      default: return FlareClass.None;
+    }
   }
+  if (typeof flare === 'object' && flare !== null) {
+    if ('c' in flare) return FlareClass.C;
+    if ('m' in flare) return FlareClass.M;
+    if ('x' in flare) return FlareClass.X;
+  }
+  return FlareClass.None;
 }
 
-interface WebSocketMessage {
-  type: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data?: any;
+function extractTimestamp(timeField: unknown): bigint {
+  if (typeof timeField === 'bigint') return timeField;
+  if (typeof timeField === 'number') return BigInt(timeField);
+  if (typeof timeField === 'object' && timeField !== null) {
+    const t = timeField as Record<string, unknown>;
+    if ('microseconds' in t) return BigInt(t.microseconds as number);
+    if ('microsSinceUnixEpoch' in t) return BigInt(t.microsSinceUnixEpoch as number);
+    if ('micros_since_unix_epoch' in t) return BigInt(t.micros_since_unix_epoch as number);
+  }
+  return BigInt(Date.now() * 1000);
 }
 
 export function useSpacetimeDB() {
-  const [connected, setConnected] = useState(false);
+  const [connectionState, setConnectionState] = useState<ConnectionState>('connecting');
   const [stations, setStations] = useState<Station[]>([]);
   const [satellites, setSatellites] = useState<Satellite[]>([]);
   const [passes, setPasses] = useState<Pass[]>([]);
   const [spaceWeather, setSpaceWeather] = useState<SpaceWeather[]>([]);
   const [simClock, setSimClock] = useState<SimClock | null>(null);
   const [kpi, setKpi] = useState<Kpi | null>(null);
+  const [error, setError] = useState<string | null>(null);
   
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
+  const reconnectAttempts = useRef(0);
 
   const connect = useCallback(() => {
-    const wsUrl = SPACETIMEDB_HOST.replace('http', 'ws') + '/database/subscribe/' + SPACETIMEDB_MODULE;
+    const wsProtocol = SPACETIMEDB_HOST.startsWith('https') ? 'wss' : 'ws';
+    const wsHost = SPACETIMEDB_HOST.replace(/^https?:\/\//, '');
+    const wsUrl = `${wsProtocol}://${wsHost}/database/subscribe/${SPACETIMEDB_MODULE}`;
+    
+    console.log('Connecting to SpacetimeDB:', wsUrl);
+    setConnectionState('connecting');
+    setError(null);
     
     try {
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
-        console.log('Connected to SpacetimeDB');
-        setConnected(true);
+        console.log('WebSocket connected, subscribing to tables...');
+        reconnectAttempts.current = 0;
         
-        ws.send(JSON.stringify({
+        const subscribeMsg = JSON.stringify({
           subscribe: {
             query_strings: [
               'SELECT * FROM station',
@@ -69,33 +101,44 @@ export function useSpacetimeDB() {
               'SELECT * FROM kpi',
             ],
           },
-        }));
+        });
+        console.log('Sending subscription:', subscribeMsg);
+        ws.send(subscribeMsg);
       };
 
       ws.onmessage = (event) => {
         try {
-          const msg: WebSocketMessage = JSON.parse(event.data);
+          const msg = JSON.parse(event.data);
+          console.log('Received message type:', msg.type || 'unknown', msg);
+          
+          if (msg.type === 'IdentityToken') {
+            console.log('Received identity token');
+            setConnectionState('connected');
+          }
           
           if (msg.type === 'InitialSubscription' || msg.type === 'TransactionUpdate') {
-            const tables = msg.data?.database_update?.tables || [];
+            setConnectionState('connected');
+            const tables = msg.database_update?.tables || msg.data?.database_update?.tables || [];
             
             for (const table of tables) {
               const tableName = table.table_name;
               const inserts = table.inserts || [];
               const deletes = table.deletes || [];
 
+              console.log(`Table ${tableName}: ${inserts.length} inserts, ${deletes.length} deletes`);
+
               switch (tableName) {
                 case 'station':
                   setStations(prev => {
-                    const deleteIds = new Set(deletes.map((d: {id: string}) => d.id));
+                    const deleteIds = new Set(deletes.map((d: Record<string, unknown>) => d.id));
                     const filtered = prev.filter(s => !deleteIds.has(s.id));
                     const newStations = inserts.map((row: Record<string, unknown>) => ({
-                      id: row.id as string,
-                      name: row.name as string,
-                      latitude: row.latitude as number,
-                      longitude: row.longitude as number,
-                      altitudeM: row.altitude_m as number,
-                      monthlyRevenueCents: BigInt((row.monthly_revenue_cents as number) || 0),
+                      id: String(row.id),
+                      name: String(row.name),
+                      latitude: Number(row.latitude),
+                      longitude: Number(row.longitude),
+                      altitudeM: Number(row.altitude_m),
+                      monthlyRevenueCents: BigInt(Number(row.monthly_revenue_cents) || 0),
                     }));
                     return [...filtered, ...newStations];
                   });
@@ -103,14 +146,14 @@ export function useSpacetimeDB() {
 
                 case 'satellite':
                   setSatellites(prev => {
-                    const deleteIds = new Set(deletes.map((d: {norad_id: number}) => d.norad_id));
+                    const deleteIds = new Set(deletes.map((d: Record<string, unknown>) => d.norad_id));
                     const filtered = prev.filter(s => !deleteIds.has(s.noradId));
                     const newSatellites = inserts.map((row: Record<string, unknown>) => ({
-                      noradId: row.norad_id as number,
-                      name: row.name as string,
-                      tleLine1: row.tle_line1 as string,
-                      tleLine2: row.tle_line2 as string,
-                      operator: row.operator as string,
+                      noradId: Number(row.norad_id),
+                      name: String(row.name),
+                      tleLine1: String(row.tle_line1 || row.tle_line_1),
+                      tleLine2: String(row.tle_line2 || row.tle_line_2),
+                      operator: String(row.operator),
                     }));
                     return [...filtered, ...newSatellites];
                   });
@@ -118,17 +161,17 @@ export function useSpacetimeDB() {
 
                 case 'pass':
                   setPasses(prev => {
-                    const deleteIds = new Set(deletes.map((d: {id: number}) => BigInt(d.id)));
+                    const deleteIds = new Set(deletes.map((d: Record<string, unknown>) => BigInt(Number(d.id))));
                     const filtered = prev.filter(p => !deleteIds.has(p.id));
                     const newPasses = inserts.map((row: Record<string, unknown>) => ({
-                      id: BigInt((row.id as number) || 0),
-                      satelliteId: row.satellite_id as number,
-                      stationId: row.station_id as string,
-                      startTime: BigInt(((row.start_time as {microseconds?: number})?.microseconds) || Date.now() * 1000),
-                      endTime: BigInt(((row.end_time as {microseconds?: number})?.microseconds) || Date.now() * 1000),
-                      status: mapPassStatus(row.status as string),
-                      maxElevationDeg: row.max_elevation_deg as number,
-                      revenueCents: BigInt((row.revenue_cents as number) || 0),
+                      id: BigInt(Number(row.id) || 0),
+                      satelliteId: Number(row.satellite_id),
+                      stationId: String(row.station_id),
+                      startTime: extractTimestamp(row.start_time),
+                      endTime: extractTimestamp(row.end_time),
+                      status: mapPassStatus(row.status),
+                      maxElevationDeg: Number(row.max_elevation_deg),
+                      revenueCents: BigInt(Number(row.revenue_cents) || 0),
                     }));
                     return [...filtered, ...newPasses];
                   });
@@ -136,13 +179,13 @@ export function useSpacetimeDB() {
 
                 case 'space_weather':
                   setSpaceWeather(prev => {
-                    const deleteTimes = new Set(deletes.map((d: {timestamp: {microseconds: number}}) => BigInt(d.timestamp?.microseconds || 0)));
+                    const deleteTimes = new Set(deletes.map((d: Record<string, unknown>) => extractTimestamp(d.timestamp)));
                     const filtered = prev.filter(w => !deleteTimes.has(w.timestamp));
                     const newWeather = inserts.map((row: Record<string, unknown>) => ({
-                      timestamp: BigInt(((row.timestamp as {microseconds?: number})?.microseconds) || 0),
-                      kpIndex: row.kp_index as number,
-                      flareClass: mapFlareClass(row.flare_class as string),
-                      dstIndex: row.dst_index as number,
+                      timestamp: extractTimestamp(row.timestamp),
+                      kpIndex: Number(row.kp_index),
+                      flareClass: mapFlareClass(row.flare_class),
+                      dstIndex: Number(row.dst_index),
                     }));
                     return [...filtered, ...newWeather];
                   });
@@ -150,27 +193,27 @@ export function useSpacetimeDB() {
 
                 case 'sim_clock':
                   if (inserts.length > 0) {
-                    const row = inserts[0] as Record<string, unknown>;
+                    const row = inserts[inserts.length - 1] as Record<string, unknown>;
                     setSimClock({
-                      id: row.id as number,
-                      currentTime: BigInt(((row.current_time as {microseconds?: number})?.microseconds) || Date.now() * 1000),
-                      speedMultiplier: row.speed_multiplier as number,
-                      isPlaying: row.is_playing as boolean,
-                      realTimeAnchor: BigInt(((row.real_time_anchor as {microseconds?: number})?.microseconds) || Date.now() * 1000),
-                      simTimeAnchor: BigInt(((row.sim_time_anchor as {microseconds?: number})?.microseconds) || Date.now() * 1000),
+                      id: Number(row.id),
+                      currentTime: extractTimestamp(row.current_time),
+                      speedMultiplier: Number(row.speed_multiplier),
+                      isPlaying: Boolean(row.is_playing),
+                      realTimeAnchor: extractTimestamp(row.real_time_anchor),
+                      simTimeAnchor: extractTimestamp(row.sim_time_anchor),
                     });
                   }
                   break;
 
                 case 'kpi':
                   if (inserts.length > 0) {
-                    const row = inserts[0] as Record<string, unknown>;
+                    const row = inserts[inserts.length - 1] as Record<string, unknown>;
                     setKpi({
-                      id: row.id as string,
-                      billedThisMonthCents: BigInt((row.billed_this_month_cents as number) || 0),
-                      revenueAtRiskCents: BigInt((row.revenue_at_risk_cents as number) || 0),
-                      creditsPaidCents: BigInt((row.credits_paid_cents as number) || 0),
-                      recoveredCents: BigInt((row.recovered_cents as number) || 0),
+                      id: String(row.id),
+                      billedThisMonthCents: BigInt(Number(row.billed_this_month_cents) || 0),
+                      revenueAtRiskCents: BigInt(Number(row.revenue_at_risk_cents) || 0),
+                      creditsPaidCents: BigInt(Number(row.credits_paid_cents) || 0),
+                      recoveredCents: BigInt(Number(row.recovered_cents) || 0),
                     });
                   }
                   break;
@@ -178,22 +221,33 @@ export function useSpacetimeDB() {
             }
           }
         } catch (e) {
-          console.error('Failed to parse message:', e);
+          console.error('Failed to parse message:', e, event.data);
         }
       };
 
-      ws.onclose = () => {
-        console.log('Disconnected from SpacetimeDB');
-        setConnected(false);
-        reconnectTimeoutRef.current = window.setTimeout(connect, 3000);
+      ws.onclose = (event) => {
+        console.log('WebSocket closed:', event.code, event.reason);
+        setConnectionState('disconnected');
+        
+        const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
+        reconnectAttempts.current++;
+        console.log(`Reconnecting in ${delay}ms (attempt ${reconnectAttempts.current})`);
+        reconnectTimeoutRef.current = window.setTimeout(connect, delay);
       };
 
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+      ws.onerror = (event) => {
+        console.error('WebSocket error:', event);
+        setConnectionState('error');
+        setError('Failed to connect to SpacetimeDB');
       };
-    } catch (error) {
-      console.error('Failed to connect:', error);
-      reconnectTimeoutRef.current = window.setTimeout(connect, 3000);
+    } catch (err) {
+      console.error('Failed to create WebSocket:', err);
+      setConnectionState('error');
+      setError(err instanceof Error ? err.message : 'Connection failed');
+      
+      const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
+      reconnectAttempts.current++;
+      reconnectTimeoutRef.current = window.setTimeout(connect, delay);
     }
   }, []);
 
@@ -204,18 +258,24 @@ export function useSpacetimeDB() {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
-      wsRef.current?.close();
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
     };
   }, [connect]);
 
   const callReducer = useCallback((reducerName: string, args: unknown[]) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({
+      const msg = JSON.stringify({
         call: {
           reducer: reducerName,
           args,
         },
-      }));
+      });
+      console.log('Calling reducer:', reducerName, args);
+      wsRef.current.send(msg);
+    } else {
+      console.warn('Cannot call reducer, WebSocket not connected');
     }
   }, []);
 
@@ -236,7 +296,9 @@ export function useSpacetimeDB() {
   }, [callReducer]);
 
   return {
-    connected,
+    connectionState,
+    connected: connectionState === 'connected',
+    error,
     stations,
     satellites,
     passes,
