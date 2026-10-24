@@ -1,7 +1,7 @@
 import { useMemo, useEffect, useState, useCallback } from 'react';
 import { motion } from 'motion/react';
 import {
-  Activity, Copy, FileWarning, FileX2, Hourglass, Play, RotateCcw, Shuffle, SunMedium, Syringe, TrendingUp, Undo2, UserCog, WifiOff,
+  Activity, ChevronLeft, Copy, FileWarning, FileX2, Hourglass, Play, RotateCcw, Shuffle, SunMedium, Syringe, TrendingUp, Undo2, UserCog, WifiOff,
   type LucideIcon,
 } from 'lucide-react';
 import { useTable } from '../../hooks/useTable';
@@ -21,6 +21,8 @@ import { C, SplitBar } from '../../ui/charts';
 import { CountUp, compactUsd, wholeUsd } from '../../ui/CountUp';
 import { EmptyState } from '../../ui/EmptyState';
 import { Skeleton } from '../../ui/Skeleton';
+import { AttackDetail, InjectionDetail } from './AttackDetail';
+import { attackTitle, attackTypeOf, outcomeTone, usd, useAttackEvals, type AttackEvalRow } from './useAttackEvals';
 import './BreakIt.css';
 
 function formatTime(timestamp: bigint, baseTimestamp: bigint): string {
@@ -46,11 +48,17 @@ const ATTACK_ICONS: Record<AttackType, LucideIcon> = {
 
 interface TypeTally {
   caught: number;
+  held: number;
   total: number;
   caughtCents: number;
   missedCents: number;
   runs: AttackRun[];
+  evals: AttackEvalRow[];
 }
+
+type Open = { kind: 'type'; type: AttackType } | { kind: 'eval'; id: bigint; from?: AttackType } | { kind: 'run'; id: bigint; from?: AttackType };
+
+const emptyTally = (): TypeTally => ({ caught: 0, held: 0, total: 0, caughtCents: 0, missedCents: 0, runs: [], evals: [] });
 
 interface RowStatus {
   text: string;
@@ -72,7 +80,7 @@ interface AttackTileProps {
 
 function AttackTile({ attackType, result, onRun, onOpen, isRunning, blocked, status, index, tech }: AttackTileProps) {
   const Icon = ATTACK_ICONS[attackType];
-  const missed = result ? result.total - result.caught : 0;
+  const missed = result ? result.total - result.caught - result.held : 0;
   const tone = status ? 'status' : !result ? 'idle' : missed > 0 ? 'missed' : 'caught';
   const StatusIcon = status?.tone === 'pending' ? Hourglass : WifiOff;
   const statusText = status && !tech ? (status.tone === 'pending' ? 'Running' : 'Unavailable') : status?.text;
@@ -115,11 +123,14 @@ function AttackTile({ attackType, result, onRun, onOpen, isRunning, blocked, sta
             <span className="breakit-tile-caught">{result.caught}</span>
             <span className="breakit-tile-total">/ {result.total}</span>
           </div>
+          {result.held > 0 && <div className="breakit-tile-held">{result.held} held for review</div>}
           {tech && (
             <div className="breakit-dots" aria-hidden>
-              {result.runs.map(r => (
-                <span key={String(r.id)} className={`breakit-dot ${r.result === AttackResult.Caught ? 'caught' : 'missed'}`} />
-              ))}
+              {result.evals.length > 0
+                ? result.evals.map(r => <span key={String(r.id)} className={`breakit-dot ${r.outcome}`} />)
+                : result.runs.map(r => (
+                  <span key={String(r.id)} className={`breakit-dot ${r.result === AttackResult.Caught ? 'caught' : 'missed'}`} />
+                ))}
             </div>
           )}
           <div className="breakit-tile-dollars">
@@ -150,7 +161,7 @@ export default function BreakIt() {
   const cases = useTable('decisionCase');
   const { online: workerOnline, silenceS: workerSilenceS, now } = useWorkerStatus();
   const [injectionError, setInjectionError] = useState<string | null>(null);
-  const [openType, setOpenType] = useState<AttackType | null>(null);
+  const [open, setOpen] = useState<Open | null>(null);
   const tech = useTechMode();
 
   useEffect(() => {
@@ -171,14 +182,27 @@ export default function BreakIt() {
       .sort((a, b) => Number(a.timestamp - b.timestamp) || Number(a.id - b.id));
   }, [attackRuns, latestSession]);
 
+  const evals = useAttackEvals(latestSession?.id ?? null);
+
   const attackTypeResults = useMemo(() => {
     const results = {} as Record<AttackType, TypeTally | null>;
     for (const t of ATTACK_TYPES_ORDER) {
       results[t] = null;
     }
+    for (const row of evals.after) {
+      const t = attackTypeOf(row);
+      const tally = results[t] ?? emptyTally();
+      tally.total += 1;
+      tally.evals.push(row);
+      if (row.outcome === 'caught') tally.caught += 1;
+      else if (row.outcome === 'escalated') tally.held += 1;
+      tally.caughtCents += Number(row.protectedCents);
+      tally.missedCents += Number(row.badCents);
+      results[t] = tally;
+    }
     for (const run of sessionRuns) {
-      if (run.result === AttackResult.Pending) continue;
-      const tally = results[run.attackType] ?? { caught: 0, total: 0, caughtCents: 0, missedCents: 0, runs: [] };
+      if (run.result === AttackResult.Pending || results[run.attackType]?.evals.length) continue;
+      const tally = results[run.attackType] ?? emptyTally();
       tally.total += 1;
       tally.runs.push(run);
       if (run.result === AttackResult.Caught) {
@@ -190,7 +214,7 @@ export default function BreakIt() {
       results[run.attackType] = tally;
     }
     return results;
-  }, [sessionRuns]);
+  }, [sessionRuns, evals.after]);
 
   const baseTimestamp = latestSession?.startedAt ?? BigInt(0);
 
@@ -243,8 +267,18 @@ export default function BreakIt() {
   const protectedCents = Number(latestSession?.dollarsProtectedCents ?? 0n);
   const badCents = Number(latestSession?.badPayoutsCents ?? 0n);
   const loading = !connected && sessions.length === 0;
-  const scored = sessionRuns.filter(r => r.result !== AttackResult.Pending);
+  const evalByRun = useMemo(() => new Map(evals.after.filter(r => r.attackRunId !== undefined).map(r => [r.attackRunId!, r])), [evals.after]);
+  const scored = sessionRuns.filter(r => r.result !== AttackResult.Pending || evalByRun.has(r.id));
+  const tickClass = (r: AttackRun) => evalByRun.get(r.id)?.outcome ?? (r.result === AttackResult.Caught ? 'caught' : 'missed');
+  const openRun = (r: AttackRun) => {
+    const row = evalByRun.get(r.id);
+    setOpen(row ? { kind: 'eval', id: row.id } : { kind: 'run', id: r.id });
+  };
+  const openType = open?.kind === 'type' ? open.type : null;
   const openTally = openType ? attackTypeResults[openType] : null;
+  const openEval = open?.kind === 'eval' ? evals.after.find(r => r.id === open.id) ?? null : null;
+  const openRunRow = open?.kind === 'run' ? sessionRuns.find(r => r.id === open.id) ?? null : null;
+  const back = open && open.kind !== 'type' && open.from ? () => setOpen({ kind: 'type', type: open.from! }) : null;
 
   return (
     <div className="breakit-page">
@@ -300,7 +334,7 @@ export default function BreakIt() {
               attackType={attackType}
               result={attackTypeResults[attackType]}
               onRun={() => runRow(attackType)}
-              onOpen={() => setOpenType(attackType)}
+              onOpen={() => setOpen({ kind: 'type', type: attackType })}
               isRunning={isRunning}
               blocked={attackType === 'PromptInjection' && !workerOnline}
               status={attackType === 'PromptInjection' ? injectionStatus : null}
@@ -314,6 +348,7 @@ export default function BreakIt() {
           <span className="ui-section-title">Run timeline</span>
           {scored.length > 0 && <span className="ui-legend">
             <span className="ui-legend-item"><span className="breakit-dot caught" />Caught</span>
+            <span className="ui-legend-item"><span className="breakit-dot escalated" />Held for review</span>
             <span className="ui-legend-item"><span className="breakit-dot missed" />Missed</span>
           </span>}
         </div>
@@ -324,12 +359,12 @@ export default function BreakIt() {
             {scored.map(r => (
               <motion.span
                 key={String(r.id)}
-                className={`breakit-tick ${r.result === AttackResult.Caught ? 'caught' : 'missed'}`}
-                title={`${formatTime(r.timestamp, baseTimestamp)} ${ATTACK_TYPE_LABELS[r.attackType]} · ${wholeUsd(Number(r.amountCents))} · ${r.result === AttackResult.Caught ? 'caught' : 'missed'}`}
+                className={`breakit-tick ${tickClass(r)}`}
+                title={`${formatTime(r.timestamp, baseTimestamp)} ${ATTACK_TYPE_LABELS[r.attackType]} · ${wholeUsd(Number(r.amountCents))} · ${tickClass(r) === 'escalated' ? 'held for review' : tickClass(r)}`}
                 initial={{ scaleY: 0 }}
                 animate={{ scaleY: 1 }}
                 transition={{ duration: 0.2 }}
-                onClick={() => setOpenType(r.attackType)}
+                onClick={() => openRun(r)}
               />
             ))}
           </div>
@@ -341,31 +376,48 @@ export default function BreakIt() {
       </div>
 
       <Drawer
-        open={openTally !== null}
-        onClose={() => setOpenType(null)}
-        eyebrow="Attack log"
-        title={openType ? ATTACK_TYPE_LABELS[openType] : ''}
+        open={open !== null}
+        onClose={() => setOpen(null)}
+        eyebrow={openTally ? 'Attack log' : 'Attack'}
+        title={openType ? ATTACK_TYPE_LABELS[openType] : openEval ? attackTitle(openEval) : openRunRow ? ATTACK_TYPE_LABELS[openRunRow.attackType] : ''}
       >
-        {openTally && (
+        {back && (
+          <button className="breakit-back" onClick={back}><ChevronLeft size={12} /> {ATTACK_TYPE_LABELS[(open as { from: AttackType }).from]}</button>
+        )}
+        {openTally && openType && (
           <>
             <div className="ui-chips">
               <Chip tone="pass">{openTally.caught} caught</Chip>
-              {openTally.total - openTally.caught > 0 && <Chip tone="block">{openTally.total - openTally.caught} missed</Chip>}
+              {openTally.held > 0 && <Chip tone="warn">{openTally.held} held for review</Chip>}
+              {openTally.total - openTally.caught - openTally.held > 0 && <Chip tone="block">{openTally.total - openTally.caught - openTally.held} missed</Chip>}
             </div>
             <div className="breakit-log">
-              {openTally.runs.map(r => (
-                <div key={String(r.id)} className="breakit-log-entry" title={r.logMessage}>
-                  <span className="breakit-log-time">{formatTime(r.timestamp, baseTimestamp)}</span>
-                  <span className={`breakit-dot ${r.result === AttackResult.Caught ? 'caught' : 'missed'}`} aria-label={r.result} />
-                  <span className="breakit-log-amount">{wholeUsd(Number(r.amountCents))}</span>
-                  <span className={`breakit-log-message ${r.result === AttackResult.Missed ? 'missed' : ''}`}>
-                    {r.logMessage.replace(/: (MISSED|caught) - /, ': ').replace(/^[^:]+: /, '')}
-                  </span>
-                </div>
-              ))}
+              {openTally.evals.length > 0
+                ? openTally.evals.map(r => (
+                  <button key={String(r.id)} className="breakit-log-entry clickable" onClick={() => setOpen({ kind: 'eval', id: r.id, from: openType })}>
+                    <span className="breakit-log-time">{r.decidedBy === 'policy' ? `${r.confidence}%` : r.decidedBy === 'human' ? 'human' : 'screen'}</span>
+                    <span className={`breakit-dot ${r.outcome}`} aria-label={r.outcome} />
+                    <span className="breakit-log-amount">{usd(r.claimedCents)}</span>
+                    <span className={`breakit-log-message ${r.outcome === 'missed' ? 'missed' : ''}`}>
+                      <Chip tone={outcomeTone(r.outcome)}>{r.outcome === 'escalated' ? 'held' : r.outcome}</Chip> {r.description}
+                    </span>
+                  </button>
+                ))
+                : openTally.runs.map(r => (
+                  <button key={String(r.id)} className="breakit-log-entry clickable" title={r.logMessage} onClick={() => setOpen({ kind: 'run', id: r.id, from: openType })}>
+                    <span className="breakit-log-time">{formatTime(r.timestamp, baseTimestamp)}</span>
+                    <span className={`breakit-dot ${r.result === AttackResult.Caught ? 'caught' : 'missed'}`} aria-label={r.result} />
+                    <span className="breakit-log-amount">{wholeUsd(Number(r.amountCents))}</span>
+                    <span className={`breakit-log-message ${r.result === AttackResult.Missed ? 'missed' : ''}`}>
+                      {r.logMessage.replace(/: (MISSED|caught) - /, ': ').replace(/^[^:]+: /, '')}
+                    </span>
+                  </button>
+                ))}
             </div>
           </>
         )}
+        {openEval && <AttackDetail row={openEval} before={evals.beforeByFixture.get(openEval.fixtureId)} />}
+        {openRunRow && (openRunRow.attackType === 'PromptInjection' ? <InjectionDetail run={openRunRow} /> : <p>{openRunRow.logMessage}</p>)}
       </Drawer>
     </div>
   );
