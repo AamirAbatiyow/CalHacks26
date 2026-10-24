@@ -41,6 +41,7 @@ import ApproveDisputeReducer from "./approve_dispute_reducer";
 import ApproveEscalatedClaimReducer from "./approve_escalated_claim_reducer";
 import ClearAttackRunsReducer from "./clear_attack_runs_reducer";
 import CreatePolicyVersionReducer from "./create_policy_version_reducer";
+import DecideCaseReducer from "./decide_case_reducer";
 import DenyClaimReducer from "./deny_claim_reducer";
 import DenyDisputeReducer from "./deny_dispute_reducer";
 import DenyEscalatedClaimReducer from "./deny_escalated_claim_reducer";
@@ -92,11 +93,14 @@ import SeedClaimPassReducer from "./seed_claim_pass_reducer";
 import SeedClaimReasonReducer from "./seed_claim_reason_reducer";
 import SeedClaimWeatherReducer from "./seed_claim_weather_reducer";
 import SeedContractTermReducer from "./seed_contract_term_reducer";
+import SeedContractsReducer from "./seed_contracts_reducer";
 import SeedDecisionWorldReducer from "./seed_decision_world_reducer";
 import SeedDemoClaimReducer from "./seed_demo_claim_reducer";
 import SeedEscalatedClaimReducer from "./seed_escalated_claim_reducer";
 import SeedFinanceHistoryReducer from "./seed_finance_history_reducer";
+import SeedIncomingClaimsReducer from "./seed_incoming_claims_reducer";
 import SeedLabeledDecisionsReducer from "./seed_labeled_decisions_reducer";
+import SeedLearningHistoryReducer from "./seed_learning_history_reducer";
 import SeedLedgerEntryReducer from "./seed_ledger_entry_reducer";
 import SeedPassReducer from "./seed_pass_reducer";
 import SeedPassTelemetryReducer from "./seed_pass_telemetry_reducer";
@@ -115,6 +119,7 @@ import SettlePassHistoryReducer from "./settle_pass_history_reducer";
 import StartAttackRunReducer from "./start_attack_run_reducer";
 import StartReplayReducer from "./start_replay_reducer";
 import SubmitScreenReducer from "./submit_screen_reducer";
+import SubmitSimilarClaimReducer from "./submit_similar_claim_reducer";
 import SubmitSystem1Reducer from "./submit_system_1_reducer";
 import SubmitSystem2Reducer from "./submit_system_2_reducer";
 import ToggleRuleReducer from "./toggle_rule_reducer";
@@ -131,22 +136,33 @@ import AttackClaimRow from "./attack_claim_table";
 import AttackFixtureRow from "./attack_fixture_table";
 import AttackRunRow from "./attack_run_table";
 import AttackRunSessionRow from "./attack_run_session_table";
+import AuditDecisionRow from "./audit_decision_table";
 import AuditLogRow from "./audit_log_table";
 import AuthorizationLogRow from "./authorization_log_table";
+import CaseConflictRow from "./case_conflict_table";
 import CaseDecisionRow from "./case_decision_table";
+import CaseOptionRow from "./case_option_table";
+import CaseRuleRow from "./case_rule_table";
+import CaseScoreRow from "./case_score_table";
+import CaseShapRow from "./case_shap_table";
+import CaseSimilarRow from "./case_similar_table";
 import CedarPolicyStoreRow from "./cedar_policy_store_table";
 import CedarRuleRow from "./cedar_rule_table";
 import ClaimRow from "./claim_table";
+import ClaimCaseRow from "./claim_case_table";
 import ClaimDecisionRow from "./claim_decision_table";
 import ClaimEvidenceRow from "./claim_evidence_table";
+import ClaimMessageRow from "./claim_message_table";
 import ClaimOutcomeRow from "./claim_outcome_table";
 import ClaimPassRow from "./claim_pass_table";
 import ClaimReasonRow from "./claim_reason_table";
 import ClaimWeatherRow from "./claim_weather_table";
 import ConfidenceConfigRow from "./confidence_config_table";
 import ContractTermRow from "./contract_term_table";
+import CustomerContractRow from "./customer_contract_table";
 import DecisionCaseRow from "./decision_case_table";
 import DecisionRecordRow from "./decision_record_table";
+import DecisionSnapshotRow from "./decision_snapshot_table";
 import DisputeRow from "./dispute_table";
 import DisputeMessageRow from "./dispute_message_table";
 import EscalatedClaimRow from "./escalated_claim_table";
@@ -155,10 +171,14 @@ import KpiRow from "./kpi_table";
 import LabeledDecisionRow from "./labeled_decision_table";
 import LearnedRuleRow from "./learned_rule_table";
 import LedgerEntryRow from "./ledger_entry_table";
+import MaintenanceLogRow from "./maintenance_log_table";
+import MinedRuleRow from "./mined_rule_table";
+import MiningResultRow from "./mining_result_table";
 import ModelVersionRow from "./model_version_table";
 import PassRow from "./pass_table";
 import PassTelemetryRow from "./pass_telemetry_table";
 import PipelineStepRow from "./pipeline_step_table";
+import PolicyProposalRow from "./policy_proposal_table";
 import PolicyReplayRow from "./policy_replay_table";
 import PolicyRuleRow from "./policy_rule_table";
 import PolicyVersionRow from "./policy_version_table";
@@ -253,6 +273,23 @@ const tablesSchema = __schema({
       { name: 'attack_run_session_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, AttackRunSessionRow),
+  auditDecision: __table({
+    name: 'audit_decision',
+    indexes: [
+      { accessor: 'id', name: 'audit_decision_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+      { accessor: 'source', name: 'audit_decision_source_idx_btree', algorithm: 'btree', columns: [
+        'source',
+      ] },
+      { accessor: 'station_id', name: 'audit_decision_station_id_idx_btree', algorithm: 'btree', columns: [
+        'stationId',
+      ] },
+    ],
+    constraints: [
+      { name: 'audit_decision_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, AuditDecisionRow),
   auditLog: __table({
     name: 'audit_log',
     indexes: [
@@ -275,6 +312,20 @@ const tablesSchema = __schema({
       { name: 'authorization_log_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, AuthorizationLogRow),
+  caseConflict: __table({
+    name: 'case_conflict',
+    indexes: [
+      { accessor: 'case_id', name: 'case_conflict_case_id_idx_btree', algorithm: 'btree', columns: [
+        'caseId',
+      ] },
+      { accessor: 'id', name: 'case_conflict_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'case_conflict_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, CaseConflictRow),
   caseDecision: __table({
     name: 'case_decision',
     indexes: [
@@ -289,6 +340,73 @@ const tablesSchema = __schema({
       { name: 'case_decision_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, CaseDecisionRow),
+  caseOption: __table({
+    name: 'case_option',
+    indexes: [
+      { accessor: 'case_id', name: 'case_option_case_id_idx_btree', algorithm: 'btree', columns: [
+        'caseId',
+      ] },
+      { accessor: 'id', name: 'case_option_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'case_option_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, CaseOptionRow),
+  caseRule: __table({
+    name: 'case_rule',
+    indexes: [
+      { accessor: 'case_id', name: 'case_rule_case_id_idx_btree', algorithm: 'btree', columns: [
+        'caseId',
+      ] },
+      { accessor: 'id', name: 'case_rule_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'case_rule_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, CaseRuleRow),
+  caseScore: __table({
+    name: 'case_score',
+    indexes: [
+      { accessor: 'case_id', name: 'case_score_case_id_idx_btree', algorithm: 'btree', columns: [
+        'caseId',
+      ] },
+    ],
+    constraints: [
+      { name: 'case_score_case_id_key', constraint: 'unique', columns: ['caseId'] },
+    ],
+  }, CaseScoreRow),
+  caseShap: __table({
+    name: 'case_shap',
+    indexes: [
+      { accessor: 'case_id', name: 'case_shap_case_id_idx_btree', algorithm: 'btree', columns: [
+        'caseId',
+      ] },
+      { accessor: 'id', name: 'case_shap_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'case_shap_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, CaseShapRow),
+  caseSimilar: __table({
+    name: 'case_similar',
+    indexes: [
+      { accessor: 'case_id', name: 'case_similar_case_id_idx_btree', algorithm: 'btree', columns: [
+        'caseId',
+      ] },
+      { accessor: 'id', name: 'case_similar_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'case_similar_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, CaseSimilarRow),
   cedarPolicyStore: __table({
     name: 'cedar_policy_store',
     indexes: [
@@ -325,6 +443,17 @@ const tablesSchema = __schema({
       { name: 'claim_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, ClaimRow),
+  claimCase: __table({
+    name: 'claim_case',
+    indexes: [
+      { accessor: 'case_id', name: 'claim_case_case_id_idx_btree', algorithm: 'btree', columns: [
+        'caseId',
+      ] },
+    ],
+    constraints: [
+      { name: 'claim_case_case_id_key', constraint: 'unique', columns: ['caseId'] },
+    ],
+  }, ClaimCaseRow),
   claimDecision: __table({
     name: 'claim_decision',
     indexes: [
@@ -347,6 +476,20 @@ const tablesSchema = __schema({
       { name: 'claim_evidence_claim_id_key', constraint: 'unique', columns: ['claimId'] },
     ],
   }, ClaimEvidenceRow),
+  claimMessage: __table({
+    name: 'claim_message',
+    indexes: [
+      { accessor: 'case_id', name: 'claim_message_case_id_idx_btree', algorithm: 'btree', columns: [
+        'caseId',
+      ] },
+      { accessor: 'id', name: 'claim_message_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'claim_message_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, ClaimMessageRow),
   claimOutcome: __table({
     name: 'claim_outcome',
     indexes: [
@@ -419,6 +562,17 @@ const tablesSchema = __schema({
       { name: 'contract_term_customer_key', constraint: 'unique', columns: ['customer'] },
     ],
   }, ContractTermRow),
+  customerContract: __table({
+    name: 'customer_contract',
+    indexes: [
+      { accessor: 'customer_id', name: 'customer_contract_customer_id_idx_btree', algorithm: 'btree', columns: [
+        'customerId',
+      ] },
+    ],
+    constraints: [
+      { name: 'customer_contract_customer_id_key', constraint: 'unique', columns: ['customerId'] },
+    ],
+  }, CustomerContractRow),
   decisionCase: __table({
     name: 'decision_case',
     indexes: [
@@ -445,6 +599,17 @@ const tablesSchema = __schema({
       { name: 'decision_record_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, DecisionRecordRow),
+  decisionSnapshot: __table({
+    name: 'decision_snapshot',
+    indexes: [
+      { accessor: 'decision_id', name: 'decision_snapshot_decision_id_idx_btree', algorithm: 'btree', columns: [
+        'decisionId',
+      ] },
+    ],
+    constraints: [
+      { name: 'decision_snapshot_decision_id_key', constraint: 'unique', columns: ['decisionId'] },
+    ],
+  }, DecisionSnapshotRow),
   dispute: __table({
     name: 'dispute',
     indexes: [
@@ -549,6 +714,48 @@ const tablesSchema = __schema({
       { name: 'ledger_entry_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, LedgerEntryRow),
+  maintenanceLog: __table({
+    name: 'maintenance_log',
+    indexes: [
+      { accessor: 'id', name: 'maintenance_log_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+      { accessor: 'station_id', name: 'maintenance_log_station_id_idx_btree', algorithm: 'btree', columns: [
+        'stationId',
+      ] },
+    ],
+    constraints: [
+      { name: 'maintenance_log_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, MaintenanceLogRow),
+  minedRule: __table({
+    name: 'mined_rule',
+    indexes: [
+      { accessor: 'policy_version_id', name: 'mined_rule_policy_version_id_idx_btree', algorithm: 'btree', columns: [
+        'policyVersionId',
+      ] },
+      { accessor: 'rule_id', name: 'mined_rule_rule_id_idx_btree', algorithm: 'btree', columns: [
+        'ruleId',
+      ] },
+    ],
+    constraints: [
+      { name: 'mined_rule_rule_id_key', constraint: 'unique', columns: ['ruleId'] },
+    ],
+  }, MinedRuleRow),
+  miningResult: __table({
+    name: 'mining_result',
+    indexes: [
+      { accessor: 'decision_id', name: 'mining_result_decision_id_idx_btree', algorithm: 'btree', columns: [
+        'decisionId',
+      ] },
+      { accessor: 'id', name: 'mining_result_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'mining_result_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, MiningResultRow),
   modelVersion: __table({
     name: 'model_version',
     indexes: [
@@ -605,6 +812,17 @@ const tablesSchema = __schema({
       { name: 'pipeline_step_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, PipelineStepRow),
+  policyProposal: __table({
+    name: 'policy_proposal',
+    indexes: [
+      { accessor: 'version_id', name: 'policy_proposal_version_id_idx_btree', algorithm: 'btree', columns: [
+        'versionId',
+      ] },
+    ],
+    constraints: [
+      { name: 'policy_proposal_version_id_key', constraint: 'unique', columns: ['versionId'] },
+    ],
+  }, PolicyProposalRow),
   policyReplay: __table({
     name: 'policy_replay',
     indexes: [
@@ -757,6 +975,7 @@ const reducersSchema = __reducers(
   __reducerSchema("approve_escalated_claim", ApproveEscalatedClaimReducer),
   __reducerSchema("clear_attack_runs", ClearAttackRunsReducer),
   __reducerSchema("create_policy_version", CreatePolicyVersionReducer),
+  __reducerSchema("decide_case", DecideCaseReducer),
   __reducerSchema("deny_claim", DenyClaimReducer),
   __reducerSchema("deny_dispute", DenyDisputeReducer),
   __reducerSchema("deny_escalated_claim", DenyEscalatedClaimReducer),
@@ -808,11 +1027,14 @@ const reducersSchema = __reducers(
   __reducerSchema("seed_claim_reason", SeedClaimReasonReducer),
   __reducerSchema("seed_claim_weather", SeedClaimWeatherReducer),
   __reducerSchema("seed_contract_term", SeedContractTermReducer),
+  __reducerSchema("seed_contracts", SeedContractsReducer),
   __reducerSchema("seed_decision_world", SeedDecisionWorldReducer),
   __reducerSchema("seed_demo_claim", SeedDemoClaimReducer),
   __reducerSchema("seed_escalated_claim", SeedEscalatedClaimReducer),
   __reducerSchema("seed_finance_history", SeedFinanceHistoryReducer),
+  __reducerSchema("seed_incoming_claims", SeedIncomingClaimsReducer),
   __reducerSchema("seed_labeled_decisions", SeedLabeledDecisionsReducer),
+  __reducerSchema("seed_learning_history", SeedLearningHistoryReducer),
   __reducerSchema("seed_ledger_entry", SeedLedgerEntryReducer),
   __reducerSchema("seed_pass", SeedPassReducer),
   __reducerSchema("seed_pass_telemetry", SeedPassTelemetryReducer),
@@ -831,6 +1053,7 @@ const reducersSchema = __reducers(
   __reducerSchema("start_attack_run", StartAttackRunReducer),
   __reducerSchema("start_replay", StartReplayReducer),
   __reducerSchema("submit_screen", SubmitScreenReducer),
+  __reducerSchema("submit_similar_claim", SubmitSimilarClaimReducer),
   __reducerSchema("submit_system_1", SubmitSystem1Reducer),
   __reducerSchema("submit_system_2", SubmitSystem2Reducer),
   __reducerSchema("toggle_rule", ToggleRuleReducer),
@@ -858,20 +1081,38 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "attack_run": Omit<typeof tablesSchema.schemaType.tables["attackRun"], "accessorName"> & { readonly accessorName: "attack_run" };
     /** @deprecated Use `attackRunSession` instead. This alias will be removed in the next major version. */
     readonly "attack_run_session": Omit<typeof tablesSchema.schemaType.tables["attackRunSession"], "accessorName"> & { readonly accessorName: "attack_run_session" };
+    /** @deprecated Use `auditDecision` instead. This alias will be removed in the next major version. */
+    readonly "audit_decision": Omit<typeof tablesSchema.schemaType.tables["auditDecision"], "accessorName"> & { readonly accessorName: "audit_decision" };
     /** @deprecated Use `auditLog` instead. This alias will be removed in the next major version. */
     readonly "audit_log": Omit<typeof tablesSchema.schemaType.tables["auditLog"], "accessorName"> & { readonly accessorName: "audit_log" };
     /** @deprecated Use `authorizationLog` instead. This alias will be removed in the next major version. */
     readonly "authorization_log": Omit<typeof tablesSchema.schemaType.tables["authorizationLog"], "accessorName"> & { readonly accessorName: "authorization_log" };
+    /** @deprecated Use `caseConflict` instead. This alias will be removed in the next major version. */
+    readonly "case_conflict": Omit<typeof tablesSchema.schemaType.tables["caseConflict"], "accessorName"> & { readonly accessorName: "case_conflict" };
     /** @deprecated Use `caseDecision` instead. This alias will be removed in the next major version. */
     readonly "case_decision": Omit<typeof tablesSchema.schemaType.tables["caseDecision"], "accessorName"> & { readonly accessorName: "case_decision" };
+    /** @deprecated Use `caseOption` instead. This alias will be removed in the next major version. */
+    readonly "case_option": Omit<typeof tablesSchema.schemaType.tables["caseOption"], "accessorName"> & { readonly accessorName: "case_option" };
+    /** @deprecated Use `caseRule` instead. This alias will be removed in the next major version. */
+    readonly "case_rule": Omit<typeof tablesSchema.schemaType.tables["caseRule"], "accessorName"> & { readonly accessorName: "case_rule" };
+    /** @deprecated Use `caseScore` instead. This alias will be removed in the next major version. */
+    readonly "case_score": Omit<typeof tablesSchema.schemaType.tables["caseScore"], "accessorName"> & { readonly accessorName: "case_score" };
+    /** @deprecated Use `caseShap` instead. This alias will be removed in the next major version. */
+    readonly "case_shap": Omit<typeof tablesSchema.schemaType.tables["caseShap"], "accessorName"> & { readonly accessorName: "case_shap" };
+    /** @deprecated Use `caseSimilar` instead. This alias will be removed in the next major version. */
+    readonly "case_similar": Omit<typeof tablesSchema.schemaType.tables["caseSimilar"], "accessorName"> & { readonly accessorName: "case_similar" };
     /** @deprecated Use `cedarPolicyStore` instead. This alias will be removed in the next major version. */
     readonly "cedar_policy_store": Omit<typeof tablesSchema.schemaType.tables["cedarPolicyStore"], "accessorName"> & { readonly accessorName: "cedar_policy_store" };
     /** @deprecated Use `cedarRule` instead. This alias will be removed in the next major version. */
     readonly "cedar_rule": Omit<typeof tablesSchema.schemaType.tables["cedarRule"], "accessorName"> & { readonly accessorName: "cedar_rule" };
+    /** @deprecated Use `claimCase` instead. This alias will be removed in the next major version. */
+    readonly "claim_case": Omit<typeof tablesSchema.schemaType.tables["claimCase"], "accessorName"> & { readonly accessorName: "claim_case" };
     /** @deprecated Use `claimDecision` instead. This alias will be removed in the next major version. */
     readonly "claim_decision": Omit<typeof tablesSchema.schemaType.tables["claimDecision"], "accessorName"> & { readonly accessorName: "claim_decision" };
     /** @deprecated Use `claimEvidence` instead. This alias will be removed in the next major version. */
     readonly "claim_evidence": Omit<typeof tablesSchema.schemaType.tables["claimEvidence"], "accessorName"> & { readonly accessorName: "claim_evidence" };
+    /** @deprecated Use `claimMessage` instead. This alias will be removed in the next major version. */
+    readonly "claim_message": Omit<typeof tablesSchema.schemaType.tables["claimMessage"], "accessorName"> & { readonly accessorName: "claim_message" };
     /** @deprecated Use `claimOutcome` instead. This alias will be removed in the next major version. */
     readonly "claim_outcome": Omit<typeof tablesSchema.schemaType.tables["claimOutcome"], "accessorName"> & { readonly accessorName: "claim_outcome" };
     /** @deprecated Use `claimPass` instead. This alias will be removed in the next major version. */
@@ -884,10 +1125,14 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "confidence_config": Omit<typeof tablesSchema.schemaType.tables["confidenceConfig"], "accessorName"> & { readonly accessorName: "confidence_config" };
     /** @deprecated Use `contractTerm` instead. This alias will be removed in the next major version. */
     readonly "contract_term": Omit<typeof tablesSchema.schemaType.tables["contractTerm"], "accessorName"> & { readonly accessorName: "contract_term" };
+    /** @deprecated Use `customerContract` instead. This alias will be removed in the next major version. */
+    readonly "customer_contract": Omit<typeof tablesSchema.schemaType.tables["customerContract"], "accessorName"> & { readonly accessorName: "customer_contract" };
     /** @deprecated Use `decisionCase` instead. This alias will be removed in the next major version. */
     readonly "decision_case": Omit<typeof tablesSchema.schemaType.tables["decisionCase"], "accessorName"> & { readonly accessorName: "decision_case" };
     /** @deprecated Use `decisionRecord` instead. This alias will be removed in the next major version. */
     readonly "decision_record": Omit<typeof tablesSchema.schemaType.tables["decisionRecord"], "accessorName"> & { readonly accessorName: "decision_record" };
+    /** @deprecated Use `decisionSnapshot` instead. This alias will be removed in the next major version. */
+    readonly "decision_snapshot": Omit<typeof tablesSchema.schemaType.tables["decisionSnapshot"], "accessorName"> & { readonly accessorName: "decision_snapshot" };
     /** @deprecated Use `disputeMessage` instead. This alias will be removed in the next major version. */
     readonly "dispute_message": Omit<typeof tablesSchema.schemaType.tables["disputeMessage"], "accessorName"> & { readonly accessorName: "dispute_message" };
     /** @deprecated Use `escalatedClaim` instead. This alias will be removed in the next major version. */
@@ -900,12 +1145,20 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "learned_rule": Omit<typeof tablesSchema.schemaType.tables["learnedRule"], "accessorName"> & { readonly accessorName: "learned_rule" };
     /** @deprecated Use `ledgerEntry` instead. This alias will be removed in the next major version. */
     readonly "ledger_entry": Omit<typeof tablesSchema.schemaType.tables["ledgerEntry"], "accessorName"> & { readonly accessorName: "ledger_entry" };
+    /** @deprecated Use `maintenanceLog` instead. This alias will be removed in the next major version. */
+    readonly "maintenance_log": Omit<typeof tablesSchema.schemaType.tables["maintenanceLog"], "accessorName"> & { readonly accessorName: "maintenance_log" };
+    /** @deprecated Use `minedRule` instead. This alias will be removed in the next major version. */
+    readonly "mined_rule": Omit<typeof tablesSchema.schemaType.tables["minedRule"], "accessorName"> & { readonly accessorName: "mined_rule" };
+    /** @deprecated Use `miningResult` instead. This alias will be removed in the next major version. */
+    readonly "mining_result": Omit<typeof tablesSchema.schemaType.tables["miningResult"], "accessorName"> & { readonly accessorName: "mining_result" };
     /** @deprecated Use `modelVersion` instead. This alias will be removed in the next major version. */
     readonly "model_version": Omit<typeof tablesSchema.schemaType.tables["modelVersion"], "accessorName"> & { readonly accessorName: "model_version" };
     /** @deprecated Use `passTelemetry` instead. This alias will be removed in the next major version. */
     readonly "pass_telemetry": Omit<typeof tablesSchema.schemaType.tables["passTelemetry"], "accessorName"> & { readonly accessorName: "pass_telemetry" };
     /** @deprecated Use `pipelineStep` instead. This alias will be removed in the next major version. */
     readonly "pipeline_step": Omit<typeof tablesSchema.schemaType.tables["pipelineStep"], "accessorName"> & { readonly accessorName: "pipeline_step" };
+    /** @deprecated Use `policyProposal` instead. This alias will be removed in the next major version. */
+    readonly "policy_proposal": Omit<typeof tablesSchema.schemaType.tables["policyProposal"], "accessorName"> & { readonly accessorName: "policy_proposal" };
     /** @deprecated Use `policyReplay` instead. This alias will be removed in the next major version. */
     readonly "policy_replay": Omit<typeof tablesSchema.schemaType.tables["policyReplay"], "accessorName"> & { readonly accessorName: "policy_replay" };
     /** @deprecated Use `policyRule` instead. This alias will be removed in the next major version. */
@@ -951,30 +1204,45 @@ const tableAccessorAliases = {
   "attack_fixture": "attackFixture",
   "attack_run": "attackRun",
   "attack_run_session": "attackRunSession",
+  "audit_decision": "auditDecision",
   "audit_log": "auditLog",
   "authorization_log": "authorizationLog",
+  "case_conflict": "caseConflict",
   "case_decision": "caseDecision",
+  "case_option": "caseOption",
+  "case_rule": "caseRule",
+  "case_score": "caseScore",
+  "case_shap": "caseShap",
+  "case_similar": "caseSimilar",
   "cedar_policy_store": "cedarPolicyStore",
   "cedar_rule": "cedarRule",
+  "claim_case": "claimCase",
   "claim_decision": "claimDecision",
   "claim_evidence": "claimEvidence",
+  "claim_message": "claimMessage",
   "claim_outcome": "claimOutcome",
   "claim_pass": "claimPass",
   "claim_reason": "claimReason",
   "claim_weather": "claimWeather",
   "confidence_config": "confidenceConfig",
   "contract_term": "contractTerm",
+  "customer_contract": "customerContract",
   "decision_case": "decisionCase",
   "decision_record": "decisionRecord",
+  "decision_snapshot": "decisionSnapshot",
   "dispute_message": "disputeMessage",
   "escalated_claim": "escalatedClaim",
   "event_log": "eventLog",
   "labeled_decision": "labeledDecision",
   "learned_rule": "learnedRule",
   "ledger_entry": "ledgerEntry",
+  "maintenance_log": "maintenanceLog",
+  "mined_rule": "minedRule",
+  "mining_result": "miningResult",
   "model_version": "modelVersion",
   "pass_telemetry": "passTelemetry",
   "pipeline_step": "pipelineStep",
+  "policy_proposal": "policyProposal",
   "policy_replay": "policyReplay",
   "policy_rule": "policyRule",
   "policy_version": "policyVersion",
@@ -1019,20 +1287,38 @@ export type DbView = __DbViewBase & {
   readonly "attack_run": __DbViewBase["attackRun"];
   /** @deprecated Use `attackRunSession` instead. This alias will be removed in the next major version. */
   readonly "attack_run_session": __DbViewBase["attackRunSession"];
+  /** @deprecated Use `auditDecision` instead. This alias will be removed in the next major version. */
+  readonly "audit_decision": __DbViewBase["auditDecision"];
   /** @deprecated Use `auditLog` instead. This alias will be removed in the next major version. */
   readonly "audit_log": __DbViewBase["auditLog"];
   /** @deprecated Use `authorizationLog` instead. This alias will be removed in the next major version. */
   readonly "authorization_log": __DbViewBase["authorizationLog"];
+  /** @deprecated Use `caseConflict` instead. This alias will be removed in the next major version. */
+  readonly "case_conflict": __DbViewBase["caseConflict"];
   /** @deprecated Use `caseDecision` instead. This alias will be removed in the next major version. */
   readonly "case_decision": __DbViewBase["caseDecision"];
+  /** @deprecated Use `caseOption` instead. This alias will be removed in the next major version. */
+  readonly "case_option": __DbViewBase["caseOption"];
+  /** @deprecated Use `caseRule` instead. This alias will be removed in the next major version. */
+  readonly "case_rule": __DbViewBase["caseRule"];
+  /** @deprecated Use `caseScore` instead. This alias will be removed in the next major version. */
+  readonly "case_score": __DbViewBase["caseScore"];
+  /** @deprecated Use `caseShap` instead. This alias will be removed in the next major version. */
+  readonly "case_shap": __DbViewBase["caseShap"];
+  /** @deprecated Use `caseSimilar` instead. This alias will be removed in the next major version. */
+  readonly "case_similar": __DbViewBase["caseSimilar"];
   /** @deprecated Use `cedarPolicyStore` instead. This alias will be removed in the next major version. */
   readonly "cedar_policy_store": __DbViewBase["cedarPolicyStore"];
   /** @deprecated Use `cedarRule` instead. This alias will be removed in the next major version. */
   readonly "cedar_rule": __DbViewBase["cedarRule"];
+  /** @deprecated Use `claimCase` instead. This alias will be removed in the next major version. */
+  readonly "claim_case": __DbViewBase["claimCase"];
   /** @deprecated Use `claimDecision` instead. This alias will be removed in the next major version. */
   readonly "claim_decision": __DbViewBase["claimDecision"];
   /** @deprecated Use `claimEvidence` instead. This alias will be removed in the next major version. */
   readonly "claim_evidence": __DbViewBase["claimEvidence"];
+  /** @deprecated Use `claimMessage` instead. This alias will be removed in the next major version. */
+  readonly "claim_message": __DbViewBase["claimMessage"];
   /** @deprecated Use `claimOutcome` instead. This alias will be removed in the next major version. */
   readonly "claim_outcome": __DbViewBase["claimOutcome"];
   /** @deprecated Use `claimPass` instead. This alias will be removed in the next major version. */
@@ -1045,10 +1331,14 @@ export type DbView = __DbViewBase & {
   readonly "confidence_config": __DbViewBase["confidenceConfig"];
   /** @deprecated Use `contractTerm` instead. This alias will be removed in the next major version. */
   readonly "contract_term": __DbViewBase["contractTerm"];
+  /** @deprecated Use `customerContract` instead. This alias will be removed in the next major version. */
+  readonly "customer_contract": __DbViewBase["customerContract"];
   /** @deprecated Use `decisionCase` instead. This alias will be removed in the next major version. */
   readonly "decision_case": __DbViewBase["decisionCase"];
   /** @deprecated Use `decisionRecord` instead. This alias will be removed in the next major version. */
   readonly "decision_record": __DbViewBase["decisionRecord"];
+  /** @deprecated Use `decisionSnapshot` instead. This alias will be removed in the next major version. */
+  readonly "decision_snapshot": __DbViewBase["decisionSnapshot"];
   /** @deprecated Use `disputeMessage` instead. This alias will be removed in the next major version. */
   readonly "dispute_message": __DbViewBase["disputeMessage"];
   /** @deprecated Use `escalatedClaim` instead. This alias will be removed in the next major version. */
@@ -1061,12 +1351,20 @@ export type DbView = __DbViewBase & {
   readonly "learned_rule": __DbViewBase["learnedRule"];
   /** @deprecated Use `ledgerEntry` instead. This alias will be removed in the next major version. */
   readonly "ledger_entry": __DbViewBase["ledgerEntry"];
+  /** @deprecated Use `maintenanceLog` instead. This alias will be removed in the next major version. */
+  readonly "maintenance_log": __DbViewBase["maintenanceLog"];
+  /** @deprecated Use `minedRule` instead. This alias will be removed in the next major version. */
+  readonly "mined_rule": __DbViewBase["minedRule"];
+  /** @deprecated Use `miningResult` instead. This alias will be removed in the next major version. */
+  readonly "mining_result": __DbViewBase["miningResult"];
   /** @deprecated Use `modelVersion` instead. This alias will be removed in the next major version. */
   readonly "model_version": __DbViewBase["modelVersion"];
   /** @deprecated Use `passTelemetry` instead. This alias will be removed in the next major version. */
   readonly "pass_telemetry": __DbViewBase["passTelemetry"];
   /** @deprecated Use `pipelineStep` instead. This alias will be removed in the next major version. */
   readonly "pipeline_step": __DbViewBase["pipelineStep"];
+  /** @deprecated Use `policyProposal` instead. This alias will be removed in the next major version. */
+  readonly "policy_proposal": __DbViewBase["policyProposal"];
   /** @deprecated Use `policyReplay` instead. This alias will be removed in the next major version. */
   readonly "policy_replay": __DbViewBase["policyReplay"];
   /** @deprecated Use `policyRule` instead. This alias will be removed in the next major version. */
@@ -1105,20 +1403,38 @@ export type Tables = __TablesBase & {
   readonly "attack_run": __TablesBase["attackRun"];
   /** @deprecated Use `attackRunSession` instead. This alias will be removed in the next major version. */
   readonly "attack_run_session": __TablesBase["attackRunSession"];
+  /** @deprecated Use `auditDecision` instead. This alias will be removed in the next major version. */
+  readonly "audit_decision": __TablesBase["auditDecision"];
   /** @deprecated Use `auditLog` instead. This alias will be removed in the next major version. */
   readonly "audit_log": __TablesBase["auditLog"];
   /** @deprecated Use `authorizationLog` instead. This alias will be removed in the next major version. */
   readonly "authorization_log": __TablesBase["authorizationLog"];
+  /** @deprecated Use `caseConflict` instead. This alias will be removed in the next major version. */
+  readonly "case_conflict": __TablesBase["caseConflict"];
   /** @deprecated Use `caseDecision` instead. This alias will be removed in the next major version. */
   readonly "case_decision": __TablesBase["caseDecision"];
+  /** @deprecated Use `caseOption` instead. This alias will be removed in the next major version. */
+  readonly "case_option": __TablesBase["caseOption"];
+  /** @deprecated Use `caseRule` instead. This alias will be removed in the next major version. */
+  readonly "case_rule": __TablesBase["caseRule"];
+  /** @deprecated Use `caseScore` instead. This alias will be removed in the next major version. */
+  readonly "case_score": __TablesBase["caseScore"];
+  /** @deprecated Use `caseShap` instead. This alias will be removed in the next major version. */
+  readonly "case_shap": __TablesBase["caseShap"];
+  /** @deprecated Use `caseSimilar` instead. This alias will be removed in the next major version. */
+  readonly "case_similar": __TablesBase["caseSimilar"];
   /** @deprecated Use `cedarPolicyStore` instead. This alias will be removed in the next major version. */
   readonly "cedar_policy_store": __TablesBase["cedarPolicyStore"];
   /** @deprecated Use `cedarRule` instead. This alias will be removed in the next major version. */
   readonly "cedar_rule": __TablesBase["cedarRule"];
+  /** @deprecated Use `claimCase` instead. This alias will be removed in the next major version. */
+  readonly "claim_case": __TablesBase["claimCase"];
   /** @deprecated Use `claimDecision` instead. This alias will be removed in the next major version. */
   readonly "claim_decision": __TablesBase["claimDecision"];
   /** @deprecated Use `claimEvidence` instead. This alias will be removed in the next major version. */
   readonly "claim_evidence": __TablesBase["claimEvidence"];
+  /** @deprecated Use `claimMessage` instead. This alias will be removed in the next major version. */
+  readonly "claim_message": __TablesBase["claimMessage"];
   /** @deprecated Use `claimOutcome` instead. This alias will be removed in the next major version. */
   readonly "claim_outcome": __TablesBase["claimOutcome"];
   /** @deprecated Use `claimPass` instead. This alias will be removed in the next major version. */
@@ -1131,10 +1447,14 @@ export type Tables = __TablesBase & {
   readonly "confidence_config": __TablesBase["confidenceConfig"];
   /** @deprecated Use `contractTerm` instead. This alias will be removed in the next major version. */
   readonly "contract_term": __TablesBase["contractTerm"];
+  /** @deprecated Use `customerContract` instead. This alias will be removed in the next major version. */
+  readonly "customer_contract": __TablesBase["customerContract"];
   /** @deprecated Use `decisionCase` instead. This alias will be removed in the next major version. */
   readonly "decision_case": __TablesBase["decisionCase"];
   /** @deprecated Use `decisionRecord` instead. This alias will be removed in the next major version. */
   readonly "decision_record": __TablesBase["decisionRecord"];
+  /** @deprecated Use `decisionSnapshot` instead. This alias will be removed in the next major version. */
+  readonly "decision_snapshot": __TablesBase["decisionSnapshot"];
   /** @deprecated Use `disputeMessage` instead. This alias will be removed in the next major version. */
   readonly "dispute_message": __TablesBase["disputeMessage"];
   /** @deprecated Use `escalatedClaim` instead. This alias will be removed in the next major version. */
@@ -1147,12 +1467,20 @@ export type Tables = __TablesBase & {
   readonly "learned_rule": __TablesBase["learnedRule"];
   /** @deprecated Use `ledgerEntry` instead. This alias will be removed in the next major version. */
   readonly "ledger_entry": __TablesBase["ledgerEntry"];
+  /** @deprecated Use `maintenanceLog` instead. This alias will be removed in the next major version. */
+  readonly "maintenance_log": __TablesBase["maintenanceLog"];
+  /** @deprecated Use `minedRule` instead. This alias will be removed in the next major version. */
+  readonly "mined_rule": __TablesBase["minedRule"];
+  /** @deprecated Use `miningResult` instead. This alias will be removed in the next major version. */
+  readonly "mining_result": __TablesBase["miningResult"];
   /** @deprecated Use `modelVersion` instead. This alias will be removed in the next major version. */
   readonly "model_version": __TablesBase["modelVersion"];
   /** @deprecated Use `passTelemetry` instead. This alias will be removed in the next major version. */
   readonly "pass_telemetry": __TablesBase["passTelemetry"];
   /** @deprecated Use `pipelineStep` instead. This alias will be removed in the next major version. */
   readonly "pipeline_step": __TablesBase["pipelineStep"];
+  /** @deprecated Use `policyProposal` instead. This alias will be removed in the next major version. */
+  readonly "policy_proposal": __TablesBase["policyProposal"];
   /** @deprecated Use `policyReplay` instead. This alias will be removed in the next major version. */
   readonly "policy_replay": __TablesBase["policyReplay"];
   /** @deprecated Use `policyRule` instead. This alias will be removed in the next major version. */
