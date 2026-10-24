@@ -22,7 +22,7 @@ pub enum AttackResult {
 }
 
 #[derive(SpacetimeType, Clone, Copy, PartialEq, Eq, Debug)]
-pub enum ClaimStatus {
+pub enum AttackClaimStatus {
     Pending,
     Approved,
     Denied,
@@ -36,8 +36,8 @@ pub enum UserRole {
     Admin,
 }
 
-#[spacetimedb::table(accessor = claim, public)]
-pub struct Claim {
+#[spacetimedb::table(accessor = attack_claim, public)]
+pub struct AttackClaim {
     #[primary_key]
     #[auto_inc]
     pub id: u64,
@@ -46,7 +46,7 @@ pub struct Claim {
     pub station_id: String,
     pub amount_cents: i64,
     pub claimed_reason: String,
-    pub status: ClaimStatus,
+    pub status: AttackClaimStatus,
     pub fraud_flags: String,
     pub created_at: Timestamp,
 }
@@ -164,7 +164,7 @@ fn detect_fraud(
         .timestamp
         .to_micros_since_unix_epoch()
         .saturating_sub(DUPLICATE_WINDOW_HOURS * 3600 * 1_000_000);
-    for existing in ctx.db.claim().iter() {
+    for existing in ctx.db.attack_claim().iter() {
         if existing.pass_id == pass_id
             && existing.owner == caller
             && existing.created_at.to_micros_since_unix_epoch() > window_start
@@ -235,12 +235,12 @@ pub fn file_claim(
         detect_fraud(ctx, pass_id, &station_id, amount_cents, &claimed_reason, caller);
 
     let status = if is_fraud {
-        ClaimStatus::Flagged
+        AttackClaimStatus::Flagged
     } else {
-        ClaimStatus::Approved
+        AttackClaimStatus::Approved
     };
 
-    ctx.db.claim().insert(Claim {
+    ctx.db.attack_claim().insert(AttackClaim {
         id: 0,
         owner: caller,
         pass_id,
@@ -707,14 +707,14 @@ fn execute_attack(
                 .and_then(|s| s.parse::<u64>().ok())
                 .unwrap_or(10);
 
-            ctx.db.claim().insert(Claim {
+            ctx.db.attack_claim().insert(AttackClaim {
                 id: 0,
                 owner: attacker_identity,
                 pass_id,
                 station_id: "STATION-A".to_string(),
                 amount_cents: fixture.amount_cents / 2,
                 claimed_reason: "First claim".to_string(),
-                status: ClaimStatus::Approved,
+                status: AttackClaimStatus::Approved,
                 fraud_flags: String::new(),
                 created_at: ctx.timestamp,
             });
@@ -1166,20 +1166,20 @@ pub fn clear_attack_runs(ctx: &ReducerContext) {
     for session in ctx.db.attack_run_session().iter() {
         ctx.db.attack_run_session().id().delete(session.id);
     }
-    for claim in ctx.db.claim().iter() {
-        ctx.db.claim().id().delete(claim.id);
+    for claim in ctx.db.attack_claim().iter() {
+        ctx.db.attack_claim().id().delete(claim.id);
     }
     log::info!("Cleared all attack runs and claims");
 }
 
 #[spacetimedb::reducer]
-pub fn get_my_claims(ctx: &ReducerContext) {
+pub fn get_my_attack_claims(ctx: &ReducerContext) {
     let caller = ctx.sender();
     let my_claims: Vec<_> = ctx
         .db
-        .claim()
+        .attack_claim()
         .iter()
         .filter(|c| c.owner == caller)
         .collect();
-    log::info!("User {} has {} claims", caller, my_claims.len());
+    log::info!("User {} has {} attack claims", caller, my_claims.len());
 }

@@ -51,8 +51,14 @@ class SpacetimeDBClient {
   private messageQueue: Array<(msg: WSMessage) => void> = [];
   private identity: string;
   private connected = false;
+  private host: string;
+  private module: string;
+  private role: string;
 
-  constructor(private host: string, private module: string, private role: string) {
+  constructor(host: string, module: string, role: string) {
+    this.host = host;
+    this.module = module;
+    this.role = role;
     this.identity = `attacker-${role}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
@@ -73,7 +79,7 @@ class SpacetimeDBClient {
             query_strings: [
               'SELECT * FROM attack_run',
               'SELECT * FROM attack_run_session',
-              'SELECT * FROM claim',
+              'SELECT * FROM attack_claim',
             ],
           },
         }));
@@ -129,18 +135,6 @@ class SpacetimeDBClient {
 
   async registerAttacker(roleCode: number): Promise<void> {
     await this.callReducer('register_attacker', [roleCode]);
-  }
-
-  async fileClaim(passId: number, stationId: string, amountCents: number, reason: string): Promise<void> {
-    await this.callReducer('file_claim', [passId, stationId, amountCents, reason]);
-  }
-
-  async raiseOwnLimit(newLimitCents: number): Promise<void> {
-    await this.callReducer('raise_own_limit', [newLimitCents]);
-  }
-
-  async editPolicy(policyId: string, newMaxClaimCents: number): Promise<void> {
-    await this.callReducer('edit_policy', [policyId, newMaxClaimCents]);
   }
 
   async runAttackType(attackTypeCode: number): Promise<void> {
@@ -297,60 +291,10 @@ async function runAllAttacksWithMultipleIdentities(
   }
 }
 
-async function runDirectAttacks(host: string, module: string): Promise<void> {
-  console.log('\n========================================');
-  console.log('  Direct Attack Simulation');
-  console.log('========================================\n');
-
-  const customers = [
-    new SpacetimeDBClient(host, module, 'adversarial-customer'),
-    new SpacetimeDBClient(host, module, 'duplicate-claimer'),
-    new SpacetimeDBClient(host, module, 'forger'),
-  ];
-  
-  const insider = new SpacetimeDBClient(host, module, 'insider-operator');
-  
-  try {
-    for (const client of customers) {
-      await client.connect();
-      await client.registerAttacker(0);
-    }
-    await insider.connect();
-    await insider.registerAttacker(1);
-    
-    console.log('\n--- Adversarial Customer: Filing bogus claims ---');
-    await customers[0].fileClaim(999, 'FAKE-STATION', 5000000, 'Dropped pass compensation for solar flare');
-    await customers[0].fileClaim(1, 'STATION-A', 2500000, 'Inflated bandwidth charges');
-    
-    console.log('\n--- Duplicate Claimer: Double-submitting ---');
-    await customers[1].fileClaim(10, 'STATION-B', 1500000, 'First legitimate claim');
-    await new Promise(resolve => setTimeout(resolve, 200));
-    await customers[1].fileClaim(10, 'STATION-B', 1500000, 'Duplicate submission');
-    
-    console.log('\n--- Forger: Wrong station claims ---');
-    await customers[2].fileClaim(20, 'FORGED-STATION-X', 4500000, 'Telemetry compensation');
-    
-    console.log('\n--- Insider: Attempting to raise own limit ---');
-    await insider.raiseOwnLimit(50000000);
-    
-    console.log('\n--- Insider: Attempting to edit policy ---');
-    await insider.editPolicy('default', 999999999);
-
-    console.log('\nDirect attacks completed. Check claims table for results.');
-    
-  } finally {
-    for (const client of customers) {
-      client.disconnect();
-    }
-    insider.disconnect();
-  }
-}
-
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   let host = SPACETIMEDB_HOST;
   let module = SPACETIMEDB_MODULE;
-  let mode = 'all';
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--host' && args[i + 1]) {
@@ -359,21 +303,14 @@ async function main(): Promise<void> {
     } else if (args[i] === '--module' && args[i + 1]) {
       module = args[i + 1];
       i++;
-    } else if (args[i] === '--direct') {
-      mode = 'direct';
     }
   }
 
   console.log(`Host: ${host}`);
   console.log(`Module: ${module}`);
-  console.log(`Mode: ${mode}`);
 
   try {
-    if (mode === 'direct') {
-      await runDirectAttacks(host, module);
-    } else {
-      await runAllAttacksWithMultipleIdentities(host, module);
-    }
+    await runAllAttacksWithMultipleIdentities(host, module);
   } catch (err) {
     console.error('Error running attacks:', err);
     process.exit(1);
