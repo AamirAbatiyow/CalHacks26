@@ -168,12 +168,19 @@ export function createLink(from: THREE.Vector3, to: THREE.Vector3, color: string
 function bandMesh(from: number, to: number, hemisphere: 1 | -1, color: string, opacity: number, radius: number): THREE.Mesh {
   const positions: number[] = [];
   const step = 4;
-  for (let m = 0; m < 360; m += step) {
-    const quad = [
-      fromGeomagnetic(hemisphere * from, m), fromGeomagnetic(hemisphere * from, m + step),
-      fromGeomagnetic(hemisphere * to, m + step), fromGeomagnetic(hemisphere * to, m),
-    ].map(p => latLonToVector3(p.lat, p.lon, radius));
-    for (const i of [0, 1, 2, 0, 2, 3]) positions.push(quad[i].x, quad[i].y, quad[i].z);
+  // Wide flat quads would cut under the sphere and vanish behind the occluder,
+  // so the band is split into rows about 1° of latitude tall.
+  const rows = Math.max(1, Math.ceil(Math.abs(to - from)));
+  for (let r = 0; r < rows; r++) {
+    const a = hemisphere * (from + ((to - from) * r) / rows);
+    const b = hemisphere * (from + ((to - from) * (r + 1)) / rows);
+    for (let m = 0; m < 360; m += step) {
+      const quad = [
+        fromGeomagnetic(a, m), fromGeomagnetic(a, m + step),
+        fromGeomagnetic(b, m + step), fromGeomagnetic(b, m),
+      ].map(p => latLonToVector3(p.lat, p.lon, radius));
+      for (const i of [0, 1, 2, 0, 2, 3]) positions.push(quad[i].x, quad[i].y, quad[i].z);
+    }
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
