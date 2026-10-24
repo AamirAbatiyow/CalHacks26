@@ -71,10 +71,14 @@ def _next_link(r: requests.Response) -> str | None:
     return None
 
 
-def make_blocks(n_blocks: int, block_hours: float, days_back: int, min_age_days: int, seed: int) -> list[tuple[datetime, datetime]]:
-    """Evenly spaced blocks with a random start hour so time of day is spread."""
+ANCHOR = datetime(2026, 10, 24, 11, tzinfo=timezone.utc)
+
+
+def make_blocks(n_blocks: int, block_hours: float, days_back: int, min_age_days: int, seed: int,
+                anchor: datetime = ANCHOR) -> list[tuple[datetime, datetime]]:
+    """Evenly spaced blocks with a random start hour so time of day is spread; fixed anchor keeps the cache valid."""
     rng = np.random.default_rng(seed)
-    now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    now = anchor
     newest = now - timedelta(days=min_age_days)
     oldest = now - timedelta(days=days_back)
     span = (newest - oldest) / n_blocks
@@ -87,9 +91,10 @@ def make_blocks(n_blocks: int, block_hours: float, days_back: int, min_age_days:
     return blocks
 
 
-def fetch_block(start: datetime, end: datetime) -> int:
+def fetch_block(start: datetime, end: datetime, status: str | None = None) -> int:
+    """All observations in [start, end); with `status`, only that status (block dir gets a suffix)."""
     tag = f"{start:%Y%m%dT%H}_{end:%Y%m%dT%H}"
-    bdir = CACHE / tag
+    bdir = CACHE / tag / (status or "all")
     bdir.mkdir(parents=True, exist_ok=True)
     done = bdir / "DONE"
     if done.exists():
@@ -97,6 +102,8 @@ def fetch_block(start: datetime, end: datetime) -> int:
 
     url = f"{NETWORK_API}/observations/"
     params = {"start": start.strftime("%Y-%m-%dT%H:%M:%SZ"), "end": end.strftime("%Y-%m-%dT%H:%M:%SZ"), "format": "json"}
+    if status:
+        params["status"] = status
     page, n = 0, 0
     state = bdir / "next.json"
     if state.exists():
@@ -154,6 +161,8 @@ def main() -> int:
     p.add_argument("--min-age-days", type=int, default=5, help="skip recent days that are not vetted yet")
     p.add_argument("--seed", type=int, default=7)
     p.add_argument("--side-data-only", action="store_true")
+    p.add_argument("--all-statuses", action="store_true",
+                   help="also fetch unvetted 'unknown' passes (costs ~45%% more requests)")
     args = p.parse_args()
 
     blocks = make_blocks(args.blocks, args.block_hours, args.days_back, args.min_age_days, args.seed)
@@ -163,7 +172,11 @@ def main() -> int:
     total = 0
     for i, (s, e) in enumerate(blocks):
         print(f"block {i + 1}/{len(blocks)}: {s:%Y-%m-%d %H:%M} -> {e:%Y-%m-%d %H:%M}", flush=True)
-        total += fetch_block(s, e)
+        tag_dir = CACHE / f"{s:%Y%m%dT%H}_{e:%Y%m%dT%H}"
+        if args.all_statuses or (tag_dir / "all").exists():
+            total += fetch_block(s, e)
+        else:
+            total += sum(fetch_block(s, e, st) for st in ("good", "bad", "failed"))
         print(f"total so far: {total}", flush=True)
     return 0
 

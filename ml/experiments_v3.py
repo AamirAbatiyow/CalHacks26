@@ -64,11 +64,13 @@ FULL_CAT = BASE_CAT + CO_OBS_CAT + BETTER_CAT
 def experiments() -> Dict[str, Dict[str, Any]]:
     return {
         "E0_v2_baseline": dict(num=BASE_NUM + SAT_TE_FEATURES, cat=BASE_CAT, sat_te=True,
-                               note="v2 recipe (hardware + fold-safe satellite TE) on the uniform data"),
+                               note="v2 recipe (hardware + fold-safe satellite TE) on the uniform data; TE is not time-causal"),
         "E1_time_kp": dict(num=BASE_NUM + SAT_TE_FEATURES + TIME_KP, cat=BASE_CAT, sat_te=True,
                            note="+ Kp and time of day (valid now that sampling is time-uniform)"),
         "E2_station_health": dict(num=BASE_NUM + SAT_TE_FEATURES + TIME_KP + STATION_HEALTH, cat=BASE_CAT, sat_te=True,
                                   note="+ past-only station health (rolling outcomes, last alive, 24h uptime)"),
+        "E2c_station_health_causal": dict(num=BASE_NUM + TIME_KP + STATION_HEALTH, cat=BASE_CAT,
+                                          note="E2 without satellite TE (TE uses same-block, partly future, outcomes)"),
         "E3_coobs_txstatus": dict(num=BASE_NUM + TIME_KP + STATION_HEALTH + CO_OBS, cat=BASE_CAT + CO_OBS_CAT,
                                   note="+ causal co-observation / satellite & transmitter history; replaces satellite TE"),
         "E4_better_features": dict(num=FULL_NUM, cat=FULL_CAT,

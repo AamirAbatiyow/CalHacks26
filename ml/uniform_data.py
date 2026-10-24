@@ -53,9 +53,9 @@ KEEP_COLS = [
 
 def load_raw_observations() -> pd.DataFrame:
     rows = []
-    for f in sorted(glob.glob(str(CACHE / "*" / "page_*.json"))):
+    for f in sorted(glob.glob(str(CACHE / "*" / "*" / "page_*.json"))):
         for o in json.load(open(f)):
-            rows.append({k: o.get(k) for k in KEEP_COLS} | {"block": Path(f).parent.name})
+            rows.append({k: o.get(k) for k in KEEP_COLS} | {"block": Path(f).parent.parent.name})
     df = pd.DataFrame(rows).drop_duplicates("id").dropna(subset=["ground_station", "norad_cat_id", "start", "end"])
     df["ground_station"] = df["ground_station"].astype(int)
     df["norad_cat_id"] = df["norad_cat_id"].astype(int)

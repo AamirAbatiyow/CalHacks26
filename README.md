@@ -345,6 +345,50 @@ The model will use real data when available and fall back to synthetic augmentat
 - **Training on all 3,500 passes** (`--window all`) gives AUC 0.850 and, at 14.9% escalation, FAIL precision 0.773, OK precision 0.861 and 0.820 accuracy. These numbers are optimistic because of the collection-window artifact described above.
 - Fold-to-fold spread is large (±5–10 points in precision), because each fold holds out about 50 stations.
 
+#### v3 experiments (time-uniform data, past-only features). Work in progress, small sample
+
+`ml/fetch_uniform.py` re-fetches SatNOGS with every status taken from the same time blocks: ten 8-hour blocks spaced across Aug 23 to Oct 14. `ml/uniform_data.py` builds features that use only information available before the pass:
+
+- **Station health** from the station's own past passes, using only passes that ended at least 1 hour before this one.
+- **Co-observation** of the same satellite at other stations under the same lag rule.
+- **Transmitter status**, used only when its `updated` timestamp predates the pass.
+- **Orbit and radio context:** TLE age, frequency versus antenna range, culmination margin, and Kp from GFZ.
+
+Fields written after the pass (`client_metadata`, waterfall, vetting, `status_certainty`) are never used. Run `python -m ml.experiments_v3` to reproduce; full results are in `ml/models/experiments_v3.json`.
+
+**Data limits:** the SatNOGS observations API allows about 50 requests per 35 minutes and ignores `page_size`, so only part of block 1 is fetched: **794 labeled passes, 187 stations**, 51% good, 26% failed (no data), 23% bad. The station × future-time split needs at least two blocks, so it has not run yet. Every number below comes from held-out stations within a single 8-hour block, and fold std is ±0.03–0.10, so most differences between experiments are within noise.
+
+| Held-out stations, ~17% target (α picked on training OOF) | AUC | Escalation | Acc (auto) | Prec FAIL | Prec OK | Recall FAIL (all) |
+|---|---|---|---|---|---|---|
+| E0 v2 recipe (hardware + satellite TE) | 0.765±0.023 | 23.3% | 0.759±0.033 | 0.758 | 0.759 | 0.609 |
+| E1 + Kp, time of day | 0.769±0.022 | 22.5% | 0.771±0.023 | 0.771 | 0.770 | 0.630 |
+| E2 + past-only station health | 0.831±0.037 | 20.0% | 0.813±0.034 | 0.817 | 0.808 | 0.684 |
+| E2c = E2 without satellite TE (strictly causal) | 0.747±0.076 | 22.3% | 0.713±0.067 | 0.721 | 0.704 | 0.622 |
+| E3 causal co-observation + transmitter status (no TE) | 0.761±0.068 | 20.9% | 0.721±0.058 | 0.717 | 0.727 | 0.630 |
+| E4 + TLE age, band vs antenna, margins | 0.761±0.067 | 21.4% | 0.724±0.061 | 0.716 | 0.734 | 0.614 |
+| E5a stacked CatBoost + XGBoost + LR | 0.754±0.063 | 18.9% | 0.750±0.064 | 0.752 | 0.748 | 0.642 |
+| E5b + beta-binomial station / satellite prior | 0.760±0.066 | 21.9% | 0.734±0.060 | 0.730 | 0.738 | 0.601 |
+| E5c + group Mondrian (history bucket × band) | 0.760±0.066 | 22.2% | 0.725±0.067 | 0.722 | 0.729 | 0.645 |
+| E6 two-stage (no-data / bad-signal) | 0.760±0.077 | 24.4% | 0.647±0.050 | 0.632 | 0.695 | 0.751 |
+| X1 NON-CAUSAL: + same-pass outcomes at other stations | 0.821±0.042 | 18.0% | 0.802±0.043 | 0.782 | 0.823 | 0.679 |
+
+| Held-out stations, 0.95 precision target | Coverage | Acc (auto) | Prec FAIL | #FAIL / #OK calls |
+|---|---|---|---|---|
+| E0 v2 recipe | 1.9%±3.5 | 0.800 | 0.846 | 13 / 2 |
+| E2 + station health (with TE) | 15.1%±5.3 | 0.950 | 0.957 | 117 / 3 |
+| E2c station health, causal | 13.2%±8.2 | 0.981 | 0.990 | 100 / 5 |
+| E3 causal co-observation | 13.2%±8.8 | 0.971 | 0.989 | 93 / 12 |
+| E4 better features | 11.1%±6.4 | 0.977 | 0.988 | 83 / 5 |
+| E5a stacked | 11.8%±7.6 | 0.957 | 0.988 | 83 / 11 |
+| E6 two-stage | 13.6%±7.3 | 0.944 | 0.951 | 102 / 6 |
+
+What this shows so far:
+
+- **The satellite target encoding behind E0–E2 and v2 is not time-causal.** Within a block it uses the same satellite's outcomes at other stations, including later passes. E2's apparent gain disappears once it is removed (E2c), and its numbers track X1, the explicitly non-causal triage ablation.
+- **Past-only station health does not raise accuracy at 17% escalation on this sample, but it makes the high-precision mode real.** At the 0.95 target, coverage goes from about 2% (v2 recipe) to 11–15%, with FAIL precision about 0.99. Almost all of those calls are confident "no data" failures at stations with recent outages. Confident OK calls stay too rare to meet the target.
+- **Stacking, the Bayesian prior, group Mondrian and the extra features** are within noise of each other on 794 passes. Two-stage routing is worse at 17% escalation, because the per-stage alpha search over-calls FAIL, though it is comparable at the 0.95 target.
+- **The causal demo number on this data** is about 0.72 accuracy on auto-decided passes at 21–22% realized escalation (E3/E4). The v2 figure of 0.798 accuracy at 17.3% escalation is optimistic for the same TE reason.
+
 ```python
 import joblib
 from ml.conformal_ensemble import build_features, load_station_meta
