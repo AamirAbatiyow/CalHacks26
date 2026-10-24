@@ -140,6 +140,15 @@ fn attack_type_from_u8(v: u8) -> AttackType {
 }
 
 const MAX_REASONABLE_CLAIM_CENTS: i64 = 1_000_000;
+
+/// A run executes in one reducer transaction, so every row shares
+/// `ctx.timestamp`. Rows are instead placed on the run's own timeline,
+/// one second per attack in execution order, so the log reads as a sequence.
+const ATTACK_STEP_MICROS: i64 = 1_000_000;
+
+fn sequence_time(ctx: &ReducerContext, step: i64) -> Timestamp {
+    Timestamp::from_micros_since_unix_epoch(ctx.timestamp.to_micros_since_unix_epoch() + step * ATTACK_STEP_MICROS)
+}
 const DUPLICATE_WINDOW_HOURS: i64 = 24;
 
 fn detect_fraud(
@@ -991,7 +1000,7 @@ pub fn run_attack_type(ctx: &ReducerContext, attack_type_code: u8) {
 
     let total = fixtures.len() as u32;
 
-    for fixture in fixtures {
+    for (seq, fixture) in (1i64..).zip(fixtures) {
         let (result, log_detail) = execute_attack(ctx, &fixture, attacker_identity);
 
         match result {
@@ -1024,14 +1033,14 @@ pub fn run_attack_type(ctx: &ReducerContext, attack_type_code: u8) {
             attack_type,
             result,
             amount_cents: fixture.amount_cents,
-            timestamp: ctx.timestamp,
+            timestamp: sequence_time(ctx, seq),
             log_message: log_msg,
             attacker_identity: Some(format!("{}", attacker_identity)),
         });
     }
 
     ctx.db.attack_run_session().id().update(AttackRunSession {
-        completed_at: Some(ctx.timestamp),
+        completed_at: Some(sequence_time(ctx, total as i64 + 1)),
         total_attacks: total,
         caught,
         missed,
@@ -1047,7 +1056,7 @@ pub fn run_attack_type(ctx: &ReducerContext, attack_type_code: u8) {
         attack_type,
         result: AttackResult::Pending,
         amount_cents: 0,
-        timestamp: ctx.timestamp,
+        timestamp: sequence_time(ctx, total as i64 + 1),
         log_message: final_log,
         attacker_identity: None,
     });
@@ -1058,7 +1067,7 @@ pub fn run_attack_type(ctx: &ReducerContext, attack_type_code: u8) {
         attack_type,
         result: AttackResult::Pending,
         amount_cents: 0,
-        timestamp: ctx.timestamp,
+        timestamp: sequence_time(ctx, total as i64 + 1),
         log_message: "Run complete".to_string(),
         attacker_identity: None,
     });
@@ -1087,7 +1096,7 @@ pub fn run_all_attacks(ctx: &ReducerContext) {
     let fixtures: Vec<_> = ctx.db.attack_fixture().iter().collect();
     let total = fixtures.len() as u32;
 
-    for fixture in fixtures {
+    for (seq, fixture) in (1i64..).zip(fixtures) {
         let (result, log_detail) = execute_attack(ctx, &fixture, attacker_identity);
 
         match result {
@@ -1120,14 +1129,14 @@ pub fn run_all_attacks(ctx: &ReducerContext) {
             attack_type: fixture.attack_type,
             result,
             amount_cents: fixture.amount_cents,
-            timestamp: ctx.timestamp,
+            timestamp: sequence_time(ctx, seq),
             log_message: log_msg,
             attacker_identity: Some(format!("{}", attacker_identity)),
         });
     }
 
     ctx.db.attack_run_session().id().update(AttackRunSession {
-        completed_at: Some(ctx.timestamp),
+        completed_at: Some(sequence_time(ctx, total as i64 + 1)),
         total_attacks: total,
         caught,
         missed,
@@ -1143,7 +1152,7 @@ pub fn run_all_attacks(ctx: &ReducerContext) {
         attack_type: AttackType::InflatedClaim,
         result: AttackResult::Pending,
         amount_cents: 0,
-        timestamp: ctx.timestamp,
+        timestamp: sequence_time(ctx, total as i64 + 1),
         log_message: final_log,
         attacker_identity: None,
     });
@@ -1154,7 +1163,7 @@ pub fn run_all_attacks(ctx: &ReducerContext) {
         attack_type: AttackType::InflatedClaim,
         result: AttackResult::Pending,
         amount_cents: 0,
-        timestamp: ctx.timestamp,
+        timestamp: sequence_time(ctx, total as i64 + 1),
         log_message: "Run complete".to_string(),
         attacker_identity: None,
     });
