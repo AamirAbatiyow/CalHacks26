@@ -2,7 +2,7 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 290px;
+  width: 304px;
   margin: 14px 0 0 14px;
   background: rgba(0, 0, 0, 0.85);
   backdrop-filter: blur(8px);
@@ -83,7 +83,7 @@
 
 .gic-row {
   display: grid;
-  grid-template-columns: 112px minmax(0, 1fr);
+  grid-template-columns: 124px minmax(0, 1fr);
   gap: 8px;
   line-height: 1.4;
 }
