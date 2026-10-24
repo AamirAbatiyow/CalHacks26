@@ -1,5 +1,15 @@
 use spacetimedb::{ReducerContext, SpacetimeType, Table, Timestamp};
 
+use crate::authority::{check_authorization, AuthzDecision};
+use crate::confidence_gate::{
+    determine_route, DecisionRoute, CONFIDENCE_AUTO_APPROVE_THRESHOLD,
+    CONFIDENCE_HUMAN_APPROVE_THRESHOLD, COST_FLOOR_AUTO_REVIEW_CENTS,
+};
+use crate::{satellite, space_weather, station};
+
+/// NOAA G1 storms start at Kp 5.
+const STORM_KP_THRESHOLD: f32 = 5.0;
+
 #[derive(SpacetimeType, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ClaimGate {
     Auto,
@@ -81,6 +91,107 @@ pub struct ClaimWeather {
     pub storm_active: bool,
 }
 
+/// SHAP contributions behind a claim's confidence score, in log-odds.
+#[spacetimedb::table(accessor = claim_reason, public)]
+pub struct ClaimReason {
+    #[primary_key]
+    #[auto_inc]
+    pub id: u64,
+    #[index(btree)]
+    pub claim_id: String,
+    pub feature: String,
+    pub detail: String,
+    pub shap_value: f32,
+}
+
+fn dollars(cents: i64) -> String {
+    format!("${}", cents / 100)
+}
+
+/// The confidence-gate condition that routed a decision, worded for the Claim page.
+pub fn decision_rule(route: DecisionRoute, confidence_percent: i64, amount_cents: i64) -> String {
+    let cap = dollars(COST_FLOOR_AUTO_REVIEW_CENTS);
+    match route {
+        DecisionRoute::AutoApprove => format!(
+            "auto_approve: confidence >= {}% and credit <= {}",
+            CONFIDENCE_AUTO_APPROVE_THRESHOLD, cap
+        ),
+        DecisionRoute::HumanApproval if amount_cents > COST_FLOOR_AUTO_REVIEW_CENTS => {
+            format!("requires_approval: credit over {} auto-approve cap", cap)
+        }
+        DecisionRoute::HumanApproval => format!(
+            "requires_approval: confidence below {}%",
+            CONFIDENCE_AUTO_APPROVE_THRESHOLD
+        ),
+        DecisionRoute::Escalated if confidence_percent < CONFIDENCE_HUMAN_APPROVE_THRESHOLD => {
+            format!("escalate: confidence below {}%", CONFIDENCE_HUMAN_APPROVE_THRESHOLD)
+        }
+        DecisionRoute::Escalated => format!(
+            "escalate: credit over {} with confidence below {}%",
+            cap, CONFIDENCE_AUTO_APPROVE_THRESHOLD
+        ),
+    }
+}
+
+/// Credits the verified part of the model's loss estimate and routes it through
+/// the confidence gate and the active Cedar policy, like `process_claim_decision`.
+fn insert_decision(ctx: &ReducerContext, claim_id: String, confidence_percent: i32, model_version: String) {
+    let Some(evidence) = ctx.db.claim_evidence().claim_id().find(claim_id.clone()) else {
+        log::error!("No evidence for claim {}; seed_claim_evidence first", claim_id);
+        return;
+    };
+    let credit_amount_cents = (evidence.estimated_loss_cents - evidence.missing_evidence_cents).max(0);
+    let confidence = confidence_percent as i64;
+
+    let mut route = determine_route(confidence, credit_amount_cents);
+    let authz_action = if route == DecisionRoute::AutoApprove { "auto_approve" } else { "recommend_approval" };
+    let authz = check_authorization(ctx, "ai_analyst", authz_action, "Claim", &claim_id, credit_amount_cents, confidence);
+    if route == DecisionRoute::AutoApprove && authz.decision != AuthzDecision::Allow {
+        route = DecisionRoute::HumanApproval;
+    }
+    let policy_version = if authz.policy_version == "none" {
+        crate::CURRENT_POLICY_VERSION.to_string()
+    } else {
+        authz.policy_version
+    };
+
+    ctx.db.claim_decision().insert(ClaimDecision {
+        claim_id,
+        credit_amount_cents,
+        confidence_percent,
+        gate: match route {
+            DecisionRoute::AutoApprove => ClaimGate::Auto,
+            DecisionRoute::HumanApproval => ClaimGate::Approval,
+            DecisionRoute::Escalated => ClaimGate::Escalated,
+        },
+        rule: decision_rule(route, confidence, credit_amount_cents),
+        policy_version,
+        model_version,
+        decided_at: ctx.timestamp,
+    });
+}
+
+/// Space weather for a claim is the `space_weather` reading nearest to signal loss.
+fn insert_weather(ctx: &ReducerContext, claim_id: String) {
+    let Some(pass) = ctx.db.claim_pass().claim_id().filter(&claim_id).next() else {
+        log::error!("No pass for claim {}; seed_claim_pass first", claim_id);
+        return;
+    };
+    let lost = pass.signal_lost_time.to_micros_since_unix_epoch();
+    let kp_index = ctx
+        .db
+        .space_weather()
+        .iter()
+        .min_by_key(|w| (w.timestamp.to_micros_since_unix_epoch() - lost).abs())
+        .map(|w| w.kp_index)
+        .unwrap_or(0.0);
+    ctx.db.claim_weather().insert(ClaimWeather {
+        claim_id,
+        kp_index,
+        storm_active: kp_index >= STORM_KP_THRESHOLD,
+    });
+}
+
 #[spacetimedb::reducer]
 pub fn seed_claim(
     ctx: &ReducerContext,
@@ -155,27 +266,26 @@ pub fn seed_claim_evidence(
 pub fn seed_claim_decision(
     ctx: &ReducerContext,
     claim_id: String,
-    credit_amount_cents: i64,
     confidence_percent: i32,
-    gate: u8,
-    rule: String,
-    policy_version: String,
     model_version: String,
 ) {
-    let claim_gate = match gate {
-        0 => ClaimGate::Auto,
-        1 => ClaimGate::Approval,
-        _ => ClaimGate::Escalated,
-    };
-    ctx.db.claim_decision().insert(ClaimDecision {
+    insert_decision(ctx, claim_id, confidence_percent, model_version);
+}
+
+#[spacetimedb::reducer]
+pub fn seed_claim_reason(
+    ctx: &ReducerContext,
+    claim_id: String,
+    feature: String,
+    detail: String,
+    shap_value: f32,
+) {
+    ctx.db.claim_reason().insert(ClaimReason {
+        id: 0,
         claim_id,
-        credit_amount_cents,
-        confidence_percent,
-        gate: claim_gate,
-        rule,
-        policy_version,
-        model_version,
-        decided_at: ctx.timestamp,
+        feature,
+        detail,
+        shap_value,
     });
 }
 
@@ -199,28 +309,29 @@ pub fn seed_claim_outcome(
 }
 
 #[spacetimedb::reducer]
-pub fn seed_claim_weather(
-    ctx: &ReducerContext,
-    claim_id: String,
-    kp_index: f32,
-    storm_active: bool,
-) {
-    ctx.db.claim_weather().insert(ClaimWeather {
-        claim_id,
-        kp_index,
-        storm_active,
-    });
+pub fn seed_claim_weather(ctx: &ReducerContext, claim_id: String) {
+    insert_weather(ctx, claim_id);
 }
 
+/// Fallback for seed.sh when no real pass can be computed: the same claim, built
+/// from the seeded `station` and `satellite` rows during the fixture storm peak.
 #[spacetimedb::reducer]
 pub fn seed_demo_claim(ctx: &ReducerContext) {
     let claim_id = "CLM-10021".to_string();
     let pass_id: u64 = 10021;
-    
+    let minute: i64 = 60 * 1_000_000;
+    let (Some(svalsat), Some(noaa20)) = (
+        ctx.db.station().id().find("svalsat".to_string()),
+        ctx.db.satellite().norad_id().find(43013),
+    ) else {
+        log::error!("Seed stations and satellites before seed_demo_claim");
+        return;
+    };
+
     let now_micros = ctx.timestamp.to_micros_since_unix_epoch();
-    let contact_start = now_micros - 45 * 60 * 1_000_000;
-    let signal_lost = now_micros - 32 * 60 * 1_000_000;
-    let contact_end = now_micros - 20 * 60 * 1_000_000;
+    let contact_start = now_micros - 840 * minute;
+    let signal_lost = contact_start + 5 * minute;
+    let contact_end = contact_start + 12 * minute;
 
     ctx.db.claim().insert(Claim {
         id: claim_id.clone(),
@@ -233,48 +344,52 @@ pub fn seed_demo_claim(ctx: &ReducerContext) {
     ctx.db.claim_pass().insert(ClaimPass {
         id: pass_id,
         claim_id: claim_id.clone(),
-        station_lat: 78.23,
-        station_lon: 15.39,
-        station_name: "SvalSat".to_string(),
-        satellite_norad_id: 43013,
-        satellite_tle1: "1 43013U 17073A   24297.84166667  .00000162  00000+0  11961-3 0  9995".to_string(),
-        satellite_tle2: "2 43013  98.7420 272.8975 0001477  93.5274 266.6059 14.19569481362839".to_string(),
+        station_lat: svalsat.latitude,
+        station_lon: svalsat.longitude,
+        station_name: svalsat.name,
+        satellite_norad_id: noaa20.norad_id,
+        satellite_tle1: noaa20.tle_line1,
+        satellite_tle2: noaa20.tle_line2,
         contact_start_time: Timestamp::from_micros_since_unix_epoch(contact_start),
         signal_lost_time: Timestamp::from_micros_since_unix_epoch(signal_lost),
         contact_end_time: Timestamp::from_micros_since_unix_epoch(contact_end),
-        max_elevation_deg: 12.4,
+        max_elevation_deg: 41.0,
     });
 
     ctx.db.claim_evidence().insert(ClaimEvidence {
         claim_id: claim_id.clone(),
         data_integrity_status: DataIntegrityStatus::Pass,
         estimated_loss_cents: 240_000,
-        missing_evidence_cents: 158_000,
+        missing_evidence_cents: 125_000,
     });
 
-    ctx.db.claim_decision().insert(ClaimDecision {
-        claim_id: claim_id.clone(),
-        credit_amount_cents: 115_000,
-        confidence_percent: 96,
-        gate: ClaimGate::Auto,
-        rule: "credit_auto_limit".to_string(),
-        policy_version: crate::CURRENT_POLICY_VERSION.to_string(),
-        model_version: crate::CURRENT_MODEL_VERSION.to_string(),
-        decided_at: ctx.timestamp,
-    });
+    insert_weather(ctx, claim_id.clone());
+    insert_decision(ctx, claim_id.clone(), 96, crate::CURRENT_MODEL_VERSION.to_string());
 
     ctx.db.claim_outcome().insert(ClaimOutcome {
         claim_id: claim_id.clone(),
-        credit_memo_sent: true,
-        ledger_posted: true,
-        completed_at: Some(ctx.timestamp),
+        credit_memo_sent: false,
+        ledger_posted: false,
+        completed_at: None,
     });
 
-    ctx.db.claim_weather().insert(ClaimWeather {
-        claim_id,
-        kp_index: 6.0,
-        storm_active: true,
-    });
+    let kp = ctx.db.claim_weather().claim_id().find(claim_id.clone()).map(|w| w.kp_index).unwrap_or(0.0);
+    let reasons = [
+        ("Downlink lost mid-contact", "7 of 12 min without telemetry".to_string(), 1.12),
+        ("Geomagnetic storm at signal loss", format!("Kp {:.1}", kp), 0.64),
+        ("Data integrity check", "passed".to_string(), 0.41),
+        ("Max elevation", "41.0 deg".to_string(), 0.18),
+        ("Unverified share of loss", "$1,250 of $2,400".to_string(), -0.37),
+    ];
+    for (feature, detail, shap_value) in reasons {
+        ctx.db.claim_reason().insert(ClaimReason {
+            id: 0,
+            claim_id: claim_id.clone(),
+            feature: feature.to_string(),
+            detail,
+            shap_value,
+        });
+    }
 
     log::info!("Demo claim CLM-10021 seeded");
 }
@@ -322,5 +437,22 @@ pub fn escalate_claim_decision(ctx: &ReducerContext, claim_id: String, reason: S
             ..decision
         });
         log::info!("Claim {} escalated: {}", claim_id, reason);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::decision_rule;
+    use crate::confidence_gate::{determine_route, DecisionRoute};
+
+    #[test]
+    fn decision_rule_names_the_gate_condition() {
+        let rule = |confidence, amount| decision_rule(determine_route(confidence, amount), confidence, amount);
+        assert_eq!(determine_route(96, 115_000), DecisionRoute::HumanApproval);
+        assert_eq!(rule(96, 115_000), "requires_approval: credit over $300 auto-approve cap");
+        assert_eq!(rule(97, 20_000), "auto_approve: confidence >= 95% and credit <= $300");
+        assert_eq!(rule(90, 20_000), "requires_approval: confidence below 95%");
+        assert_eq!(rule(70, 20_000), "escalate: confidence below 80%");
+        assert_eq!(rule(90, 50_000), "escalate: credit over $300 with confidence below 95%");
     }
 }

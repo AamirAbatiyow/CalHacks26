@@ -77,16 +77,29 @@ echo "Initializing authority..."
 "$SPACETIME" call "$MODULE" init_confidence_config --server "$SERVER" || true
 "$SPACETIME" call "$MODULE" register_actor --server "$SERVER" -- '"ops_reviewer"' 1 '"Ops Reviewer"' || true
 
-# Claim detail (CLM-10021): a real NOAA-20 pass over SvalSat from the last few hours
+# Claim detail (CLM-10021): a real NOAA-20 pass over SvalSat during the fixture storm.
+# Credit, gate, rule and policy version are derived by the module from the evidence,
+# the confidence gate and the active Cedar policy; weather from space_weather.
 echo "Seeding claims..."
 if CLAIM_PASS=$(node "$SCRIPT_DIR/scripts/find-claim-pass.mjs" "$FIXTURES_DIR/satellites.json" "$FIXTURES_DIR/stations.json" 43013 svalsat 2>/dev/null); then
   claim_pass() { echo "$CLAIM_PASS" | jq -r ".$1"; }
   "$SPACETIME" call "$MODULE" seed_claim --server "$SERVER" -- '"CLM-10021"' '"Northpoint Orbital"' 1820000 10021 || true
   "$SPACETIME" call "$MODULE" seed_claim_pass --server "$SERVER" -- 10021 '"CLM-10021"' "$(claim_pass latitude)" "$(claim_pass longitude)" "\"$(claim_pass station_name)\"" "$(claim_pass norad_id)" "\"$(claim_pass tle1)\"" "\"$(claim_pass tle2)\"" "$(claim_pass start_micros)" "$(claim_pass signal_lost_micros)" "$(claim_pass end_micros)" "$(claim_pass max_elevation_deg)" || true
-  "$SPACETIME" call "$MODULE" seed_claim_evidence --server "$SERVER" -- '"CLM-10021"' 0 240000 158000 || true
-  "$SPACETIME" call "$MODULE" seed_claim_decision --server "$SERVER" -- '"CLM-10021"' 115000 96 0 '"credit_auto_limit"' '"v4"' '"v2"' || true
-  "$SPACETIME" call "$MODULE" seed_claim_outcome --server "$SERVER" -- '"CLM-10021"' true true || true
-  "$SPACETIME" call "$MODULE" seed_claim_weather --server "$SERVER" -- '"CLM-10021"' 6.0 true || true
+  "$SPACETIME" call "$MODULE" seed_claim_evidence --server "$SERVER" -- '"CLM-10021"' 0 240000 125000 || true
+  "$SPACETIME" call "$MODULE" seed_claim_weather --server "$SERVER" -- '"CLM-10021"' || true
+  "$SPACETIME" call "$MODULE" seed_claim_decision --server "$SERVER" -- '"CLM-10021"' 96 '"v2"' || true
+  "$SPACETIME" call "$MODULE" seed_claim_outcome --server "$SERVER" -- '"CLM-10021"' false false || true
+
+  contact_min=$(( ($(claim_pass end_micros) - $(claim_pass start_micros)) / 60000000 ))
+  gap_min=$(( ($(claim_pass end_micros) - $(claim_pass signal_lost_micros)) / 60000000 ))
+  lost_offset_min=$(( ($(claim_pass signal_lost_micros) - NOW_MICROS) / 60000000 ))
+  claim_kp=$(jq --argjson t "$lost_offset_min" 'min_by((.offset_minutes - $t) | fabs) | .kp_index' "$FIXTURES_DIR/space_weather.json")
+  claim_reason() { "$SPACETIME" call "$MODULE" seed_claim_reason --server "$SERVER" -- '"CLM-10021"' "\"$1\"" "\"$2\"" "$3" || true; }
+  claim_reason "Downlink lost mid-contact" "$gap_min of $contact_min min without telemetry" 1.12
+  claim_reason "Geomagnetic storm at signal loss" "Kp $claim_kp" 0.64
+  claim_reason "Data integrity check" "passed" 0.41
+  claim_reason "Max elevation" "$(claim_pass max_elevation_deg) deg" 0.18
+  claim_reason "Unverified share of loss" "\$1,250 of \$2,400" -0.37
 else
   "$SPACETIME" call "$MODULE" seed_demo_claim --server "$SERVER" || true
 fi

@@ -1,5 +1,6 @@
-// Finds the most recent real pass of a satellite over a ground station (SGP4 via
-// satellite.js from the web app) and prints it as JSON for seed.sh.
+// Finds the most recent real pass of a satellite over a ground station during the
+// fixture geomagnetic storm (SGP4 via satellite.js from the web app) and prints it
+// as JSON for seed.sh.
 // Usage: node find-claim-pass.mjs <satellites.json> <stations.json> <norad_id> <station_id>
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
@@ -34,14 +35,18 @@ const STEP_MS = 15_000;
 const now = Date.now();
 let best = null;
 let current = null;
-for (let t = now - 8 * 3600_000; t <= now - 20 * 60_000; t += STEP_MS) {
+// The space_weather fixture's storm (Kp >= 5) runs from 17h to 10h before seeding;
+// the window is padded so a pass that starts near its edges can still finish.
+for (let t = now - 17.5 * 3600_000; t <= now - 9.5 * 3600_000; t += STEP_MS) {
   const el = elevationDeg(t);
   if (el > 0) {
     current ??= { start: t, maxEl: el };
     current.maxEl = Math.max(current.maxEl, el);
     current.end = t;
   } else if (current) {
-    if (current.maxEl > 15 && current.end - current.start > 6 * 60_000) best = current;
+    const lost = current.start + (current.end - current.start) * 0.42;
+    const inStorm = lost >= now - 17 * 3600_000 && lost <= now - 10 * 3600_000;
+    if (inStorm && current.end - current.start > 6 * 60_000 && current.maxEl > (best?.maxEl ?? 8)) best = current;
     current = null;
   }
 }
