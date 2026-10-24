@@ -146,15 +146,14 @@ jq -c '.[]' "$FIXTURES_DIR/sla_terms.json" | while read -r c; do
 done
 "$SPACETIME" call "$MODULE" seed_decision_world --server "$SERVER" || true
 WORKER_DIR="$SCRIPT_DIR/../worker"
-if [ "$SERVER" = "maincloud" ]; then
-  WORKER_HOST="${STDB_HOST:-wss://maincloud.spacetimedb.com}"
-else
-  WORKER_HOST="${STDB_HOST:-ws://localhost:3000}"
-fi
+case "$SERVER" in
+  maincloud) DEFAULT_STDB_HOST="wss://maincloud.spacetimedb.com" ;;
+  local) DEFAULT_STDB_HOST="ws://localhost:3000" ;;
+  *) DEFAULT_STDB_HOST="$SERVER" ;;
+esac
 if [ -d "$WORKER_DIR/node_modules" ]; then
-  # The worker's bindings are generated, not committed.
-  [ -f "$WORKER_DIR/src/module_bindings/index.ts" ] || (cd "$WORKER_DIR" && npm run --silent generate > /dev/null)
-  (cd "$WORKER_DIR" && STDB_HOST="$WORKER_HOST" STDB_MODULE="$MODULE" npm run --silent seed-history) || true
+  [ -f "$WORKER_DIR/src/module_bindings/index.ts" ] || (cd "$WORKER_DIR" && npm run --silent generate)
+  (cd "$WORKER_DIR" && STDB_HOST="${STDB_HOST:-$DEFAULT_STDB_HOST}" STDB_MODULE="$MODULE" npm run --silent seed-history) || true
 else
   echo "Skipping labeled history: run 'npm install' in worker/ and then 'npm run seed-history' there."
 fi

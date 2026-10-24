@@ -10,8 +10,8 @@
   "schedule_ahead_hours": 24,
   "min_elevation_deg": 10,
   "min_contact_minutes": 4,
-  "drop_rate": 0.015,
-  "storm_drop_rate": 0.06,
+  "drop_rate": 0.07,
+  "storm_drop_rate": 0.35,
   "storm_min_abs_latitude_deg": 60,
   "contracts": [
     {
@@ -197,13 +197,13 @@
     }
   ],
   "settlement": {
-    "settlement_lag_hours": 72,
-    "dropped_credit_pct": 60,
-    "dropped_recovered_pct": 25,
-    "dispute_per_mille": 20,
-    "dispute_credit_pct": 65,
+    "settlement_lag_hours": 168,
+    "dropped_credit_pct": 40,
+    "dropped_recovered_pct": 50,
+    "dispute_per_mille": 50,
+    "dispute_credit_pct": 70,
     "dispute_credit_min_pct": 25,
-    "dispute_credit_max_pct": 50,
+    "dispute_credit_max_pct": 60,
     "auto_decided_pct": 65
   }
 }

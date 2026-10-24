@@ -125,25 +125,36 @@ SPACETIMEDB_SERVER=maincloud  # or 'local' for local development
 SPACETIMEDB_MODULE=ground-truth
 ```
 
-#### Republishing and reseeding the production database (`ground-truth-aamir`)
+`server/spacetime.local.json` pins the database name for CLI calls made from `server/` (currently `ground-truth-aamir`), so run the scripts with `SPACETIMEDB_MODULE` set to that name.
 
-Schema changes (new tables such as `attack_eval` and `attack_clearance`) need a clear-and-reseed. Run these from the repo root:
+### Republishing and reseeding an existing database
+
+A code-only update that keeps every row (the module's tables and columns are unchanged) is a plain publish:
 
 ```bash
-# 1. Start the worker first so it trains System 1 on the seeded history; the seed waits up to 60s
-#    for that model before running Break It. The worker reconnects on its own when the database
-#    is republished, so leave it running.
+cd server/spacetimedb
+spacetime build
+spacetime publish ground-truth-aamir --server maincloud --yes
+```
+
+Seeded figures (passes, prices, ledger, KPIs, the audit history) only change on a reseed. `server/reseed.sh` deletes the database's data, republishes the module and runs `seed.sh`, then prints the KPI row and row counts. It refuses to run without `--yes`, and refuses a database name that differs from the one `spacetime.local.json` pins:
+
+```bash
+cd server
+spacetime login                                  # Maincloud only
+./reseed.sh ground-truth-aamir maincloud --yes   # or: ./reseed.sh ground-truth-aamir local --yes
+```
+
+Connected clients reconnect on their own. The worker reconnects too and retrains System 1 on the reseeded history, so start it before reseeding and leave it running: `seed.sh` waits up to 60s for that model before running Break It, and without a running worker Break It falls back to a fixed stand-in score. From the repo root:
+
+```bash
 (cd worker && npm install && npm run generate && STDB_HOST=wss://maincloud.spacetimedb.com STDB_MODULE=ground-truth-aamir npm start)
-
-# 2. In another terminal, republish with a clear (-c deletes all data) and reseed.
-spacetime publish ground-truth-aamir --server maincloud -p server/spacetimedb -c -y
-SPACETIMEDB_SERVER=maincloud SPACETIMEDB_MODULE=ground-truth-aamir bash server/seed.sh
-
-# 3. Rebuild the web client against the new schema.
+# in another terminal
+server/reseed.sh ground-truth-aamir maincloud --yes
 (cd web && npm run generate && npm run build)
 ```
 
-The seed ends by running every Break It attack, so the page opens with the before and after comparison and the held storm-overclaim cluster ready for the live decision. To reset the live moment without a full reseed, run `spacetime call ground-truth-aamir --server maincloud seed_attack_fixtures` and then `run_all_attacks`; a promoted v7 stays promoted, so after a promotion only a clear-and-reseed brings the cluster back to held.
+Schema changes (such as Break It's `attack_eval`, `attack_clearance` and `authority_change` tables) need this reseed rather than a plain publish. The seed ends by running every Break It attack, so the page opens with the before and after comparison and the held storm-overclaim cluster ready for the live decision. A promoted v7 stays promoted, so after the live decision only a reseed puts the cluster back on hold.
 
 ## SpacetimeDB Tables
 
@@ -155,8 +166,8 @@ The seed ends by running every Break It attack, so the page opens with the befor
 | `space_weather` | Kp index, flare events, Dst index |
 | `sim_clock` | Simulation time control |
 | `kpi` | Financial KPIs, all derived from other tables by `sync_kpis` (see below); never written by hand |
-| `escalated_claim` | Approvals queue: claims the confidence gate escalated for human review |
-| `claim`, `claim_pass`, `claim_evidence`, `claim_decision`, `claim_outcome`, `claim_weather` | Claim page (`#/claims/<id>`): the disputed pass, evidence, gated decision and outcome |
+| `escalated_claim` | Claims queue: claims the confidence gate escalated for human review |
+| `claim`, `claim_pass`, `claim_evidence`, `claim_decision`, `claim_outcome`, `claim_weather` | Claims page detail (`#/claims/<id>`): the disputed pass, evidence, gated decision and outcome |
 | `claim_reason` | SHAP contributions behind a claim decision's confidence |
 | `decision_record` | Audit log for AI decisions with `policy_version` and `model_version` |
 
@@ -184,7 +195,7 @@ All AI-driven decisions (disputes, credits, pass classifications) are logged to 
 | `go_live` | Return to live time |
 | `record_decision` | Log an AI decision with policy/model versions |
 | `seed_finance_history` | Seed audit decisions and ledger entries against already-seeded passes |
-| `seed_escalated_claim` | Add a claim to the Approvals queue (only if the confidence gate escalates it) |
+| `seed_escalated_claim` | Add a claim to the Claims queue (only if the confidence gate escalates it) |
 | `approve_escalated_claim` / `deny_escalated_claim` / `edit_escalated_claim` | Human decisions on escalated claims |
 | `seek_replay` | Jump a policy replay to a given claim |
 | `seed_claim_decision` | Credit a claim's verified loss; gate, rule and policy version come from the confidence gate and active Cedar policy |
@@ -195,20 +206,31 @@ All AI-driven decisions (disputes, credits, pass classifications) are logged to 
 
 ### Layer Panel
 Toggle visibility of:
-- Ground stations (white markers)
-- Satellites and routes (gray markers with orbit tracks)
-- Pass traffic (white/amber lines)
-- Space weather (auroral oval, storm-affected station highlights)
+- Ground stations: cyan triangles sized by monthly revenue; stations inside the storm zone get a ring in the storm's color
+- Satellites and trails: white dots with an 8-minute fading trail
+- Pass traffic: a line from station to satellite for every pass in contact at the current time; white when healthy, in the storm's color (amber with no storm) when the pass dropped or its station is inside the storm zone
+- Space weather: the storm-affected zone, with a badge like `G3 Strong · Kp 6.7` and the number of stations and passes inside it
+
+### Storm zone
+
+Kp is mapped to the NOAA G-scale (`web/src/utils/storm.ts`): Kp 5 is G1 Minor (yellow), 6 G2 Moderate (orange), 7 G3 Strong (red), 8 G4 Severe (deep red), 9 G5 Extreme (magenta). Kp is reported in thirds, so 6.7 ("7-") counts as Kp 7. Below Kp 5 nothing is drawn.
+
+The zone is the auroral oval in geomagnetic coordinates (centered dipole, pole at 80.8°N 72.6°W): its equatorward edge sits at 66° − 2.2°·Kp geomagnetic latitude (about 51° at Kp 6.7) and its poleward edge at 75° − 0.8°·Kp. It is drawn in both hemispheres as a filled band in the severity color with a solid equatorward edge, with the polar cap inside it filled faintly. A station counts as affected when its geomagnetic latitude is poleward of the equatorward edge.
 
 ### Playback Bar
-- Play/pause simulation
-- Speed control (1x, 4x, 16x)
-- Scrubber showing last 24 hours
-- Event ticks (amber for disputes/dropped passes)
-- Live button to return to real-time
+- Play/pause simulation, speed control (1x, 4x, 16x) and a Live button
+- Scrubber over the last 24 hours with PT time labels every 3 hours (dates at midnight)
+- Storm intervals on the track in their G-scale color, one segment per run of readings at the same level (hover for peak Kp and times)
+- Dropped-pass density above the track (amber bars, 15-minute bins)
+
+A legend at the bottom right of each globe shows the station, satellite, pass link, affected pass and G1 to G5 colors, with the current level outlined.
+
+### Claims page
+
+`#/claims` is one queue for every claim: escalated ones that need a human first, then decided ones. The red badge on the Claims nav item counts escalated claims and escalated decision cases. Selecting a row (deep link `#/claims/<claim id>`) shows the claim's pass on a globe beside its detail: the station and satellite markers with name labels, the contact arc (amber or the storm's color after signal loss), the station-to-satellite link labeled with the elevation and PT time, and a playback bar over the contact window. The detail is the evidence handoff and decision form for an escalated claim, or the claim's evidence, decision and outcome for a decided one. `#/approvals` redirects to `#/claims`; Ledger and Audit are tabs of Finance (`#/finance/ledger`, `#/finance/audit`, and the old `#/ledger` and `#/audit` redirect there).
 
 ### Decision Replay
-Click any decision (an Audit row, the Claim page decision card, or **Replay path** in Approvals) to replay that one decision's path through the pipeline. Only the stages it actually took are drawn, one at a time, with each node's output (confidence, Cedar verdict, injection screen, System 2 rationale, re-verify checks, the human's credit, the retrained model version, and any policy proposal). Branches not taken show as faint stubs.
+Click any decision (an Audit row, a decided claim's decision card, or **Replay path** on an escalated claim) to replay that one decision's path through the pipeline. Only the stages it actually took are drawn, one at a time, with each node's output (confidence, Cedar verdict, injection screen, System 2 rationale, re-verify checks, the human's credit, the retrained model version, and any policy proposal). Branches not taken show as faint stubs.
 
 - Controls: play/pause (space), step back/forward (← / →), 0.5x–4x speed, Replay (R), close (Esc).
 - Deep link: `#/<page>?replay=<key>`, where key is `audit:<decision_record id>`, `claim:<claim id>` or `approval:<escalated_claim id>`.
@@ -223,7 +245,7 @@ Click any decision (an Audit row, the Claim page decision card, or **Replay path
 
 ### How the KPIs are computed
 
-`server/spacetimedb/src/kpis.rs` recomputes the single `kpi` row every sim tick and after ledger writes, seeding and Approvals decisions. The Overview strip and the Finance summary both render that row.
+`server/spacetimedb/src/kpis.rs` recomputes the single `kpi` row every sim tick and after ledger writes, seeding and human claim decisions. The Overview strip and the Finance summary both render that row.
 
 | KPI | Formula |
 |-----|---------|
@@ -236,7 +258,7 @@ Click any decision (an Audit row, the Claim page decision card, or **Replay path
 
 Seeded credits, recoveries and claims are percentages of the revenue of the pass they refer to, and seeded invoices are one per station totalling billed pass revenue, so the Ledger invoices sum to Billed this month at seed time.
 
-There are no dollar approval caps anywhere. The confidence gate is the only gate: confidence of 95% or more auto-decides, anything lower escalates to Approvals. Every auto-approval writes its ledger credit. The $300 in Review cost saved is the cost of a human review, not a cap.
+There are no dollar approval caps anywhere. The confidence gate is the only gate: confidence of 95% or more auto-decides, anything lower escalates to the Claims queue. Every auto-approval writes its ledger credit. The $300 in Review cost saved is the cost of a human review, not a cap.
 
 ## Seeded volume
 
@@ -261,10 +283,11 @@ The seed models an operator the size of KSAT, priced at AWS Ground Station on-de
 | Satellites | `satellites.json` | 169 satellites with real CelesTrak TLEs: the 30 curated demo satellites plus Planet (40), Spire (30, narrowband), ICEYE (40), Satellogic (15), Capella (9) and Umbra (5). Each satellite has a `band` that sets its price |
 | Contracts | `contracts.json` | Six enterprise contracts, one per customer, each covering a constellation with a daily contact quota per satellite (10 to 12). Together they ask for about 1,580 contacts per day |
 | Pricing | `contracts.json` `pricing` | $15/min narrowband, $25/min wideband, billed per started minute |
+| Fleet multiplier | `contracts.json` `fleet_multiplier` | 10. The generated contacts are a sample of the fleet: each booked pass stands for 10 contacts of the same geometry, so its price (and every credit, dispute and claim derived from it) is 10 times one contact's. The seed books about 1,580 contacts a day, which at 10x is about 190K a month, KSAT's contact volume |
 | History | `contracts.json` | 30 days of history plus 24 hours of scheduled passes |
-| Drops | `contracts.json` | 1.5% of contacts drop; 6% at stations above 60° latitude during Kp ≥ 5 storms |
-| Settlement | `contracts.json` `settlement` | Passes settle 72 hours after they end. Of dropped passes, 60% are credited in full, 25% are recovered (re-downlinked) and the rest are denied. 2% of completed passes are disputed; 65% of those are credited 25% to 50% of the pass, the rest denied, and recent ones stay open. 65% of decisions carry confidence ≥ 95% and auto-decide; the rest go through human review |
-| Escalated claims | `claims.json` | Six Approvals claims, each tied to 20 to 120 of the customer's most recent open passes and sized as a percentage of those passes' revenue |
+| Drops | `contracts.json` | 7% of contacts drop; 35% at stations above 60° latitude during Kp ≥ 5 storms. The month modeled includes the October storm season |
+| Settlement | `contracts.json` `settlement` | Passes settle 7 days after they end, so the last week of drops and disputes is still open (revenue at risk). Of dropped passes, 40% are credited in full, 50% are recovered (re-downlinked) and the rest are denied. 5% of completed passes are disputed; 70% of those are credited 25% to 60% of the pass, the rest denied. 65% of decisions carry confidence ≥ 95% and auto-decide; the rest go through human review |
+| Escalated claims | `claims.json` | Six escalated claims, each tied to 20 to 120 of the customer's most recent open passes and sized as a percentage of those passes' revenue |
 
 ### How passes are generated
 
@@ -274,21 +297,24 @@ The seed models an operator the size of KSAT, priced at AWS Ground Station on-de
 
 | Figure | Value |
 |--------|-------|
-| Passes | 48,954 (about 47,000 billed in the trailing 30 days, roughly a quarter of KSAT's monthly contacts) |
-| Billed this month | $8.05M (about $97M a year, in line with KSAT's ~$220M total revenue) |
-| Revenue at risk | $85.3K |
-| Credits paid | $100.9K |
-| Recovered | $28.7K |
-| Leakage avoided | $96.3K |
-| Review cost saved | $180.1K (632 auto-approved decisions x $285) |
+| Passes | 48,954 booked passes (about 47,000 billed in the trailing 30 days, standing for about 470,000 contacts at the fleet multiplier) |
+| Billed this month | $80.6M |
+| Revenue at risk | $2.77M |
+| Credits paid | $2.67M |
+| Recovered | $2.21M |
+| Leakage avoided | $3.54M |
+| Review cost saved | $411K (1,442 auto-approved decisions x $285) |
+| Ledger entries | 3,560 |
+| Labeled decisions (worker history) | 2,409 |
+| Audit decisions (policy-learning history) | 11,997 |
 
 The annual figures are 12 times the trailing-30-day KPIs:
 
 | Annual figure | Formula | Value |
 |---------------|---------|-------|
-| Dispute cost | 12 x (Credits paid + Revenue at risk) | ~$2.2M |
-| Leakage avoided | 12 x Leakage avoided | ~$1.2M |
-| Review cost saved | 12 x Review cost saved | ~$2.2M |
+| Dispute cost | 12 x (Credits paid + Revenue at risk) | ~$65M |
+| Leakage avoided | 12 x Leakage avoided | ~$42M |
+| Review cost saved | 12 x Review cost saved | ~$4.9M |
 
 Exact figures move slightly with the seed time, because pass geometry and the trailing 30-day window depend on `now`.
 
@@ -307,7 +333,7 @@ claim -> file_case (module builds the feature snapshot from pass, telemetry, spa
                 passed                           -> System 2 (worker): LLM analyst reads every source
       -> submit_system2 re-verifies in the module: cited evidence must exist and belong to the claim,
          credit <= entitlement, telemetry/System 1 sanity checks, the 95% threshold, then Cedar
-           -> auto-decided by System 2, or escalated to Approvals with the evidence package and case summary
+           -> auto-decided by System 2, or escalated to the Claims queue with the evidence package and case summary
 ```
 
 Run it after `seed.sh` (which also seeds `fixtures/sla_terms.json`, maintenance windows and 2,409 labeled decisions over 180 days):
@@ -327,14 +353,14 @@ npm test                                   # worker tests
 
 **Mock mode.** Without `LLM_API_KEY`, System 2 is `mockAnalyst` (`worker/src/system2.ts`), a deterministic stand-in that is deliberately credulous: it obeys instructions in the customer message and believes asserted outages and cited ids. Break It therefore measures the guards around System 2, not the mock.
 
-**Prompt-injection defense.** The customer message is untrusted: it never enters the system prompt, it is passed in the user turn as one JSON-escaped string between `<<<CUSTOMER_MESSAGE>>>` markers with hidden characters stripped and delimiters neutralised, and a cheap screen (`worker/src/screen.ts`: Unicode tag decoding, zero-width and bidi stripping, NFKC, homoglyph folding, base64 decoding, instruction patterns) runs first. Whatever System 2 returns is re-verified by the module, and Cedar has the final say. Break It's Prompt injection row files 12 attacks as real claims (`run_injection_attacks`). The worker decides them, so the module refuses the run when the worker has not sent a heartbeat in 15 s (the row shows "Worker offline" and how to start it), and a run not fully decided within 60 s is closed by the scheduled `expire_injection_run`: undecided attacks are not scored and go to Approvals with the reason.
+**Prompt-injection defense.** The customer message is untrusted: it never enters the system prompt, it is passed in the user turn as one JSON-escaped string between `<<<CUSTOMER_MESSAGE>>>` markers with hidden characters stripped and delimiters neutralised, and a cheap screen (`worker/src/screen.ts`: Unicode tag decoding, zero-width and bidi stripping, NFKC, homoglyph folding, base64 decoding, instruction patterns) runs first. Whatever System 2 returns is re-verified by the module, and Cedar has the final say. Break It's Prompt injection row files 12 attacks as real claims (`run_injection_attacks`). The worker decides them, so the module refuses the run when the worker has not sent a heartbeat in 15 s (the row shows "Worker offline" and how to start it), and a run not fully decided within 60 s is closed by the scheduled `expire_injection_run`: undecided attacks are not scored and go to the Claims queue with the reason.
 
 **Learning.** Two channels, never trained on the policies themselves:
 
-1. Model weights. Every human decision in Approvals (`human_decide_case`) writes a `labeled_decision` with the full package the reviewer saw (snapshot, customer message and extracted fields, ML probability and SHAP terms, System 1 and System 2 outputs, rules fired), the verdict, credit, reason code and text, decisive evidence, reviewer, versions and claim type. The worker refits System 1 on all human labels (warm-started Newton/IRLS), replays it on the labeled history, and `register_model_version` promotes it only if auto-approve precision does not regress (the module re-checks). `model_version.latency_ms` is measured on the module clock from the human decision to the new version being registered.
+1. Model weights. Every human decision on the Claims page (`human_decide_case`) writes a `labeled_decision` with the full package the reviewer saw (snapshot, customer message and extracted fields, ML probability and SHAP terms, System 1 and System 2 outputs, rules fired), the verdict, credit, reason code and text, decisive evidence, reviewer, versions and claim type. The worker refits System 1 on all human labels (warm-started Newton/IRLS), replays it on the labeled history, and `register_model_version` promotes it only if auto-approve precision does not regress (the module re-checks). `model_version.latency_ms` is measured on the module clock from the human decision to the new version being registered.
 2. Policies. `worker/src/miner.ts` proposes a rule only when at least three reviewers made the same decision on the same claim type, cited the same decisive evidence, and no labeled decision with those feature values went the other way. A single decision never creates a rule, and customer text is never a rule input. The module stores the rule as Cedar text (`learned_rule.cedar_text`), re-counts support and contradictions over every label through Cedar, and promotes it only if replay precision does not regress. When nothing qualifies, the Decisions page shows "No consistent pattern found ..., so no rule was proposed".
 
-Every step of every decision is a `case_decision` row with the deciding system (System 1, System 2, learned rule, guard or human), model and policy versions, inputs and cited evidence; final decisions also write `decision_record`. The Decisions page shows model versions, retrain latency, learned rules and the audit feed; Approvals shows escalated cases with their evidence and the labeling form.
+Every step of every decision is a `case_decision` row with the deciding system (System 1, System 2, learned rule, guard or human), model and policy versions, inputs and cited evidence; final decisions also write `decision_record`. The Decisions page shows model versions, retrain latency, learned rules and the audit feed; the Claims page shows escalated cases with their evidence and the labeling form.
 
 ## Policy learning on the Policies page
 
@@ -361,17 +387,17 @@ The incoming claims (`server/fixtures/incoming_claims.json`) are written so the 
 | CLM-20007 | Kp was above the exclusion: the contract excuses the loss even though the message asks for credit |
 | CLM-20008 | 30% of the contact was lost, but the customer asks for 100% of the fee |
 
-Each conflict lowers confidence by a stated penalty (`case_conflict`), which is how Approvals explains why a claim is below 95%.
+Each conflict lowers confidence by a stated penalty (`case_conflict`), which is how the Claims page explains why a claim is below 95%.
 
 ### Six months of human audit decisions
 
-`seed_learning_history` (`history.rs`) writes about 10,000 `audit_decision` rows over 182 days. Volume per station and month is the station's pass count times `claim_rate()`, the pass generator's drop rate plus its dispute rate from `contracts.json`, so the history is sized from pass revenue. Five reviewers follow consistent practices in some situations (minable patterns), disagree in others (contradiction zones), and decide against practice 1% of the time (noise). Every row stores the full evidence snapshot (`decision_snapshot`), outcome, credit, reason code and text, decisive evidence, reviewer, model and policy versions, and claim type. The Policies page's History entry shows it by month, by reason and by most recent decision.
+`seed_learning_history` (`history.rs`) writes about 12,000 `audit_decision` rows over 182 days. Volume per station and month is the station's pass count times `claim_rate()`: the pass generator's drop rate plus its dispute rate from `contracts.json`, times the share that is not auto-decided (`auto_decided_pct`), since only human-reviewed claims are in the history. Credits are shares of the station's average pass fee, so they scale with the fleet multiplier like the rest of the seed. Five reviewers follow consistent practices in some situations (minable patterns), disagree in others (contradiction zones), and decide against practice 1% of the time (noise). Every row stores the full evidence snapshot (`decision_snapshot`), outcome, credit, reason code and text, decisive evidence, reviewer, model and policy versions, and claim type. The Policies page's History entry shows it by month, by reason and by most recent decision.
 
 ### The loop
 
-1. **Escalation.** A claim below 95% opens on Approvals with the evidence handoff: telemetry and modeled elevation timeline, the Kp curve against the contract exclusion, station history and maintenance, the contract clause and formula credit, the customer message and their history, the failure model's probability with exact SHAP terms, every Cedar rule that matched or did not and why, why confidence is below 95%, similar past decisions, and the options with their dollar impact.
+1. **Escalation.** A claim below 95% opens on the Claims page with the evidence handoff: telemetry and modeled elevation timeline, the Kp curve against the contract exclusion, station history and maintenance, the contract clause and formula credit, the customer message and their history, the failure model's probability with exact SHAP terms, every Cedar rule that matched or did not and why, why confidence is below 95%, similar past decisions, and the options with their dollar impact.
 2. **Decision.** `decide_case` stores the decision with its snapshot and the evidence the reviewer marked decisive.
-3. **Mining.** `learn_from_decision` takes the claim type plus the decisive features as a pattern and counts labeled decisions with the same values. It proposes a rule only with at least 3 consistent decisions and none contradicting. Otherwise it records why (`below_support`, `contradicted`, `no_decisive_evidence`), and Approvals and History show "no rule proposed" with the count. A single decision never creates a rule.
+3. **Mining.** `learn_from_decision` takes the claim type plus the decisive features as a pattern and counts labeled decisions with the same values. It proposes a rule only with at least 3 consistent decisions and none contradicting. Otherwise it records why (`below_support`, `contradicted`, `no_decisive_evidence`), and the Claims page and History show "no rule proposed" with the count. A single decision never creates a rule.
 4. **Rule text.** `TemplateRuleWriter` ("template-v1") writes the Cedar `permit` on action `apply_precedent` with `@id`, `@outcome`, `@confidence` and `@support` annotations. Generation is deterministic; `RuleWriter` is the seam for an LLM writer, whose output would still be parsed by Cedar and replayed before anyone can promote it.
 5. **Replay and version.** The proposal is a new `policy_version` with a `policy_proposal` linking it to the human decision that caused it. Every labeled decision is replayed through the current and the proposed Cedar policy sets. Promotion is disabled if precision regresses or if the version would auto-decide below 95%.
 6. **Promotion.** `promote_policy_version` makes the version current. New claims matching the rule auto-decide at the rule's confidence, citing the rule id and policy version.
@@ -382,11 +408,11 @@ The four governing rules (auto-decide at 95%, escalate below 95%, AI cannot edit
 
 | Version | Escalations | Precision | Regressions | Settled automatically | Drift from human credits | Result |
 |---------|-------------|-----------|-------------|-----------------------|--------------------------|--------|
-| v5 (threshold 90%) | 2,772 → 2,278 | 98.89% → 98.91% | 4 | $54,700 | +$736 | Blocked by the 95% floor |
-| v6 (7 rules mined from history) | 2,772 → 1,362 | 98.89% → 99.07% | 0 | $129,519 | $0 | Promoted |
-| v7 (learned from CLM-20003) | 1,364 → 1,361 | 99.07% → 99.07% | 0 | $673 | $0 | Promoted |
+| v5 (threshold 90%) | 3,406 → 2,793 | 98.87% → 98.89% | 5 | $677,496 | +$7,834 | Blocked by the 95% floor |
+| v6 (7 rules mined from history) | 3,406 → 1,660 | 98.87% → 99.06% | 0 | $1,611,099 | $0 | Promoted |
+| v7 (learned from CLM-20003) | 1,364 → 1,361 | 99.07% → 99.07% | 0 | $673 | $0 | Promoted (measured before the fleet multiplier) |
 
-Live: one decision on CLM-20002 (approve $300: storm below the exclusion, total loss, integrity passed) produced no rule: 2 of 3 consistent decisions. The same decision on CLM-20003 made 3 with none contradicting, so v7 was proposed. After promotion, a similar new claim (CLM-20009, TrollSat, Kp 5.0, 95% lost) auto-approved at 99% for $325, citing `v7-learned-1` under policy v7. Exact figures move slightly with the seed time.
+Live (measured before the fleet multiplier): one decision on CLM-20002 (approve $300: storm below the exclusion, total loss, integrity passed) produced no rule: 2 of 3 consistent decisions. The same decision on CLM-20003 made 3 with none contradicting, so v7 was proposed. After promotion, a similar new claim (CLM-20009, TrollSat, Kp 5.0, 95% lost) auto-approved at 99% for $325, citing `v7-learned-1` under policy v7. Exact figures move slightly with the seed time.
 
 ### Relation to the decision pipeline
 

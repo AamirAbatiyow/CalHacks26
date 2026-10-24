@@ -1,15 +1,15 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Sidebar, type PageId } from './components/Sidebar';
 import { KpiStrip } from './components/KpiStrip';
 import { Globe } from './components/Globe';
+import { isDegraded } from './utils/storm';
 import { LayerPanel } from './components/LayerPanel';
 import { PlaybackBar } from './components/PlaybackBar';
 import { useSpacetimeDB } from './hooks/useSpacetimeDB';
-import { useHashPage } from './hooks/useHashPage';
+import { useHashPage, useHashParam } from './hooks/useHashPage';
 import { useKpi } from './hooks/useKpi';
-import ClaimPage from './pages/Claim';
-import ApprovalsPage from './pages/Approvals';
-import FinancePage from './pages/Finance';
+import ClaimsPage from './pages/Claims';
+import FinancePage, { type FinanceTabId } from './pages/Finance';
 import PoliciesPage from './pages/Policies';
 import BreakItPage from './pages/BreakIt';
 import DecisionsPage from './pages/Decisions';
@@ -20,11 +20,13 @@ import './App.css';
 
 function App() {
   const [activePage, setActivePage] = useHashPage();
+  const hashParam = useHashParam();
+  const financeTab: FinanceTabId = hashParam === 'ledger' || hashParam === 'audit' ? hashParam : 'summary';
   const [layers, setLayers] = useState<LayerState>({
     groundStations: true,
     satellitesAndRoutes: true,
-    passTraffic: false,
-    spaceWeather: false,
+    passTraffic: true,
+    spaceWeather: true,
   });
 
   const [playbackSpeed, setPlaybackSpeed] = useState<PlaybackSpeed>(1);
@@ -88,20 +90,21 @@ function App() {
       }, spaceWeather[0])
     : null;
 
+  const affectedPasses = useMemo(() => {
+    if (!layers.spaceWeather || !currentWeather) return 0;
+    const byId = new Map(stations.map(s => [s.id, s]));
+    return passes.filter(p => p.startTime <= currentTime && p.endTime > currentTime
+      && isDegraded(p, byId.get(p.stationId), currentWeather.kpIndex)).length;
+  }, [passes, stations, currentTime, currentWeather, layers.spaceWeather]);
+
   const renderPage = (page: PageId) => {
     switch (page) {
       case 'claims':
-        return <ClaimPage />;
-      case 'approvals':
-        return <ApprovalsPage />;
+        return <ClaimsPage stations={stations} satellites={satellites} passes={passes} spaceWeather={spaceWeather} />;
       case 'decisions':
         return <DecisionsPage />;
       case 'finance':
-        return <FinancePage key="summary" initialTab="summary" />;
-      case 'ledger':
-        return <FinancePage key="ledger" initialTab="ledger" />;
-      case 'audit':
-        return <FinancePage key="audit" initialTab="audit" />;
+        return <FinancePage key={financeTab} initialTab={financeTab} />;
       case 'policies':
         return <PoliciesPage />;
       case 'breakit':
@@ -137,6 +140,8 @@ function App() {
             layers={layers}
             onToggle={toggleLayer}
             kpIndex={currentWeather?.kpIndex ?? 0}
+            stations={stations}
+            affectedPasses={affectedPasses}
           />
         </div>
         <PlaybackBar
@@ -147,6 +152,7 @@ function App() {
           speed={playbackSpeed}
           isLive={isLive}
           passes={passes}
+          spaceWeather={spaceWeather}
           onPlayPause={handlePlayPause}
           onSpeedChange={handleSpeedChange}
           onSeek={handleSeek}

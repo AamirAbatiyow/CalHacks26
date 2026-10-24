@@ -1,15 +1,11 @@
 import {
-  BookText,
   Gauge,
   Globe2,
   Inbox,
   Network,
-  ScrollText,
   Settings,
   ShieldAlert,
   SlidersHorizontal,
-  Users,
-  Zap,
   type LucideIcon,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
@@ -29,13 +25,9 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { id: 'overview', label: 'Overview', icon: Globe2, enabled: true },
-  { id: 'claims', label: 'Claims', icon: Zap, enabled: true },
-  { id: 'approvals', label: 'Approvals', icon: Inbox, enabled: true },
+  { id: 'claims', label: 'Claims', icon: Inbox, enabled: true },
   { id: 'decisions', label: 'Decisions', icon: Network, enabled: true },
-  { id: 'customers', label: 'Customers', icon: Users, enabled: false },
   { id: 'finance', label: 'Finance', icon: Gauge, enabled: true },
-  { id: 'ledger', label: 'Ledger', icon: BookText, enabled: true },
-  { id: 'audit', label: 'Audit', icon: ScrollText, enabled: true },
   { id: 'policies', label: 'Policies', icon: SlidersHorizontal, enabled: true },
   { id: 'breakit', label: 'Break It', icon: ShieldAlert, enabled: true },
   { id: 'settings', label: 'Settings', icon: Settings, enabled: true },
@@ -71,7 +63,7 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
               <span className="sidebar-icon-wrapper">
                 <Icon className="sidebar-icon" size={16} strokeWidth={1.6} />
                 <AnimatePresence>
-                  {item.id === 'approvals' && pendingApprovalsCount > 0 && (
+                  {item.id === 'claims' && pendingApprovalsCount > 0 && (
                     <motion.span
                       key="badge"
                       className="sidebar-badge"

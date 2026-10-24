@@ -1,17 +1,20 @@
-import type { LayerState } from '../types';
+import type { LayerState, Station } from '../types';
+import { auroralOval, inStormZone, stormLevel } from '../utils/storm';
 import './LayerPanel.css';
 
 interface LayerPanelProps {
   layers: LayerState;
   onToggle: (layer: keyof LayerState) => void;
   kpIndex: number;
+  stations: Station[];
+  affectedPasses: number;
 }
 
 interface LayerToggleProps {
   label: string;
   enabled: boolean;
   onToggle: () => void;
-  badge?: string;
+  badge?: { text: string; color: string };
 }
 
 function LayerToggle({ label, enabled, onToggle, badge }: LayerToggleProps) {
@@ -26,12 +29,18 @@ function LayerToggle({ label, enabled, onToggle, badge }: LayerToggleProps) {
         <span className="toggle-thumb" />
       </span>
       <span className="toggle-label">{label}</span>
-      {badge && <span className="toggle-badge">{badge}</span>}
+      {badge && (
+        <span className="toggle-badge" style={{ color: badge.color, background: `${badge.color}26`, borderColor: `${badge.color}80` }}>
+          {badge.text}
+        </span>
+      )}
     </button>
   );
 }
 
-export function LayerPanel({ layers, onToggle, kpIndex }: LayerPanelProps) {
+export function LayerPanel({ layers, onToggle, kpIndex, stations, affectedPasses }: LayerPanelProps) {
+  const level = stormLevel(kpIndex);
+  const affectedStations = level ? stations.filter(s => inStormZone(s.latitude, s.longitude, kpIndex)).length : 0;
   return (
     <div className="layer-panel">
       <LayerToggle
@@ -40,7 +49,7 @@ export function LayerPanel({ layers, onToggle, kpIndex }: LayerPanelProps) {
         onToggle={() => onToggle('groundStations')}
       />
       <LayerToggle
-        label="Satellites and routes"
+        label="Satellites and trails"
         enabled={layers.satellitesAndRoutes}
         onToggle={() => onToggle('satellitesAndRoutes')}
       />
@@ -53,8 +62,22 @@ export function LayerPanel({ layers, onToggle, kpIndex }: LayerPanelProps) {
         label="Space weather"
         enabled={layers.spaceWeather}
         onToggle={() => onToggle('spaceWeather')}
-        badge={kpIndex >= 5 ? `Kp ${kpIndex.toFixed(0)} storm` : undefined}
+        badge={level ? { text: `G${level.g} ${level.name} · Kp ${kpIndex.toFixed(1)}`, color: level.color } : undefined}
       />
+      {layers.spaceWeather && (
+        <div className="layer-storm-info">
+          {level ? (
+            <>
+              <span style={{ color: level.color }}>Affected zone</span> poleward of {auroralOval(kpIndex).equatorward.toFixed(0)}° geomagnetic
+              <br />
+              {affectedStations} station{affectedStations === 1 ? '' : 's'} inside
+              {layers.passTraffic && <> · {affectedPasses} affected pass{affectedPasses === 1 ? '' : 'es'} now</>}
+            </>
+          ) : (
+            <>Quiet · Kp {kpIndex.toFixed(1)}, no storm zone</>
+          )}
+        </div>
+      )}
     </div>
   );
 }

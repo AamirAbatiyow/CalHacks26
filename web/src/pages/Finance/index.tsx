@@ -62,7 +62,10 @@ export default function Finance({ initialTab = 'summary' }: { initialTab?: Finan
           <button
             key={tab.id}
             className={`finance-tab ${activeTab === tab.id ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => {
+              setActiveTab(tab.id);
+              window.history.replaceState(null, '', tab.id === 'summary' ? '#/finance' : `#/finance/${tab.id}`);
+            }}
           >
             {tab.label}
             {activeTab === tab.id && <motion.span layoutId="finance-tab" className="finance-tab-line" transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }} />}
