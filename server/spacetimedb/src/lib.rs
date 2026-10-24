@@ -5,7 +5,7 @@ pub mod authority;
 pub mod confidence_gate;
 
 #[cfg(test)]
-mod tests;
+mod authority_tests;
 
 #[derive(SpacetimeType, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PassStatus {
