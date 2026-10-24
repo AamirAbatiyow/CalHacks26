@@ -137,40 +137,56 @@ pub fn start_replay(
     });
 }
 
+/// Replay state with the scrubber at `claim`; reaching the end stops playback.
+fn replay_at_claim(replay: PolicyReplay, claim: u32) -> PolicyReplay {
+    let new_claim = claim.min(replay.total_claims);
+    let progress = if replay.total_claims == 0 {
+        1.0
+    } else {
+        new_claim as f32 / replay.total_claims as f32
+    };
+
+    let precision_after = 98.1 - (progress * 1.7);
+    let decisions_changed = (progress * 37.0) as u32;
+    let dollar_impact = (progress * 5420000.0) as i64;
+
+    let (new_status, block_reason) = if new_claim >= replay.total_claims {
+        if precision_after < replay.precision_before {
+            (ReplayStatus::Blocked, "precision regression".to_string())
+        } else {
+            (ReplayStatus::Completed, String::new())
+        }
+    } else {
+        (ReplayStatus::Running, String::new())
+    };
+
+    PolicyReplay {
+        current_claim: new_claim,
+        precision_after,
+        decisions_changed,
+        dollar_impact_cents: dollar_impact,
+        is_playing: replay.is_playing && new_status == ReplayStatus::Running,
+        status: new_status,
+        block_reason,
+        ..replay
+    }
+}
+
 #[spacetimedb::reducer]
 pub fn advance_replay(ctx: &ReducerContext, replay_id: u64, claims_to_advance: u32) {
     if let Some(replay) = ctx.db.policy_replay().id().find(replay_id) {
         if replay.status != ReplayStatus::Running || !replay.is_playing {
             return;
         }
+        let target = replay.current_claim.saturating_add(claims_to_advance);
+        ctx.db.policy_replay().id().update(replay_at_claim(replay, target));
+    }
+}
 
-        let new_claim = (replay.current_claim + claims_to_advance).min(replay.total_claims);
-        let progress = new_claim as f32 / replay.total_claims as f32;
-        
-        let precision_after = 98.1 - (progress * 1.7);
-        let decisions_changed = (progress * 37.0) as u32;
-        let dollar_impact = (progress * 5420000.0) as i64;
-
-        let (new_status, block_reason) = if new_claim >= replay.total_claims {
-            if precision_after < replay.precision_before {
-                (ReplayStatus::Blocked, "precision regression".to_string())
-            } else {
-                (ReplayStatus::Completed, String::new())
-            }
-        } else {
-            (ReplayStatus::Running, String::new())
-        };
-
-        ctx.db.policy_replay().id().update(PolicyReplay {
-            current_claim: new_claim,
-            precision_after,
-            decisions_changed,
-            dollar_impact_cents: dollar_impact,
-            is_playing: new_status == ReplayStatus::Running,
-            status: new_status,
-            block_reason,
-            ..replay
-        });
+#[spacetimedb::reducer]
+pub fn seek_replay(ctx: &ReducerContext, replay_id: u64, claim: u32) {
+    if let Some(replay) = ctx.db.policy_replay().id().find(replay_id) {
+        ctx.db.policy_replay().id().update(replay_at_claim(replay, claim));
     }
 }
 

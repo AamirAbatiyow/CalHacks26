@@ -61,9 +61,10 @@ interface ReplayBarProps {
   replay: PolicyReplay;
   onPlayPause: () => void;
   onSpeedChange: (speed: number) => void;
+  onSeek: (claim: number) => void;
 }
 
-function ReplayBar({ replay, onPlayPause, onSpeedChange }: ReplayBarProps) {
+function ReplayBar({ replay, onPlayPause, onSpeedChange, onSeek }: ReplayBarProps) {
   const progress = replay.totalClaims > 0 ? (replay.currentClaim / replay.totalClaims) * 100 : 0;
   const speeds = [1, 4, 16];
   const playing = replay.isPlaying && replay.status === ReplayStatus.Running;
@@ -84,13 +85,13 @@ function ReplayBar({ replay, onPlayPause, onSpeedChange }: ReplayBarProps) {
   return (
     <div className="replay-bar">
       <div className="replay-controls">
-        <button className="control-btn" title="Skip to start">
+        <button className="control-btn" onClick={() => onSeek(0)} title="Skip to start">
           ⏮
         </button>
         <button className="control-btn play-btn" onClick={onPlayPause} title={playing ? 'Pause' : 'Play'}>
           {playing ? '⏸' : '▶'}
         </button>
-        <button className="control-btn" title="Skip to end">
+        <button className="control-btn" onClick={() => onSeek(replay.totalClaims)} title="Skip to end">
           ⏭
         </button>
         <div className="speed-controls">
@@ -253,6 +254,7 @@ export default function Policies() {
     cedarRules,
     replays,
     advanceReplay,
+    seekReplay,
     setReplayPlaying,
     setReplaySpeed,
     toggleRule,
@@ -296,6 +298,12 @@ export default function Policies() {
       setReplayPlaying(activeReplay.id, !activeReplay.isPlaying);
     }
   }, [activeReplay, setReplayPlaying]);
+
+  const handleSeek = useCallback((claim: number) => {
+    if (activeReplay) {
+      seekReplay(activeReplay.id, claim);
+    }
+  }, [activeReplay, seekReplay]);
 
   const handleSpeedChange = useCallback((speed: number) => {
     if (activeReplay) {
@@ -362,6 +370,7 @@ export default function Policies() {
           replay={activeReplay}
           onPlayPause={handlePlayPause}
           onSpeedChange={handleSpeedChange}
+          onSeek={handleSeek}
         />
       )}
     </div>

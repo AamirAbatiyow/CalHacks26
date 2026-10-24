@@ -74,6 +74,10 @@ export function usePoliciesDB() {
     reducers()?.advanceReplay({ replayId, claimsToAdvance });
   }, []);
 
+  const seekReplay = useCallback((replayId: bigint, claim: number) => {
+    reducers()?.seekReplay({ replayId, claim });
+  }, []);
+
   const setReplayPlaying = useCallback((replayId: bigint, playing: boolean) => {
     reducers()?.setReplayPlaying({ replayId, playing });
   }, []);
@@ -101,6 +105,7 @@ export function usePoliciesDB() {
     replays,
     startReplay,
     advanceReplay,
+    seekReplay,
     setReplayPlaying,
     setReplaySpeed,
     toggleRule,
