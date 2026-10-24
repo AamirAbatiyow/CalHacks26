@@ -1,8 +1,21 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { motion } from 'motion/react';
+import {
+  Ban, CheckCircle2, CircleDot, FilePlus2, GitBranch, History, Pause, Play, ScrollText, SkipBack, SkipForward, Sparkles, Users,
+} from 'lucide-react';
 import { usePoliciesDB } from '../../hooks/usePoliciesDB';
 import { useHashParam } from '../../hooks/useHashPage';
+import { useTable, tag } from '../../hooks/useTable';
+import { parseJson, type LearnedRuleRow } from '../../hooks/useDecisions';
 import { PolicyStatus, ReplayStatus } from '../../types';
 import type { PolicyVersion, CedarRule, PolicyReplay } from '../../types';
+import { FlowGraph, type GraphEdge, type GraphNode } from '../../ui/FlowGraph';
+import { Drawer, Fact } from '../../ui/Drawer';
+import { Chip } from '../../ui/Chip';
+import { Meter } from '../../ui/charts';
+import { CountUp, compactUsd } from '../../ui/CountUp';
+import { EmptyState } from '../../ui/EmptyState';
+import { SkeletonGraph, SkeletonRows } from '../../ui/Skeleton';
 import './Policies.css';
 
 function formatDate(micros: bigint): string {
@@ -10,50 +23,36 @@ function formatDate(micros: bigint): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function formatDollars(cents: bigint): string {
-  const dollars = Math.abs(Number(cents)) / 100;
-  const sign = Number(cents) >= 0 ? '+' : '-';
-  if (dollars >= 1000000) {
-    return `${sign}$${(dollars / 1000000).toFixed(1)}M`;
-  }
-  if (dollars >= 1000) {
-    return `${sign}$${(dollars / 1000).toFixed(1)}K`;
-  }
-  return `${sign}$${dollars.toFixed(0)}`;
+function claimTypeLabel(raw: string): string {
+  const s = raw.replace(/_/g, ' ');
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function getStatusLabel(status: PolicyStatus, author: string): string {
-  switch (status) {
-    case PolicyStatus.Proposed:
-      return `Proposed by ${author}`;
-    case PolicyStatus.Current:
-      return 'Current';
-    case PolicyStatus.Retired:
-      return 'Retired';
-  }
+interface Condition { feature: string; op: string; value: unknown }
+const OPS: Record<string, string> = { eq: '=', gte: '≥', gt: '>', lt: '<', lte: '≤', ne: '≠' };
+
+function conditionText(c: Condition): string {
+  return `${c.feature.replace(/_/g, ' ')} ${OPS[c.op] ?? c.op} ${String(c.value).replace(/_/g, ' ')}`;
 }
 
-interface VersionItemProps {
-  version: PolicyVersion;
-  isSelected: boolean;
-  onClick: () => void;
+function pts(before: number, after: number): string {
+  const d = after - before;
+  return `${d >= 0 ? '+' : '−'}${Math.abs(d).toFixed(2)} pts`;
 }
 
-function VersionItem({ version, isSelected, onClick }: VersionItemProps) {
+const STATUS_ICON = { [PolicyStatus.Proposed]: Sparkles, [PolicyStatus.Current]: CheckCircle2, [PolicyStatus.Retired]: CircleDot };
+
+function VersionItem({ version, isSelected, onClick }: { version: PolicyVersion; isSelected: boolean; onClick: () => void }) {
+  const Icon = STATUS_ICON[version.status];
   return (
-    <button
-      className={`version-item ${isSelected ? 'selected' : ''} ${version.status.toLowerCase()}`}
-      onClick={onClick}
-    >
-      <div className="version-header">
-        <span className="version-number">v{version.version}</span>
-      </div>
-      <div className="version-meta">
-        <span className="version-status">{getStatusLabel(version.status, version.author)}</span>
-        {version.status !== PolicyStatus.Proposed && (
-          <span className="version-date"> · {formatDate(version.createdAt)}</span>
-        )}
-      </div>
+    <button className={`version-item ${isSelected ? 'selected' : ''} ${version.status.toLowerCase()}`} onClick={onClick}>
+      {isSelected && <motion.span layoutId="policy-version-active" className="version-active-bg" transition={{ type: 'spring', stiffness: 500, damping: 40 }} />}
+      <span className="version-number">v{version.version}</span>
+      <span className="version-meta">
+        <Icon size={11} aria-hidden />
+        <span className="version-status">{version.status === PolicyStatus.Proposed ? version.author : version.status}</span>
+        {version.status !== PolicyStatus.Proposed && <span className="version-date">{formatDate(version.createdAt)}</span>}
+      </span>
     </button>
   );
 }
@@ -70,30 +69,17 @@ function ReplayBar({ replay, onPlayPause, onSpeedChange, onSeek }: ReplayBarProp
   const speeds = [1, 4, 16];
   const playing = replay.isPlaying && replay.status === ReplayStatus.Running;
 
-  const eventTicks = useMemo(() => {
-    const ticks = [];
-    const seed = Number(replay.id);
-    for (let i = 0; i < 20; i++) {
-      const pos = ((seed * 17 + i * 73) % 100);
-      ticks.push({
-        position: pos,
-        isDispute: i % 4 === 0,
-      });
-    }
-    return ticks;
-  }, [replay.id]);
-
   return (
     <div className="replay-bar">
       <div className="replay-controls">
-        <button className="control-btn" onClick={() => onSeek(0)} title="Skip to start">
-          ⏮
+        <button className="control-btn" onClick={() => onSeek(0)} title="Skip to start" aria-label="Skip to start">
+          <SkipBack size={13} />
         </button>
-        <button className="control-btn play-btn" onClick={onPlayPause} title={playing ? 'Pause' : 'Play'}>
-          {playing ? '⏸' : '▶'}
+        <button className="control-btn play-btn" onClick={onPlayPause} title={playing ? 'Pause' : 'Play'} aria-label={playing ? 'Pause' : 'Play'}>
+          {playing ? <Pause size={14} /> : <Play size={14} />}
         </button>
-        <button className="control-btn" onClick={() => onSeek(replay.totalClaims)} title="Skip to end">
-          ⏭
+        <button className="control-btn" onClick={() => onSeek(replay.totalClaims)} title="Skip to end" aria-label="Skip to end">
+          <SkipForward size={13} />
         </button>
         <div className="speed-controls">
           {speeds.map(s => (
@@ -112,13 +98,6 @@ function ReplayBar({ replay, onPlayPause, onSpeedChange, onSeek }: ReplayBarProp
         <div className="scrubber">
           <div className="scrubber-track">
             <div className="scrubber-progress" style={{ width: `${progress}%` }} />
-            {eventTicks.map((tick, i) => (
-              <div
-                key={i}
-                className={`scrubber-tick ${tick.isDispute ? 'dispute' : ''}`}
-                style={{ left: `${tick.position}%` }}
-              />
-            ))}
             <div className="scrubber-handle" style={{ left: `${progress}%` }} />
           </div>
         </div>
@@ -127,130 +106,104 @@ function ReplayBar({ replay, onPlayPause, onSpeedChange, onSeek }: ReplayBarProp
 
       <div className="replay-timestamp">
         <span className="timestamp-value">Claim {replay.currentClaim.toLocaleString()} of {replay.totalClaims.toLocaleString()}</span>
-        <button className="live-btn">
-          Live
-        </button>
+        <button className="live-btn">Live</button>
       </div>
     </div>
   );
 }
 
-interface ReplayResultsProps {
-  replay: PolicyReplay;
-  proposedVersion: PolicyVersion;
-  currentVersion: PolicyVersion;
-  onPromote: () => void;
-}
-
-function ReplayResults({ replay, proposedVersion, currentVersion, onPromote }: ReplayResultsProps) {
-  const precisionRegressed = replay.precisionAfter < replay.precisionBefore;
-  const isBlocked = replay.status === ReplayStatus.Blocked;
-  const isCompleted = replay.status === ReplayStatus.Completed;
-
+function ReplayTiles({ replay, onPromote }: { replay: PolicyReplay; onPromote: () => void }) {
+  const regressed = replay.precisionAfter < replay.precisionBefore;
+  const impact = Number(replay.dollarImpactCents);
+  const blocked = replay.status === ReplayStatus.Blocked;
   return (
-    <div className="replay-results">
-      <h2 className="replay-title">
-        Replay v{proposedVersion.version} vs v{currentVersion.version} on {replay.totalClaims.toLocaleString()} past claims
-      </h2>
-
-      <div className="replay-metrics">
-        <div className="replay-metric">
-          <span className="metric-label">Precision</span>
-          <span className={`metric-value precision ${precisionRegressed ? 'regressed' : 'improved'}`}>
-            {replay.precisionBefore.toFixed(1)}% to {replay.precisionAfter.toFixed(1)}%
-          </span>
-        </div>
-
-        <div className="replay-metric">
-          <span className="metric-label">Decisions changed</span>
-          <span className="metric-value">{replay.decisionsChanged}</span>
-        </div>
-
-        <div className="replay-metric">
-          <span className="metric-label">Dollar impact</span>
-          <span className={`metric-value ${Number(replay.dollarImpactCents) > 0 ? 'negative' : 'positive'}`}>
-            {formatDollars(replay.dollarImpactCents)} {Number(replay.dollarImpactCents) > 0 ? 'overpaid' : 'saved'}
-          </span>
-        </div>
+    <motion.div className="ui-tiles" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+      <div className="ui-tile">
+        <span className="ui-stat-label">Precision</span>
+        <span className={`ui-stat-value ${regressed ? 'tone-warn' : ''}`}>
+          {replay.precisionBefore.toFixed(1)}% <span className="policy-arrow">→</span> {replay.precisionAfter.toFixed(1)}%
+        </span>
+        <span className="ui-stat-sub">{pts(replay.precisionBefore, replay.precisionAfter)}</span>
       </div>
-
-      {isBlocked && replay.blockReason && (
-        <div className="replay-blocked">
-          <span className="blocked-badge">Blocked: {replay.blockReason}</span>
-        </div>
-      )}
-
-      {isCompleted && !isBlocked && (
-        <div className="replay-actions">
-          <button className="promote-btn" onClick={onPromote}>Promote to Current</button>
-        </div>
-      )}
-    </div>
+      <div className="ui-tile">
+        <span className="ui-stat-label">Decisions changed</span>
+        <span className="ui-stat-value"><CountUp value={replay.decisionsChanged} format={n => Math.round(n).toLocaleString()} /></span>
+        <span className="ui-stat-sub">of {replay.totalClaims.toLocaleString()} claims</span>
+      </div>
+      <div className="ui-tile">
+        <span className="ui-stat-label">Dollar impact</span>
+        <span className={`ui-stat-value ${impact > 0 ? 'tone-warn' : ''}`}>
+          <CountUp value={Math.abs(impact)} format={compactUsd} />
+        </span>
+        <span className="ui-stat-sub">{impact > 0 ? 'overpaid' : 'saved'}</span>
+      </div>
+      <div className="ui-tile policy-tile-action">
+        {blocked ? (
+          <Chip tone="block" icon={Ban} title={replay.blockReason}>Blocked: {replay.blockReason}</Chip>
+        ) : replay.status === ReplayStatus.Completed ? (
+          <button className="promote-btn" onClick={onPromote}><CheckCircle2 size={13} /> Promote to current</button>
+        ) : (
+          <Chip tone="accent" icon={History}>Replaying</Chip>
+        )}
+      </div>
+    </motion.div>
   );
 }
 
-interface RuleEditorProps {
+interface RuleListProps {
   rules: CedarRule[];
+  changed: Set<string>;
   onToggleRule: (ruleId: string) => void;
+  onOpen: (ruleId: string) => void;
   onCreateVersion: () => void;
   canEdit: boolean;
 }
 
-function RuleEditor({ rules, onToggleRule, onCreateVersion, canEdit }: RuleEditorProps) {
-  const [expandedRule, setExpandedRule] = useState<string | null>(null);
-
+function RuleList({ rules, changed, onToggleRule, onOpen, onCreateVersion, canEdit }: RuleListProps) {
   return (
-    <div className="rule-editor">
-      <div className="rule-editor-header">
-        <h3>Cedar Rules</h3>
+    <section className="policy-section">
+      <div className="policy-section-head">
+        <span className="ui-section-title">Cedar rules</span>
         {canEdit && (
-          <button className="add-rule-btn">+ Add Rule</button>
+          <button className="create-version-btn" onClick={onCreateVersion}><FilePlus2 size={13} /> New version</button>
         )}
       </div>
       <div className="rules-list">
         {rules.map(rule => (
-          <div key={rule.id} className={`rule-item ${!rule.enabled ? 'disabled' : ''}`}>
-            <div className="rule-header" onClick={() => setExpandedRule(expandedRule === rule.id ? null : rule.id)}>
-              <div className="rule-info">
-                <span className="rule-name">{rule.name}</span>
-                <span className="rule-description">{rule.description}</span>
-              </div>
-              <div className="rule-actions">
-                {canEdit && (
-                  <button
-                    className={`toggle-btn ${rule.enabled ? 'enabled' : ''}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleRule(rule.id);
-                    }}
-                  >
-                    {rule.enabled ? 'ON' : 'OFF'}
-                  </button>
-                )}
-                <span className="expand-icon">{expandedRule === rule.id ? '▼' : '▶'}</span>
-              </div>
-            </div>
-            {expandedRule === rule.id && (
-              <div className="rule-code">
-                <pre>{rule.cedarCode}</pre>
-              </div>
+          <div
+            key={rule.id}
+            className={`rule-item ui-row-hover ${!rule.enabled ? 'disabled' : ''}`}
+            onClick={() => onOpen(rule.id)}
+            title={rule.description}
+          >
+            <ScrollText size={13} className="rule-icon" aria-hidden />
+            <span className="rule-name">{rule.name}</span>
+            {changed.has(rule.id) && <Chip tone="warn" icon={GitBranch}>Changed</Chip>}
+            {canEdit ? (
+              <button
+                className={`toggle-btn ${rule.enabled ? 'enabled' : ''}`}
+                role="switch"
+                aria-checked={rule.enabled}
+                aria-label={`${rule.name} ${rule.enabled ? 'on' : 'off'}`}
+                onClick={(e) => { e.stopPropagation(); onToggleRule(rule.id); }}
+              >
+                <motion.span className="toggle-knob" layout transition={{ type: 'spring', stiffness: 600, damping: 35 }} />
+              </button>
+            ) : (
+              <Chip>{rule.enabled ? 'On' : 'Off'}</Chip>
             )}
           </div>
         ))}
       </div>
-      {canEdit && (
-        <div className="rule-editor-footer">
-          <button className="create-version-btn" onClick={onCreateVersion}>
-            Create New Version
-          </button>
-        </div>
-      )}
-    </div>
+    </section>
   );
 }
 
+type Open = { kind: 'labels' } | { kind: 'pattern' | 'rule' | 'replay'; rule: LearnedRuleRow } | { kind: 'decisions' | 'proposal' | 'prule' | 'preplay' } | { kind: 'cedar'; id: string };
+
 export default function Policies() {
   const {
+    connected,
     policyVersions,
     cedarRules,
     replays,
@@ -262,10 +215,13 @@ export default function Policies() {
     createPolicyVersion,
     promotePolicyVersion,
   } = usePoliciesDB();
+  const learnedRows = useTable('learnedRule');
+  const labelRows = useTable('labeledDecision');
 
   const linkedVersionId = useHashParam();
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
   const [appliedLinkId, setAppliedLinkId] = useState<string | null>(null);
+  const [open, setOpen] = useState<Open | null>(null);
 
   useEffect(() => {
     if (policyVersions.length === 0) return;
@@ -288,6 +244,62 @@ export default function Policies() {
   );
 
   const showReplay = selectedVersion?.status === PolicyStatus.Proposed && currentVersion && activeReplay;
+
+  const changedRules = useMemo(() => {
+    if (!currentVersion || selectedVersionId === currentVersion.id) return [];
+    const base = new Set(cedarRules.filter(r => r.policyVersionId === currentVersion.id).map(r => `${r.name}\n${r.cedarCode}`));
+    return cedarRules.filter(r => r.policyVersionId === selectedVersionId && !base.has(`${r.name}\n${r.cedarCode}`));
+  }, [cedarRules, currentVersion, selectedVersionId]);
+  const changedIds = useMemo(() => new Set(changedRules.map(r => r.id)), [changedRules]);
+
+  const learned = useMemo(() => [...learnedRows].sort((a, b) => Number(a.id - b.id)), [learnedRows]);
+  const labelStats = useMemo(() => ({
+    total: labelRows.length,
+    history: labelRows.filter(l => l.source === 'history').length,
+    reviewers: new Set(labelRows.map(l => l.reviewer)).size,
+  }), [labelRows]);
+
+  const { nodes, edges } = useMemo(() => {
+    const nodes: GraphNode[] = [];
+    const edges: GraphEdge[] = [];
+    if (learned.length > 0) {
+      nodes.push({ id: 'labels', title: 'Labels', icon: Users, value: labelStats.total.toLocaleString(), sub: 'human decisions' });
+    }
+    for (const r of learned) {
+      const promoted = tag(r.status) === 'Promoted';
+      const approve = tag(r.verdict) === 'Approve';
+      nodes.push({
+        id: `p${r.id}`, title: 'Pattern', icon: Sparkles, value: `${r.support} agree`,
+        sub: `${r.distinctReviewers} reviewers`, tone: r.contradictions > 0 ? 'warn' : 'neutral', hint: r.description,
+      });
+      nodes.push({
+        id: `r${r.id}`, title: `Rule L${r.id}`, icon: ScrollText, value: approve ? 'Approve' : 'Deny',
+        sub: claimTypeLabel(r.claimType), tone: promoted ? 'neutral' : 'block',
+      });
+      nodes.push({
+        id: `x${r.id}`, title: promoted ? 'Promoted' : 'Rejected', icon: promoted ? CheckCircle2 : Ban,
+        value: `${r.precisionAfter.toFixed(2)}%`, sub: pts(r.precisionBefore, r.precisionAfter),
+        tone: promoted ? 'pass' : 'block', emphasis: true, hint: r.reason,
+      });
+      edges.push({ from: 'labels', to: `p${r.id}` });
+      edges.push({ from: `p${r.id}`, to: `r${r.id}`, tone: r.contradictions > 0 ? 'warn' : undefined });
+      edges.push({ from: `r${r.id}`, to: `x${r.id}`, tone: promoted ? 'pass' : 'block' });
+    }
+    if (showReplay && selectedVersion && currentVersion && activeReplay) {
+      const blocked = activeReplay.status === ReplayStatus.Blocked;
+      const regressed = activeReplay.precisionAfter < activeReplay.precisionBefore;
+      nodes.push({ id: 'decisions', title: `v${currentVersion.version} decisions`, icon: History, value: currentVersion.decisionCount.toLocaleString() });
+      nodes.push({ id: 'proposal', title: 'Proposal', icon: Sparkles, value: `${changedRules.length} rule${changedRules.length === 1 ? '' : 's'}`, sub: `by ${selectedVersion.author}` });
+      nodes.push({ id: 'prule', title: `Cedar v${selectedVersion.version}`, icon: GitBranch, value: `${selectedRules.length} rules`, sub: changedRules[0]?.name, tone: 'warn' });
+      nodes.push({
+        id: 'preplay', title: blocked ? 'Blocked' : 'Replay', icon: blocked ? Ban : History,
+        value: `${activeReplay.precisionAfter.toFixed(1)}%`, sub: pts(activeReplay.precisionBefore, activeReplay.precisionAfter),
+        tone: blocked ? 'block' : regressed ? 'warn' : 'pass', emphasis: true, hint: activeReplay.blockReason || undefined,
+      });
+      edges.push({ from: 'decisions', to: 'proposal' }, { from: 'proposal', to: 'prule' }, { from: 'prule', to: 'preplay', tone: blocked ? 'block' : 'pass' });
+    }
+    return { nodes, edges };
+  }, [learned, labelStats.total, showReplay, selectedVersion, currentVersion, activeReplay, changedRules, selectedRules.length]);
 
   useEffect(() => {
     if (!activeReplay || !activeReplay.isPlaying || activeReplay.status !== ReplayStatus.Running) return;
@@ -335,12 +347,26 @@ export default function Policies() {
     }
   }, [selectedVersionId, promotePolicyVersion]);
 
+  const handleSelectNode = useCallback((id: string) => {
+    const rule = learned.find(r => id.slice(1) === String(r.id));
+    if (id === 'labels') setOpen({ kind: 'labels' });
+    else if (id === 'decisions' || id === 'proposal' || id === 'prule' || id === 'preplay') setOpen({ kind: id });
+    else if (rule) setOpen({ kind: id[0] === 'p' ? 'pattern' : id[0] === 'r' ? 'rule' : 'replay', rule });
+  }, [learned]);
+
+  const selectedNodeId = open === null ? null
+    : 'rule' in open ? `${open.kind === 'pattern' ? 'p' : open.kind === 'rule' ? 'r' : 'x'}${open.rule.id}`
+    : open.kind === 'cedar' ? null : open.kind;
+
+  const loading = !connected && policyVersions.length === 0;
+
   return (
     <div className="policies-page">
       <div className="policies-main">
         <div className="versions-panel">
+          <div className="ui-eyebrow versions-eyebrow">Versions</div>
           <div className="versions-list">
-            {policyVersions.map(version => (
+            {loading ? <SkeletonRows rows={5} /> : policyVersions.map(version => (
               <VersionItem
                 key={version.id}
                 version={version}
@@ -352,19 +378,44 @@ export default function Policies() {
         </div>
 
         <div className="policies-content">
-          {showReplay && selectedVersion && currentVersion && activeReplay && (
-            <ReplayResults
-              replay={activeReplay}
-              proposedVersion={selectedVersion}
-              currentVersion={currentVersion}
-              onPromote={handlePromote}
-            />
+          <section className="policy-section">
+            <div className="policy-section-head">
+              <span className="ui-section-title">Rule lineage</span>
+              <span className="ui-legend">
+                <span>Decisions</span><span className="policy-arrow">→</span><span>Pattern</span><span className="policy-arrow">→</span>
+                <span>Rule</span><span className="policy-arrow">→</span><span>Replay</span>
+              </span>
+            </div>
+            {loading ? <SkeletonGraph /> : nodes.length === 0 ? (
+              <EmptyState art="graph" compact title="No learned rules yet" hint="Rules appear once reviewers agree on a pattern." />
+            ) : (
+              <FlowGraph
+                nodes={nodes}
+                edges={edges}
+                height={Math.max(200, (learned.length + (showReplay ? 1 : 0)) * 86 + 24)}
+                rankSep={56}
+                selectedId={selectedNodeId}
+                onSelect={handleSelectNode}
+                label="Rule lineage: human decisions feed patterns, patterns become Cedar rules, rules are replayed on history"
+              />
+            )}
+          </section>
+
+          {showReplay && activeReplay && (
+            <section className="policy-section">
+              <div className="policy-section-head">
+                <span className="ui-section-title">Replay v{selectedVersion?.version} vs v{currentVersion?.version}</span>
+              </div>
+              <ReplayTiles replay={activeReplay} onPromote={handlePromote} />
+            </section>
           )}
 
           {selectedVersion && (
-            <RuleEditor
+            <RuleList
               rules={selectedRules}
+              changed={changedIds}
               onToggleRule={handleToggleRule}
+              onOpen={id => setOpen({ kind: 'cedar', id })}
               onCreateVersion={handleCreateVersion}
               canEdit={selectedVersion.status === PolicyStatus.Current}
             />
@@ -380,6 +431,132 @@ export default function Policies() {
           onSeek={handleSeek}
         />
       )}
+
+      <PolicyDrawer
+        open={open}
+        onClose={() => setOpen(null)}
+        labelStats={labelStats}
+        cedarRules={cedarRules}
+        changedRules={changedRules}
+        selectedVersion={selectedVersion}
+        currentVersion={currentVersion}
+        replay={activeReplay}
+      />
     </div>
+  );
+}
+
+interface PolicyDrawerProps {
+  open: Open | null;
+  onClose: () => void;
+  labelStats: { total: number; history: number; reviewers: number };
+  cedarRules: CedarRule[];
+  changedRules: CedarRule[];
+  selectedVersion?: PolicyVersion;
+  currentVersion?: PolicyVersion;
+  replay?: PolicyReplay;
+}
+
+function PolicyDrawer({ open, onClose, labelStats, cedarRules, changedRules, selectedVersion, currentVersion, replay }: PolicyDrawerProps) {
+  let eyebrow = '';
+  let title = '';
+  let body: React.ReactNode = null;
+
+  if (open?.kind === 'labels') {
+    eyebrow = 'Decisions';
+    title = 'Human labels';
+    body = (
+      <>
+        <Fact label="Labeled decisions" value={labelStats.total.toLocaleString()} />
+        <Fact label="From history" value={labelStats.history.toLocaleString()} />
+        <Fact label="Live reviews" value={(labelStats.total - labelStats.history).toLocaleString()} />
+        <Fact label="Reviewers" value={labelStats.reviewers} />
+      </>
+    );
+  } else if (open && 'rule' in open) {
+    const r = open.rule;
+    const conditions = parseJson<Condition[]>(r.conditionsJson) ?? [];
+    const promoted = tag(r.status) === 'Promoted';
+    eyebrow = `Learned rule L${r.id}`;
+    if (open.kind === 'pattern') {
+      title = 'Pattern';
+      body = (
+        <>
+          <p className="ui-quote">{r.description}</p>
+          <div className="ui-chips">{conditions.map((c, i) => <Chip key={i}>{conditionText(c)}</Chip>)}</div>
+          <Fact label="Consistent decisions" value={r.support} />
+          <Fact label="Reviewers" value={r.distinctReviewers} />
+          <Fact label="Contradictions" value={r.contradictions} tone={r.contradictions > 0 ? 'warn' : undefined} />
+        </>
+      );
+    } else if (open.kind === 'rule') {
+      title = `${tag(r.verdict) === 'Approve' ? 'Approve' : 'Deny'} · ${claimTypeLabel(r.claimType)}`;
+      body = (
+        <>
+          <div className="ui-chips">
+            <Chip tone={promoted ? 'pass' : 'block'} icon={promoted ? CheckCircle2 : Ban}>{promoted ? 'Promoted' : 'Rejected'}</Chip>
+          </div>
+          <pre className="policy-code">{r.cedarText}</pre>
+        </>
+      );
+    } else {
+      title = promoted ? 'Replay passed' : 'Replay rejected';
+      body = (
+        <>
+          <Fact label="Precision" value={`${r.precisionBefore.toFixed(2)}% → ${r.precisionAfter.toFixed(2)}%`} tone={r.precisionAfter < r.precisionBefore ? 'warn' : 'pass'} />
+          <Fact label="Auto-decided coverage" value={`${r.coverageBefore.toFixed(2)}% → ${r.coverageAfter.toFixed(2)}%`} />
+          <Meter value={r.coverageAfter} max={100} threshold={r.coverageBefore} label="Coverage after; tick is before" />
+          <p className="ui-quote">{r.reason}</p>
+        </>
+      );
+    }
+  } else if (open?.kind === 'decisions' && currentVersion) {
+    eyebrow = 'Decisions';
+    title = `Under v${currentVersion.version}`;
+    body = <Fact label="Decisions made" value={currentVersion.decisionCount.toLocaleString()} />;
+  } else if ((open?.kind === 'proposal' || open?.kind === 'prule') && selectedVersion) {
+    eyebrow = `v${selectedVersion.version} proposal`;
+    title = open.kind === 'proposal' ? `Proposed by ${selectedVersion.author}` : 'Changed rules';
+    body = (
+      <>
+        {changedRules.map(r => (
+          <div key={r.id} className="policy-drawer-rule">
+            <div className="policy-drawer-rule-name">{r.name}</div>
+            <p className="ui-quote">{r.description}</p>
+            <pre className="policy-code">{r.cedarCode}</pre>
+          </div>
+        ))}
+      </>
+    );
+  } else if (open?.kind === 'preplay' && replay) {
+    eyebrow = 'Replay';
+    title = `${replay.totalClaims.toLocaleString()} past claims`;
+    body = (
+      <>
+        <Fact label="Precision" value={`${replay.precisionBefore.toFixed(1)}% → ${replay.precisionAfter.toFixed(1)}%`} tone={replay.precisionAfter < replay.precisionBefore ? 'warn' : 'pass'} />
+        <Fact label="Decisions changed" value={replay.decisionsChanged} />
+        <Fact label="Dollar impact" value={`${compactUsd(Math.abs(Number(replay.dollarImpactCents)))} ${Number(replay.dollarImpactCents) > 0 ? 'overpaid' : 'saved'}`} tone={Number(replay.dollarImpactCents) > 0 ? 'warn' : 'pass'} />
+        <Fact label="Progress" value={`${replay.currentClaim.toLocaleString()} of ${replay.totalClaims.toLocaleString()}`} />
+        {replay.blockReason && <Fact label="Blocked" value={replay.blockReason} tone="block" />}
+      </>
+    );
+  } else if (open?.kind === 'cedar') {
+    const r = cedarRules.find(x => x.id === open.id);
+    if (r) {
+      eyebrow = 'Cedar rule';
+      title = r.name;
+      body = (
+        <>
+          <p className="ui-quote">{r.description}</p>
+          <pre className="policy-code">{r.cedarCode}</pre>
+        </>
+      );
+    }
+  }
+
+  return (
+    <Drawer open={open !== null && body !== null} onClose={onClose} eyebrow={eyebrow} title={title}>
+      {body}
+    </Drawer>
   );
 }

@@ -589,3 +589,24 @@
 .ui-row-hover:hover {
   background: rgba(255, 255, 255, 0.03);
 }
+
+/* Stat tiles: a row of numbers split by thin dividers, as on Finance */
+.ui-tiles {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+}
+
+.ui-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 24px;
+  border-left: 1px solid #1c1c1c;
+  min-width: 0;
+}
+
+.ui-tile:first-child {
+  padding-left: 0;
+  border-left: none;
+}
