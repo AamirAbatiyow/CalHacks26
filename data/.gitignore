@@ -1,0 +1,18 @@
+# Ignore large raw data files (can be regenerated)
+raw/*.json
+raw/*_cache/
+
+# Keep sample files for reference
+!raw/sample_*.json
+
+# Ignore large processed outputs
+processed/passes_features.parquet
+processed/station_weather.json
+
+# Keep smaller processed files
+!processed/stations.json
+!processed/satellites.json
+!processed/space_weather.json
+
+# Keep pipeline stats
+!pipeline_stats.json
