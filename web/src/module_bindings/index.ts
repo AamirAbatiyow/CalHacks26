@@ -126,6 +126,7 @@ import SubmitScreenReducer from "./submit_screen_reducer";
 import SubmitSimilarClaimReducer from "./submit_similar_claim_reducer";
 import SubmitSystem1Reducer from "./submit_system_1_reducer";
 import SubmitSystem2Reducer from "./submit_system_2_reducer";
+import SubmitToErpReducer from "./submit_to_erp_reducer";
 import ToggleRuleReducer from "./toggle_rule_reducer";
 import UpdateClaimOutcomeReducer from "./update_claim_outcome_reducer";
 import WorkerHeartbeatReducer from "./worker_heartbeat_reducer";
@@ -172,6 +173,8 @@ import DecisionRecordRow from "./decision_record_table";
 import DecisionSnapshotRow from "./decision_snapshot_table";
 import DisputeRow from "./dispute_table";
 import DisputeMessageRow from "./dispute_message_table";
+import ErpBatchRow from "./erp_batch_table";
+import ErpPostingRow from "./erp_posting_table";
 import EscalatedClaimRow from "./escalated_claim_table";
 import EventLogRow from "./event_log_table";
 import KpiRow from "./kpi_table";
@@ -678,6 +681,39 @@ const tablesSchema = __schema({
       { name: 'dispute_message_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, DisputeMessageRow),
+  erpBatch: __table({
+    name: 'erp_batch',
+    indexes: [
+      { accessor: 'id', name: 'erp_batch_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+      { accessor: 'request_id', name: 'erp_batch_request_id_idx_btree', algorithm: 'btree', columns: [
+        'requestId',
+      ] },
+    ],
+    constraints: [
+      { name: 'erp_batch_id_key', constraint: 'unique', columns: ['id'] },
+      { name: 'erp_batch_request_id_key', constraint: 'unique', columns: ['requestId'] },
+    ],
+  }, ErpBatchRow),
+  erpPosting: __table({
+    name: 'erp_posting',
+    indexes: [
+      { accessor: 'batch_id', name: 'erp_posting_batch_id_idx_btree', algorithm: 'btree', columns: [
+        'batchId',
+      ] },
+      { accessor: 'idempotency_key', name: 'erp_posting_idempotency_key_idx_btree', algorithm: 'btree', columns: [
+        'idempotencyKey',
+      ] },
+      { accessor: 'ledger_entry_id', name: 'erp_posting_ledger_entry_id_idx_btree', algorithm: 'btree', columns: [
+        'ledgerEntryId',
+      ] },
+    ],
+    constraints: [
+      { name: 'erp_posting_idempotency_key_key', constraint: 'unique', columns: ['idempotencyKey'] },
+      { name: 'erp_posting_ledger_entry_id_key', constraint: 'unique', columns: ['ledgerEntryId'] },
+    ],
+  }, ErpPostingRow),
   escalatedClaim: __table({
     name: 'escalated_claim',
     indexes: [
@@ -1103,6 +1139,7 @@ const reducersSchema = __reducers(
   __reducerSchema("submit_similar_claim", SubmitSimilarClaimReducer),
   __reducerSchema("submit_system_1", SubmitSystem1Reducer),
   __reducerSchema("submit_system_2", SubmitSystem2Reducer),
+  __reducerSchema("submit_to_erp", SubmitToErpReducer),
   __reducerSchema("toggle_rule", ToggleRuleReducer),
   __reducerSchema("update_claim_outcome", UpdateClaimOutcomeReducer),
   __reducerSchema("worker_heartbeat", WorkerHeartbeatReducer),
@@ -1188,6 +1225,10 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "decision_snapshot": Omit<typeof tablesSchema.schemaType.tables["decisionSnapshot"], "accessorName"> & { readonly accessorName: "decision_snapshot" };
     /** @deprecated Use `disputeMessage` instead. This alias will be removed in the next major version. */
     readonly "dispute_message": Omit<typeof tablesSchema.schemaType.tables["disputeMessage"], "accessorName"> & { readonly accessorName: "dispute_message" };
+    /** @deprecated Use `erpBatch` instead. This alias will be removed in the next major version. */
+    readonly "erp_batch": Omit<typeof tablesSchema.schemaType.tables["erpBatch"], "accessorName"> & { readonly accessorName: "erp_batch" };
+    /** @deprecated Use `erpPosting` instead. This alias will be removed in the next major version. */
+    readonly "erp_posting": Omit<typeof tablesSchema.schemaType.tables["erpPosting"], "accessorName"> & { readonly accessorName: "erp_posting" };
     /** @deprecated Use `escalatedClaim` instead. This alias will be removed in the next major version. */
     readonly "escalated_claim": Omit<typeof tablesSchema.schemaType.tables["escalatedClaim"], "accessorName"> & { readonly accessorName: "escalated_claim" };
     /** @deprecated Use `eventLog` instead. This alias will be removed in the next major version. */
@@ -1287,6 +1328,8 @@ const tableAccessorAliases = {
   "decision_record": "decisionRecord",
   "decision_snapshot": "decisionSnapshot",
   "dispute_message": "disputeMessage",
+  "erp_batch": "erpBatch",
+  "erp_posting": "erpPosting",
   "escalated_claim": "escalatedClaim",
   "event_log": "eventLog",
   "labeled_decision": "labeledDecision",
@@ -1403,6 +1446,10 @@ export type DbView = __DbViewBase & {
   readonly "decision_snapshot": __DbViewBase["decisionSnapshot"];
   /** @deprecated Use `disputeMessage` instead. This alias will be removed in the next major version. */
   readonly "dispute_message": __DbViewBase["disputeMessage"];
+  /** @deprecated Use `erpBatch` instead. This alias will be removed in the next major version. */
+  readonly "erp_batch": __DbViewBase["erpBatch"];
+  /** @deprecated Use `erpPosting` instead. This alias will be removed in the next major version. */
+  readonly "erp_posting": __DbViewBase["erpPosting"];
   /** @deprecated Use `escalatedClaim` instead. This alias will be removed in the next major version. */
   readonly "escalated_claim": __DbViewBase["escalatedClaim"];
   /** @deprecated Use `eventLog` instead. This alias will be removed in the next major version. */
@@ -1525,6 +1572,10 @@ export type Tables = __TablesBase & {
   readonly "decision_snapshot": __TablesBase["decisionSnapshot"];
   /** @deprecated Use `disputeMessage` instead. This alias will be removed in the next major version. */
   readonly "dispute_message": __TablesBase["disputeMessage"];
+  /** @deprecated Use `erpBatch` instead. This alias will be removed in the next major version. */
+  readonly "erp_batch": __TablesBase["erpBatch"];
+  /** @deprecated Use `erpPosting` instead. This alias will be removed in the next major version. */
+  readonly "erp_posting": __TablesBase["erpPosting"];
   /** @deprecated Use `escalatedClaim` instead. This alias will be removed in the next major version. */
   readonly "escalated_claim": __TablesBase["escalatedClaim"];
   /** @deprecated Use `eventLog` instead. This alias will be removed in the next major version. */

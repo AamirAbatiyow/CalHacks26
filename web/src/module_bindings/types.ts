@@ -763,6 +763,51 @@ export const DisputeStatus = __t.enum("DisputeStatus", {
 });
 export type DisputeStatus = __Infer<typeof DisputeStatus>;
 
+export const ErpBatch = __t.object("ErpBatch", {
+  id: __t.u64(),
+  requestId: __t.string(),
+  batchRef: __t.string(),
+  submittedAt: __t.timestamp(),
+  submittedBy: __t.identity(),
+  submittedByName: __t.string(),
+  target: __t.string(),
+  requested: __t.u32(),
+  posted: __t.u32(),
+  failed: __t.u32(),
+  skipped: __t.u32(),
+  postedNetCents: __t.i64(),
+  invoiceCents: __t.i64(),
+  creditCents: __t.i64(),
+  recoveryCents: __t.i64(),
+});
+export type ErpBatch = __Infer<typeof ErpBatch>;
+
+export const ErpPosting = __t.object("ErpPosting", {
+  ledgerEntryId: __t.u64(),
+  idempotencyKey: __t.string(),
+  get status() {
+    return ErpStatus;
+  },
+  batchId: __t.u64(),
+  documentType: __t.string(),
+  externalId: __t.string(),
+  erpDocumentId: __t.option(__t.string()),
+  debitAccount: __t.string(),
+  creditAccount: __t.string(),
+  amountCents: __t.i64(),
+  attempts: __t.u32(),
+  error: __t.option(__t.string()),
+  updatedAt: __t.timestamp(),
+});
+export type ErpPosting = __Infer<typeof ErpPosting>;
+
+// The tagged union or sum type for the algebraic type `ErpStatus`.
+export const ErpStatus = __t.enum("ErpStatus", {
+  Submitted: __t.unit(),
+  Failed: __t.unit(),
+});
+export type ErpStatus = __Infer<typeof ErpStatus>;
+
 export const EscalatedClaim = __t.object("EscalatedClaim", {
   id: __t.u64(),
   customerName: __t.string(),

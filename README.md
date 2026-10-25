@@ -104,9 +104,9 @@ flowchart LR
     H --> L["Labeled ruling →<br/>retrain + mine rule →<br/>replay → human promotes"]
 ```
 
-- **Module** (`server/spacetimedb`, Rust): evidence, routing, Cedar (`cedar-policy` v4 compiled to WASM), re-verification, ledger, KPIs, audit and replay. 91 tests.
+- **Module** (`server/spacetimedb`, Rust): evidence, routing, Cedar (`cedar-policy` v4 compiled to WASM), re-verification, ledger, ERP handoff, KPIs, audit and replay. 95 tests.
 - **Worker** (`worker/`, TypeScript): System 1 (L2 logistic regression, structured features only, never customer text) and the injection screen (Unicode tag, zero-width and bidi stripping, NFKC, homoglyph folding, base64 decoding, instruction patterns). Also System 2 (GPT-4.1 via any OpenAI-compatible endpoint, strict JSON schema, customer text JSON-escaped and delimited, never in the system prompt), retraining and the rule miner. 36 tests.
-- **Web** (`web/`, Vite + React): a three.js globe with a G-scale storm band, plus Claims, Decisions, Finance (Ledger and Audit), Policies and Break It, and decision replay (React Flow). Internals stay hidden behind Settings → Show technical details.
+- **Web** (`web/`, Vite + React): a three.js globe with a G-scale storm band, plus Claims, Decisions, Finance (Earnings, Ledger with ERP submit, and Audit), Policies and Break It, and decision replay (React Flow). Internals stay hidden behind Settings → Show technical details.
 
 ## How we use SpacetimeDB
 

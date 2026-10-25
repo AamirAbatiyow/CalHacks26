@@ -3,7 +3,8 @@ import { ArrowDown, ArrowUp } from 'lucide-react';
 
 export interface Column<T> {
   key: string;
-  label: string;
+  /** Header content; a control such as a select-all checkbox is allowed when `sort` is omitted. */
+  label: ReactNode;
   /** CSS grid track, e.g. `120px` or `minmax(0, 1fr)`. */
   width: string;
   align?: 'left' | 'right';
