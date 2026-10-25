@@ -1,23 +1,25 @@
 import { useMemo, useState } from 'react';
 import {
-  Bot, CheckCircle2, CloudLightning, Cpu, FileText, Inbox, Info, Play, ScrollText, ShieldCheck, ShieldX, UserCheck, Wifi, WifiOff, Zap,
+  Bot, CheckCircle2, CloudLightning, Cpu, FileText, Inbox, ListChecks, Play, ScrollText, ShieldCheck, ShieldX, UserCheck, Wifi, WifiOff, Zap,
   type LucideIcon,
 } from 'lucide-react';
-import { micros, reducers, tag } from '../../hooks/useTable';
-import {
-  CLAIM_TYPE_LABELS, SYSTEM_LABELS, parseJson, useDecisionData, type CaseDecisionRow, type DecisionCaseRow, type LearnedRuleRow,
-} from '../../hooks/useDecisions';
+import { reducers, tag } from '../../hooks/useTable';
+import { CLAIM_TYPE_LABELS, SYSTEM_LABELS, parseJson, type CaseDecisionRow, type DecisionCaseRow } from '../../hooks/useDecisions';
 import { openReplay } from '../../replay/useDecisionTrace';
-import { FlowGraph, COMPACT_NODE_W, type GraphEdge, type GraphNode } from '../../ui/FlowGraph';
-import { Drawer, Fact } from '../../ui/Drawer';
+import { Drawer } from '../../ui/Drawer';
 import { Chip, type Tone } from '../../ui/Chip';
-import { Meter, TrendLine } from '../../ui/charts';
+import { Meter } from '../../ui/charts';
 import { CountUp, compactUsd, usd } from '../../ui/CountUp';
 import { EmptyState } from '../../ui/EmptyState';
 import { escalationChip } from '../Claims/CaseReview';
 import { useTechMode } from '../../hooks/useTechMode';
 import { plainEscalation, plainReason } from '../../utils/plainReason';
 import { DataTable, type Column } from '../../ui/DataTable';
+import { PipelineMap, type StageCard } from './PipelineMap';
+import { STAGE_ORDER, type StageId } from './stages';
+import { StageDetail } from './StageDetail';
+import { usePipeline } from './usePipeline';
+import { AUTO_DECIDE_PCT } from './system1';
 import './Decisions.css';
 
 const SCENARIOS: readonly (readonly [string, string, LucideIcon])[] = [
@@ -42,14 +44,6 @@ const SYSTEM_TONES: Record<string, Tone> = {
   Guard: 'block',
   Human: 'neutral',
 };
-
-function ago(ts: unknown): string {
-  const s = Math.max(0, Math.round((Date.now() * 1000 - Number(micros(ts))) / 1e6));
-  if (s < 60) return `${s}s ago`;
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-  return `${Math.floor(s / 86400)}d ago`;
-}
 
 function SystemChip({ system }: { system: string }) {
   return <Chip tone={SYSTEM_TONES[system] ?? 'neutral'} icon={SYSTEM_ICONS[system]}>{SYSTEM_LABELS[system] ?? system}</Chip>;
@@ -125,18 +119,29 @@ function StepCard({ d }: { d: CaseDecisionRow }) {
   );
 }
 
-type Open = { kind: 'case'; c: DecisionCaseRow } | { kind: 'rule'; r: LearnedRuleRow };
+const STAGE_IDS = new Set<string>(STAGE_ORDER);
+
+function initialStage(): StageId {
+  const param = window.location.hash.replace(/^#\/?/, '').split(/[?]/)[0].split('/')[1];
+  return param && STAGE_IDS.has(param) ? (param as StageId) : 's1';
+}
 
 export default function DecisionsPage() {
-  const d = useDecisionData();
+  const d = usePipeline();
   const [error, setError] = useState<string | null>(null);
-  const [open, setOpen] = useState<Open | null>(null);
+  const [openCase, setOpenCase] = useState<DecisionCaseRow | null>(null);
+  const [stageId, setStageId] = useState<StageId>(initialStage);
   const tech = useTechMode();
   const columns = useMemo(() => caseColumns(tech), [tech]);
   const active = d.active;
   const lastLive = d.models.find(m => m.triggeredByLabel !== undefined) ?? null;
   const promoted = d.rules.filter(r => tag(r.status) === 'Promoted');
-  const auto = d.cases.filter(c => tag(c.status) === 'AutoDecided').length;
+  const split = d.history?.split ?? null;
+
+  const select = (id: StageId) => {
+    setStageId(id);
+    window.history.replaceState(null, '', `#/decisions/${id}`);
+  };
 
   const file = async (scenario: string) => {
     setError(null);
@@ -147,42 +152,28 @@ export default function DecisionsPage() {
     }
   };
 
-  const flow = useMemo(() => {
-    let s1 = 0, rule = 0, s2Ran = 0, guard = 0, escalated = 0, autoCents = 0, claimedCents = 0;
-    for (const c of d.cases) {
-      const by = tag(c.decidedBy);
-      const status = tag(c.status);
-      claimedCents += Number(c.amountClaimedCents);
-      if (by === 'System1') s1++;
-      if (by === 'LearnedRule') rule++;
-      if (by === 'Guard') guard++;
-      if (status === 'Escalated' || by === 'Human') escalated++;
-      if (status === 'AutoDecided') autoCents += Number(c.finalCreditCents);
-      if ((d.stepsByCase.get(c.id) ?? []).some(s => tag(s.system) === 'System2')) s2Ran++;
-    }
-    const nodes: GraphNode[] = [
-      { id: 'claims', title: 'Claims', icon: FileText, value: String(d.cases.length), sub: compactUsd(claimedCents) },
-      { id: 's1', title: 'System 1', icon: Cpu, value: String(s1 + rule), sub: '≥ 95% auto', hint: 'Model decides alone at 95% confidence or higher' },
-      { id: 's2', title: 'System 2', icon: Bot, value: String(s2Ran), sub: 'reads all sources', hint: 'Below 95%, System 2 reads every source, including the customer message' },
-      { id: 'cedar', title: 'Cedar', icon: ShieldCheck, value: String(auto), sub: guard > 0 ? `${guard} guarded` : 'final say', hint: 'Cedar policy has the final say on every automatic decision' },
-      { id: 'auto', title: 'Auto', icon: Zap, value: compactUsd(autoCents), sub: `${auto} claims`, tone: 'pass', emphasis: true },
-      { id: 'human', title: 'Claims review', icon: Inbox, value: String(escalated), sub: '< 95% · evidence', tone: escalated > 0 ? 'warn' : 'neutral', emphasis: escalated > 0 },
+  const stages = useMemo<StageCard[]>(() => {
+    const l = d.live;
+    const offline = d.workerOnline ? undefined : 'worker offline';
+    const policyVersion = d.policy.active?.version;
+    return [
+      { id: 'claims', kicker: 'Claims intake', name: 'Evidence assembled', tech: 'SpacetimeDB reducer', metric: `${compactUsd(l.claimed)} claimed`, icon: FileText, lane: 'intake', count: String(d.cases.length), countTitle: 'Claims filed' },
+      { id: 's1', kicker: 'System 1', name: 'Numbers-only model', tech: `Logistic model · ${active ? `s1-v${active.version}` : 'none yet'}`, metric: `≥ ${AUTO_DECIDE_PCT}% sure: decides alone`, icon: Cpu, lane: 'fast', count: String(l.s1Ran), countTitle: 'Live claims scored', warn: offline },
+      { id: 'rules', kicker: 'Learned rules', name: 'Rules from rulings', tech: 'Cedar rules, mined', metric: `${promoted.length} live rule${promoted.length === 1 ? '' : 's'}`, icon: ScrollText, lane: 'deep', count: String(l.rule), countTitle: 'Live claims decided by a rule' },
+      { id: 'screen', kicker: 'Injection screen', name: 'Message check', tech: 'Worker text screen', metric: l.flagged ? `${l.flagged} flagged` : 'hidden instructions?', icon: ShieldX, lane: 'deep', count: String(l.screenedCases), countTitle: 'Messages screened' },
+      { id: 's2', kicker: 'System 2', name: 'LLM analyst', tech: `${d.worker?.llmModel ?? 'LLM'} · strict JSON`, metric: 'reads every source', icon: Bot, lane: 'deep', count: String(l.s2Ran), countTitle: 'Live claims reviewed', warn: offline },
+      { id: 'reverify', kicker: 'Re-verify', name: 'Checks the AI', tech: 'Rust reducer in the DB', metric: 'evidence · amount · S1', icon: ListChecks, lane: 'deep', count: String(l.reverifyPassed + l.reverifyFailed), countTitle: 'Proposals re-verified' },
+      { id: 'cedar', kicker: 'Cedar', name: 'Final say', tech: `AWS Cedar${policyVersion ? ` · policy ${policyVersion}` : ''}`, metric: 'AI acts only if permitted', icon: ShieldCheck, lane: 'fast', count: String(l.cedarAllow + l.cedarDeny), countTitle: 'Permission checks on live claims' },
+      { id: 'auto', kicker: 'Decided', name: 'Paid or denied', tech: 'One DB transaction', metric: `${compactUsd(l.autoCents)} credited`, icon: Zap, lane: 'outcome', count: String(l.auto), countTitle: 'Auto-decided claims' },
+      { id: 'human', kicker: 'Human review', name: 'Ops reviewer', tech: 'Claims queue', metric: l.waiting ? `${l.waiting} waiting` : 'decides what AI cannot', icon: UserCheck, lane: 'human', count: String(l.waiting + l.humanDecided), countTitle: 'Claims sent to a person' },
     ];
-    const edges: GraphEdge[] = [
-      { from: 'claims', to: 's1' },
-      { from: 's1', to: 'cedar', tone: 'pass' },
-      { from: 's1', to: 's2', dashed: true },
-      { from: 's2', to: 'cedar', tone: 'pass' },
-      { from: 's2', to: 'human', tone: 'warn', dashed: true },
-      { from: 'cedar', to: 'auto', tone: 'pass' },
-    ];
-    return { nodes, edges };
-  }, [d.cases, d.stepsByCase, auto]);
+  }, [d.live, d.cases.length, d.workerOnline, d.worker, d.policy.active, active, promoted.length]);
 
-  const trend = useMemo(() => [...d.models].reverse().map(m => ({ x: `v${m.version}`, y: m.precisionPct })), [d.models]);
-
-  const openCase = open?.kind === 'case' ? open.c : null;
-  const openRule = open?.kind === 'rule' ? open.r : null;
+  const stage = stages.find(s => s.id === stageId) ?? stages[1];
+  const fastStat = split && split.total
+    ? `${split.fastPct.toFixed(0)}% of ${split.total.toLocaleString()} past claims · ${split.fastAgreePct.toFixed(1)}% match the human`
+    : undefined;
+  const deepStat = split && split.total ? `${(100 - split.fastPct).toFixed(0)}% of past claims` : undefined;
 
   return (
     <div className="dz-page">
@@ -195,7 +186,7 @@ export default function DecisionsPage() {
         <Stat label="Calibration" sub={active ? `Brier ${active.brier.toFixed(3)}` : ''}>{active ? `ECE ${active.ece.toFixed(3)}` : '—'}</Stat>
         <Stat label="Decision to live model" sub={lastLive ? `s1-v${lastLive.version}` : 'no live label yet'}>{lastLive ? `${lastLive.latencyMs.toFixed(0)} ms` : '—'}</Stat>
         <Stat label="Learned rules" sub={`of ${d.rules.length}`}>{promoted.length}</Stat>
-        <Stat label="Auto-decided" sub={`of ${d.cases.length}`}>{auto}</Stat>
+        <Stat label="Auto-decided" sub={`of ${d.cases.length}`}>{d.live.auto}</Stat>
         <span className="dz-worker" title={d.worker ? `System 2 ${d.worker.mode} (${d.worker.llmModel})` : undefined}>
           <Chip tone={d.workerOnline ? 'pass' : 'block'} icon={d.workerOnline ? Wifi : WifiOff}>
             Worker {d.workerOnline ? 'online' : 'offline'}
@@ -203,100 +194,38 @@ export default function DecisionsPage() {
         </span>
       </div>}
 
-      <div className={`dz-body ${tech ? '' : 'dz-body-simple'}`}>
-        <div className="dz-col">
-          {!tech && (
-            <section className="dz-section">
-              <span className="ui-section-title">File a claim</span>
-              <div className="dz-actions">
-                {SCENARIOS.map(([k, v, Icon]) => (
-                  <button key={k} className="dz-btn" onClick={() => file(k)}><Icon size={12} /> {v}</button>
-                ))}
-              </div>
-              {error && <div className="dz-error">{error}</div>}
-            </section>
-          )}
-          {tech && (<>
-          <section className="dz-section">
-            <div className="dz-section-head">
-              <span className="ui-section-title">Pipeline</span>
-              <span className="dz-info" title="System 1 auto-decides at 95% confidence or higher (Cedar has the final say); otherwise System 2 reads every source, including the customer message, and below 95% the claim goes to the Claims queue with the full evidence package.">
-                <Info size={12} />
-              </span>
+      <div className="dz-scroll">
+        <section className="dz-hero">
+          <div className="dz-hero-head">
+            <div className="dz-hero-text">
+              <span className="ui-eyebrow">Decision pipeline</span>
+              <h1 className="dz-hero-title">How a claim gets decided</h1>
+              <p className="dz-hero-lede">
+                Every claim meets <b>System 1</b>, a fast numbers-only model, first. When it is at least {AUTO_DECIDE_PCT}% sure, the claim takes
+                the <b className="dz-fast">fast lane</b>: no LLM call, straight to Cedar for permission. Otherwise it takes <b className="dz-deep">deep review</b>,
+                where an LLM reads everything and the database checks its work. Select any stage to see its technology, accuracy and real data.
+              </p>
             </div>
-            <FlowGraph nodes={flow.nodes} edges={flow.edges} height={220} rankSep={24} nodeWidth={COMPACT_NODE_W} label="Decision pipeline with live claim counts" />
+            <div className="dz-legend" aria-label="Legend">
+              <span className="dz-legend-item fast"><i /> Fast lane</span>
+              <span className="dz-legend-item deep"><i /> Deep review</span>
+              <span className="dz-legend-item human"><i /> To a person</span>
+              <span className="dz-legend-item loop"><i /> Learning loop</span>
+            </div>
+          </div>
+          <PipelineMap stages={stages} selected={stage.id} onSelect={select} fastStat={fastStat} deepStat={deepStat} />
+          <div className="dz-try">
+            <span className="ui-muted">Try it: file a test claim and watch the counts move</span>
             <div className="dz-actions">
               {SCENARIOS.map(([k, v, Icon]) => (
                 <button key={k} className="dz-btn" onClick={() => file(k)}><Icon size={12} /> {v}</button>
               ))}
             </div>
             {error && <div className="dz-error">{error}</div>}
-          </section>
+          </div>
+        </section>
 
-          <section className="dz-section">
-            <span className="ui-section-title">System 1 precision by version</span>
-            {d.models.length === 0 ? (
-              <EmptyState art="graph" compact title="No model yet" hint="Start the worker: cd worker && npm start" />
-            ) : (
-              <>
-                {trend.length > 1 && <TrendLine data={trend} threshold={95} format={v => `${v.toFixed(1)}%`} label="Auto-approve precision per System 1 version; dashed line is 95%" />}
-                <div className="dz-table">
-                  <div className="dz-tr dz-th">
-                    <span>Version</span><span>Status</span><span>Precision</span><span>Coverage</span><span>Labels</span>
-                  </div>
-                  {d.models.slice(0, 8).map(m => (
-                    <div
-                      key={m.version}
-                      className={`dz-tr ${tag(m.status) === 'Active' ? 'active' : ''}`}
-                      title={`ECE ${m.ece.toFixed(3)} · ${m.triggeredByLabel !== undefined ? `live in ${m.latencyMs.toFixed(0)} ms after label #${m.triggeredByLabel}` : `bootstrap fit ${m.fitMs.toFixed(0)} ms`} · ${m.note}`}
-                    >
-                      <span className="dz-mono">s1-v{m.version}</span>
-                      <span><Chip tone={tag(m.status) === 'Active' ? 'pass' : 'neutral'}>{tag(m.status)}</Chip></span>
-                      <span className="dz-num">{m.precisionPct.toFixed(2)}%</span>
-                      <span className="dz-num">{m.coveragePct.toFixed(1)}%</span>
-                      <span className="dz-num">{m.trainedRows.toLocaleString()}{m.liveLabels > 0 && <span className="dz-muted"> +{m.liveLabels}</span>}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </section>
-
-          <section className="dz-section">
-            <div className="dz-section-head">
-              <span className="ui-section-title">Learned rules</span>
-              <span
-                className="dz-info"
-                title={`A rule is proposed only when three or more reviewers made the same decision on the same kind of claim, citing the same deciding evidence, and no labeled decision contradicts it. It is stored as Cedar, replayed on ${d.labelCount.toLocaleString()} labeled decisions, and promoted only if precision does not regress. Customer text is never a rule input.`}
-              >
-                <Info size={12} />
-              </span>
-            </div>
-            {d.worker?.note && <p className="dz-note" title={d.worker.note}>{d.worker.note}</p>}
-            {d.rules.length === 0 ? (
-              <EmptyState art="graph" compact title="No rule proposed" hint="No consistent pattern in the labeled decisions yet." />
-            ) : (
-              <div className="dz-rules">
-                {d.rules.map(r => {
-                  const ok = tag(r.status) === 'Promoted';
-                  return (
-                    <button key={String(r.id)} className="dz-rule ui-row-hover" onClick={() => setOpen({ kind: 'rule', r })} title={r.description}>
-                      <span className="dz-mono">L{String(r.id)}</span>
-                      <Chip tone={ok ? 'pass' : 'block'}>{tag(r.status)}</Chip>
-                      <span className="dz-ellipsis">{tag(r.verdict)} · {CLAIM_TYPE_LABELS[r.claimType.split('_').map(w => w[0].toUpperCase() + w.slice(1)).join('')] ?? r.claimType}</span>
-                      <span className="dz-rule-support" aria-label={`${r.support} consistent decisions`}>
-                        <Meter value={Math.min(r.support, 40)} max={40} label={`${r.support} consistent decisions`} />
-                        <span className="dz-num">{r.support}</span>
-                      </span>
-                      <span className="dz-num dz-muted">{r.precisionAfter >= r.precisionBefore ? '+' : '−'}{Math.abs(r.precisionAfter - r.precisionBefore).toFixed(2)} pts</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-          </>)}
-        </div>
+        <StageDetail d={d} stage={stage} tech={tech} onSelect={select} />
 
         <section className="dz-section dz-feed">
           <span className="ui-section-title">Decisions</span>
@@ -306,7 +235,7 @@ export default function DecisionsPage() {
               columns={columns}
               rowKey={c => String(c.id)}
               defaultSort={{ key: 'ref', dir: 'desc' }}
-              onRowClick={c => setOpen({ kind: 'case', c })}
+              onRowClick={c => setOpenCase(c)}
               rowTitle={c => (tech ? [c.modelVersion, c.policyVersion].filter(Boolean).join(' · ') : undefined)}
               limit={60}
               label="Decided claims"
@@ -316,10 +245,10 @@ export default function DecisionsPage() {
       </div>
 
       <Drawer
-        open={open !== null}
-        onClose={() => setOpen(null)}
-        eyebrow={openCase ? `${openCase.claimRef} · ${CLAIM_TYPE_LABELS[tag(openCase.claimType)]}` : openRule ? `Learned rule L${openRule.id}` : ''}
-        title={openCase ? openCase.customer : openRule ? openRule.description : ''}
+        open={openCase !== null}
+        onClose={() => setOpenCase(null)}
+        eyebrow={openCase ? `${openCase.claimRef} · ${CLAIM_TYPE_LABELS[tag(openCase.claimType)]}` : ''}
+        title={openCase ? openCase.customer : ''}
       >
         {openCase && (
           <>
@@ -332,19 +261,6 @@ export default function DecisionsPage() {
             <button className="dz-btn dz-replay" onClick={() => openReplay(`case:${openCase.claimRef}`)}><Play size={12} /> Replay path</button>
             {openCase.escalationReason && <p className="ui-quote">{tech ? openCase.escalationReason : plainReason(openCase.escalationReason)}</p>}
             {tech && (d.stepsByCase.get(openCase.id) ?? []).map(s => <StepCard key={String(s.id)} d={s} />)}
-          </>
-        )}
-        {openRule && (
-          <>
-            <div className="ui-chips">
-              <Chip tone={tag(openRule.status) === 'Promoted' ? 'pass' : 'block'}>{tag(openRule.status)}</Chip>
-              <Chip>{openRule.support} decisions</Chip>
-              <Chip>{openRule.distinctReviewers} reviewers</Chip>
-              <Chip tone={openRule.contradictions > 0 ? 'warn' : 'neutral'}>{openRule.contradictions} contradictions</Chip>
-            </div>
-            <Fact label="Precision" value={`${openRule.precisionBefore.toFixed(2)}% → ${openRule.precisionAfter.toFixed(2)}%`} />
-            <pre className="dz-cedar">{openRule.cedarText}</pre>
-            <p className="ui-quote">{openRule.reason} · {openRule.triggeredByLabel !== undefined ? `completed by label #${openRule.triggeredByLabel}` : 'mined from history'} · {ago(openRule.createdAt)}</p>
           </>
         )}
       </Drawer>

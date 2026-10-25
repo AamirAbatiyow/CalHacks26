@@ -22,7 +22,7 @@ All three read the same SpacetimeDB Maincloud database, `ground-truth-aamir`, ov
 - **What it does.** Ground Truth files each claim as a case, builds the evidence from real orbital data, telemetry, space weather and the customer's contract, and routes it through a numbers-only model (System 1), learned Cedar rules, a prompt-injection screen, and an LLM analyst (System 2, GPT-4.1 through any OpenAI-compatible endpoint). The module re-verifies every LLM citation. Anything below 95% confidence goes to a human with a complete evidence package.
 - **Hyphenate (deterministic + AI that learns safely).** Human rulings become labeled decisions. After 3 consistent rulings with no contradiction the system proposes a Cedar rule, replays it over the whole labeled history, and blocks it if precision regresses. When the loop shipped (PR [#26](https://github.com/AamirAbatiyow/CalHacks26/pull/26)), mined policy v6 cut escalations from **2,772 to 1,362** while precision rose from **98.89% to 99.07%** with **0 regressions**; on the current, larger seed the same step is **3,406 → 1,660** at **98.87% → 99.06%**, again with 0 regressions. A live ruling then produced **v7**, which is promoted. The four governing rules (the 95% gate, escalation, AI cannot edit policy, human authority) are fixed and cannot be switched off.
 - **SpacetimeDB.** The whole decision system (evidence, routing, Cedar authorization, re-verification, ledger, KPIs, audit and replay) runs inside reducers in one Rust module. Every screen updates live through subscriptions, and the worker is just another subscriber.
-- **SpaceX.** 169 satellites with real CelesTrak TLEs are SGP4-propagated against 28 real ground-station locations to produce about 49,000 priced passes. A pass-failure classifier is trained on real SatNOGS observations: 0.979 precision on held-out stations (PR [#23](https://github.com/AamirAbatiyow/CalHacks26/pull/23), open).
+- **SpaceX.** 169 satellites with real CelesTrak TLEs are SGP4-propagated against 28 real ground-station locations to produce about 49,000 priced passes. The Overview globe also flies 12 real Starlinks, checked against SpaceX's public Starlink ephemerides. A pass-failure classifier is trained on real SatNOGS observations: 0.979 precision on held-out stations (PR [#23](https://github.com/AamirAbatiyow/CalHacks26/pull/23), open).
 - **CRS (fraud).** **Break It** fires real adversarial claims through the real decision path from separate identities and reports what was caught, held for a human or missed. Prompt injection: **11 of 12 caught**. Before/after learning (PR [#28](https://github.com/AamirAbatiyow/CalHacks26/pull/28)): **31 caught / 40 held / 0 missed** before, **67 / 1 / 3** after one human ruling and v7. Separation of duties, enforced in Cedar, now refuses the insider attacks that used to cause $1.645M in bad payouts.
 
 ---
@@ -88,7 +88,7 @@ Ground Truth is an AI dispute and billing analyst. Each claim becomes a case. Th
 | **Break It** | Adversarial testing: real attack claims filed through the real decision path, scored as caught, held or missed |
 | **Settings** | **Show technical details**. Off by default, so the app reads like a billing product (dollars, status, a short reason). On, it reveals confidence, SHAP terms, re-verify checks, model and policy versions, Cedar text and replay internals |
 
-The sidebar is Overview, Claims, Decisions, Finance (Ledger and Audit tabs), Policies and Break It, with Settings at the bottom. Old links still work: `#/approvals` redirects to `#/claims`, and `#/ledger` and `#/audit` redirect to the Finance tabs.
+The sidebar is Overview, Claims, Decisions, Finance (Summary, Earnings, Ledger and Audit tabs), Policies and Break It, with Settings at the bottom. Old links still work: `#/approvals` redirects to `#/claims`, and `#/ledger` and `#/audit` redirect to the Finance tabs.
 
 ### Decision replay
 
@@ -101,6 +101,7 @@ Click any decision (an Audit row, a decided claim's decision card, or **Replay p
 | Real | Detail |
 |---|---|
 | **Satellites** | 169 satellites with real CelesTrak TLEs: 30 curated demo satellites (ISS, NOAA-20 and others; TLE epoch October 2024) plus 139 commercial Earth-observation satellites with current TLEs (Planet 40, ICEYE 40, Spire 30, Satellogic 15, Capella 9, Umbra 5) |
+| **Starlink sample** | 12 operational SpaceX Starlinks shown on the Overview globe as violet diamonds: three per shell (53°, 43°, 70°, 97° polar), spread across orbital planes. TLEs from CelesTrak's GP API; each is listed as Operational in SpaceX's public Starlink ephemerides manifest (`api.starlink.com/public-files/ephemerides/MANIFEST.txt`), whose Modified ITC files are state vectors rather than TLEs. The card's "next overhead" is an SGP4 prediction at 10° or more over our stations. Not in the module and never booked or billed |
 | **Passes** | Propagated with SGP4 (`satellite.js`) against every station. Contacts above 10° elevation lasting at least 4 minutes, booked highest-elevation first under per-satellite quotas, a 5-minute slew gap and each station's antenna count. About 49,000 passes per seed |
 | **Ground stations** | 28 real ground-station locations, matching KSAT's reported count of 28: 22 KSAT sites (SvalSat, TrollSat, Tromsø, Inuvik, Hartebeesthoek and others) plus 6 AWS Ground Station regions. 322 antennas in total |
 | **Volumes** | Sized against KSAT's 2025 annual report. The seed books about 47,000 passes per 30 days, and each booked pass stands for 10 contacts of the same geometry (`fleet_multiplier: 10`), about 470,000 contacts a month, roughly 2.7 times KSAT's ~175,000 |
@@ -394,6 +395,8 @@ If your default Rust toolchain is older than the module's edition 2024, prefix t
 
 `seed.sh` generates the pass history with SGP4 (about 30 s), loads it in batches, settles the dispute and credit history, and seeds SLA terms, maintenance windows, labeled decisions, the six-month audit history and Break It fixtures. A full local seed takes a few minutes.
 
+By default the seed promotes the history-mined v6. With `STAGE_MINED_POLICY=1` it leaves v6 proposed and v4 current, so the v4 → v6 upgrade can be promoted live; [DEMO.md](DEMO.md) has the click path and the reset options.
+
 ### Maincloud publish and reseed
 
 ```bash
@@ -547,6 +550,8 @@ Ground Truth is built on the idea that an AI should earn autonomy one provable c
 | `register_model_version` | Re-check and promote a retrained System 1 |
 | `decide_case` | Policies channel: store a ruling and run the miner |
 | `promote_policy_version` | Make a policy version current and activate its Cedar |
+| `seed_learning_history_staged` | `seed_learning_history` with the mined v6 left proposed and v4 current (`STAGE_MINED_POLICY=1` in `seed.sh`); see [DEMO.md](DEMO.md) |
+| `rewind_to_mined_proposal` | Demo reset in about a second: v4 current, v6 proposed, later versions deleted, Break It rerun under v4; decided claims stay decided |
 | `toggle_rule` | Switch a non-governing rule; refuses the four fixed rules |
 | `run_injection_attacks` | File 12 prompt-injection attacks as real claims; refused if the worker has no heartbeat in 15 s, closed by `expire_injection_run` after 60 s |
 | `record_decision` | Log a decision with policy and model versions |
@@ -572,6 +577,7 @@ Seeded credits, recoveries and claims are percentages of the revenue of the pass
 |---|---|---|
 | Stations | `stations.json` | 28 stations, 322 antennas (SvalSat 100, Tromsø 40, TrollSat 12, Hartebeesthoek 12, the rest 2 to 10). Monthly revenue is the sum of billed passes |
 | Satellites | `satellites.json` | 169 satellites with CelesTrak TLEs; each has a `band` that sets its price |
+| Starlink sample | `starlink.json` | 12 fixed Starlink NORAD IDs and their TLEs, read by the web app at build time (not seeded). Refresh with `node server/scripts/refresh-starlink.mjs`, then redeploy the web app |
 | Contracts and pricing | `contracts.json` | Six enterprise contracts with daily contact quotas (about 1,580 booked passes per day), $15/$25 per started minute, 30 days of history plus 24 hours scheduled |
 | Fleet multiplier | `contracts.json` `fleet_multiplier` | 10: each booked pass stands for 10 contacts, so its price and everything derived from it is 10 times one contact's |
 | Drops and settlement | `contracts.json` | 7% drop rate, 35% above 60° latitude during Kp ≥ 5 (storm season). Passes settle after 7 days, so the last week is still open (revenue at risk): 40% of drops credited in full, 50% recovered, the rest denied; 5% of completed passes disputed, 70% of those credited 25% to 60%; 65% of decisions auto-decide |

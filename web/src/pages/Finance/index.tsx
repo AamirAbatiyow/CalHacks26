@@ -36,6 +36,8 @@ function useFinanceData() {
     description: row.description,
     referenceId: row.referenceId ?? null,
     amountCents: row.amountCents,
+    passId: row.passId ?? null,
+    stationId: row.stationId ?? null,
   })), [ledgerRows]);
 
   return { decisionRecords, ledgerEntries };
@@ -89,7 +91,13 @@ export default function Finance({ initialTab = 'summary', passes = [], simNow = 
           />
         )}
         {activeTab === 'earnings' && (
-          <EarningsTab passes={passes} entries={ledgerEntries} simNow={simNow} />
+          <EarningsTab
+            passes={passes}
+            entries={ledgerEntries}
+            decisions={decisionRecords}
+            atRiskNow={kpi ? Number(kpi.revenueAtRiskCents) : null}
+            simNow={simNow}
+          />
         )}
         {activeTab === 'ledger' && (
           <LedgerTab entries={ledgerEntries} />

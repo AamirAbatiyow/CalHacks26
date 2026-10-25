@@ -163,6 +163,52 @@ export function change({ current, previous }: Pick<LineTotals, 'current' | 'prev
   return { abs, pct: previous === 0 ? null : (abs / Math.abs(previous)) * 100 };
 }
 
+/** A human review costs $300 and an automated decision $15 (`kpis.rs`). */
+export const REVIEW_COST_SAVED_CENTS = 30_000 - 1_500;
+
+export interface SavingsInput {
+  /** Billed revenue per pass id, to cap a denied claim at the fee of its pass. */
+  passRevenue: Map<string, number>;
+  decisions: { at: number; outcome: string; passId: string | null; amountCents: number }[];
+  disputes: { at: number; status: string; passId: string; claimCents: number }[];
+  escalations: { at: number; status: string; claimedCents: number; proposedCents: number }[];
+}
+
+export interface SavingsFlows {
+  denied: Flow[];
+  trimmed: Flow[];
+  reviewSaved: Flow[];
+}
+
+/**
+ * Dated flows behind the `kpi` row's leakage avoided and review cost saved, with the
+ * same rules as `compute_kpis`: denied claims are capped at the pass fee, a reviewed
+ * escalation saves what was claimed above what was paid, and each auto-approved
+ * decision saves a human review. Recoveries come straight from the ledger.
+ */
+export function savingsFlows({ passRevenue, decisions, disputes, escalations }: SavingsInput): SavingsFlows {
+  const cap = (passId: string | null, cents: number) => {
+    const rev = passId === null ? undefined : passRevenue.get(passId);
+    return rev === undefined ? cents : Math.min(cents, rev);
+  };
+  const out: SavingsFlows = { denied: [], trimmed: [], reviewSaved: [] };
+  for (const d of decisions) {
+    if (d.outcome === 'Denied') out.denied.push({ at: d.at, value: cap(d.passId, d.amountCents) });
+    else if (d.outcome === 'AutoApproved') out.reviewSaved.push({ at: d.at, value: REVIEW_COST_SAVED_CENTS });
+  }
+  for (const d of disputes) {
+    if (d.status === 'Denied') out.denied.push({ at: d.at, value: cap(d.passId, d.claimCents) });
+  }
+  for (const c of escalations) {
+    if (c.status === 'Denied') out.denied.push({ at: c.at, value: c.claimedCents });
+    else if (c.status === 'Approved' || c.status === 'Edited') {
+      const kept = Math.max(c.claimedCents - c.proposedCents, 0);
+      if (kept > 0) out.trimmed.push({ at: c.at, value: kept });
+    }
+  }
+  return out;
+}
+
 function csvCell(v: string | number): string {
   const s = String(v);
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;

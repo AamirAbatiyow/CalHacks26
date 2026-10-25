@@ -104,9 +104,9 @@ flowchart LR
     H --> L["Labeled ruling →<br/>retrain + mine rule →<br/>replay → human promotes"]
 ```
 
-- **Module** (`server/spacetimedb`, Rust): evidence, routing, Cedar (`cedar-policy` v4 compiled to WASM), re-verification, ledger, KPIs, audit and replay. 91 tests.
+- **Module** (`server/spacetimedb`, Rust): evidence, routing, Cedar (`cedar-policy` v4 compiled to WASM), re-verification, ledger, ERP handoff, KPIs, audit and replay. 95 tests.
 - **Worker** (`worker/`, TypeScript): System 1 (L2 logistic regression, structured features only, never customer text) and the injection screen (Unicode tag, zero-width and bidi stripping, NFKC, homoglyph folding, base64 decoding, instruction patterns). Also System 2 (GPT-4.1 via any OpenAI-compatible endpoint, strict JSON schema, customer text JSON-escaped and delimited, never in the system prompt), retraining and the rule miner. 36 tests.
-- **Web** (`web/`, Vite + React): a three.js globe with a G-scale storm band, plus Claims, Decisions, Finance (Ledger and Audit), Policies and Break It, and decision replay (React Flow). Internals stay hidden behind Settings → Show technical details.
+- **Web** (`web/`, Vite + React): a three.js globe with a G-scale storm band, plus Claims, Decisions, Finance (Earnings, Ledger with ERP submit, and Audit), Policies and Break It, and decision replay (React Flow). Internals stay hidden behind Settings → Show technical details.
 
 ## How we use SpacetimeDB
 
@@ -121,6 +121,7 @@ flowchart LR
 | Real | Simulated |
 |---|---|
 | 169 satellites with CelesTrak TLEs (Planet, ICEYE, Spire, Satellogic, Capella, Umbra and 30 curated), propagated with SGP4 | The 24-hour Kp, flare and Dst curve (peaks at Kp 6.7, G3) |
+| 12 operational Starlinks on the Overview globe (violet diamonds), one per orbital plane across the 53°, 43°, 70° and 97° shells: CelesTrak TLEs, each checked against SpaceX's [public Starlink ephemerides](https://api.starlink.com/public-files/ephemerides/) (`server/scripts/refresh-starlink.mjs`). Display only, never booked or billed | |
 | 28 ground stations: 22 KSAT sites plus 6 AWS Ground Station regions, 322 antennas | Six customer contracts and their SLA terms |
 | Volumes sized from KSAT's 2025 annual report | The ledger, invoices, disputes, drop rates and six months of reviewer history |
 | AWS Ground Station on-demand pricing | Customer claim messages (written so sources disagree) |
@@ -145,6 +146,7 @@ SPACETIMEDB_SERVER=local SPACETIMEDB_MODULE=ground-truth bash server/seed.sh   #
 ```
 
 - **Maincloud:** `server/reseed.sh ground-truth-aamir maincloud --yes`, with the worker running against `wss://maincloud.spacetimedb.com`.
+- **Live v4 → v6 demo:** prefix the seed with `STAGE_MINED_POLICY=1` to start at v4 current with v6 proposed, then promote v6 on camera. Click path and seconds-long reset: [docs/DEMO.md](docs/DEMO.md).
 - **Vercel:** root `web`, Vite preset.
 - **Tests:** `cargo +stable test` in `server/spacetimedb` and `npm test` in `worker`.
 

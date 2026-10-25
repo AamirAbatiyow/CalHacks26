@@ -3,6 +3,7 @@
 #
 #   ./reseed.sh <database> <server> --yes
 #   ./reseed.sh ground-truth-aamir maincloud --yes
+#   STAGE_MINED_POLICY=1 ./reseed.sh ground-truth-aamir maincloud --yes   # v4 current, v6 proposed
 #
 # Republishes the current module with --delete-data=always, which drops every row
 # and recreates the schema in one step, so no table is left half-cleared or with a

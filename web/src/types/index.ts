@@ -124,6 +124,7 @@ export interface EscalatedClaim {
 export interface LayerState {
   groundStations: boolean;
   satellitesAndRoutes: boolean;
+  starlink: boolean;
   passTraffic: boolean;
   spaceWeather: boolean;
 }
@@ -219,6 +220,8 @@ export interface LedgerEntry {
   description: string;
   referenceId: string | null;
   amountCents: bigint;
+  passId: bigint | null;
+  stationId: string | null;
 }
 
 export const PolicyStatus = {

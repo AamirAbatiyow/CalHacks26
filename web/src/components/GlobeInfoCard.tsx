@@ -4,15 +4,21 @@ import type { Pass, Satellite, Station } from '../types';
 import { PassStatus } from '../types';
 import { auroralOval, geomagneticLatitude, inStormZone, stormLevel } from '../utils/storm';
 import { FLEET_MULTIPLIER, satelliteBand, stationAntennas, stationOperator, tleOrbit } from '../utils/fleet';
-import { MARKER_COLORS } from './globeMarkers';
+import { MARKER_COLORS, satellitePosition } from './globeMarkers';
+import { cosparId, nextOverheadPass } from '../utils/passPrediction';
+import { STARLINK_SOURCE, starlinkShell, type StarlinkSatellite } from '../utils/starlink';
 import './GlobeInfoCard.css';
 
-export type GlobeSelection = { kind: 'station'; id: string } | { kind: 'satellite'; id: number };
+export type GlobeSelection =
+  | { kind: 'station'; id: string }
+  | { kind: 'satellite'; id: number }
+  | { kind: 'starlink'; id: number };
 
 interface GlobeInfoCardProps {
   selection: GlobeSelection;
   stations: Station[];
   satellites: Satellite[];
+  starlinks?: StarlinkSatellite[];
   passes: Pass[];
   kp: number;
   currentTime: bigint;
@@ -69,8 +75,21 @@ function StationBody({ station, passes, kp, currentTime }: { station: Station; p
   </>);
 }
 
+function OrbitRows({ line1, line2 }: { line1: string; line2: string }) {
+  const orbit = useMemo(() => tleOrbit(line1, line2), [line1, line2]);
+  if (!orbit) return null;
+  return (<>
+    <Row label="TLE epoch">{orbit.epoch.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'UTC' })} UTC</Row>
+    <Row label="Orbit">{orbit.inclinationDeg.toFixed(1)}° incl · {orbit.periodMin.toFixed(1)} min</Row>
+    <Row label="Altitude">
+      {Math.abs(orbit.apogeeKm - orbit.perigeeKm) < 20
+        ? `${Math.round((orbit.apogeeKm + orbit.perigeeKm) / 2)} km`
+        : `${Math.round(orbit.perigeeKm)} × ${Math.round(orbit.apogeeKm)} km`}
+    </Row>
+  </>);
+}
+
 function SatelliteBody({ sat, stations, passes, currentTime }: { sat: Satellite; stations: Station[]; passes: Pass[]; currentTime: bigint }) {
-  const orbit = useMemo(() => tleOrbit(sat.tleLine1, sat.tleLine2), [sat]);
   const band = satelliteBand(sat.noradId);
   const pass = useMemo(() => {
     let current: Pass | null = null;
@@ -91,15 +110,7 @@ function SatelliteBody({ sat, stations, passes, currentTime }: { sat: Satellite;
     <Row label="Band · price">
       {band ? <>{band.band === 'wideband' ? 'Wideband' : 'Narrowband'} · ${(band.centsPerMinute / 100).toFixed(0)}/min{FLEET_MULTIPLIER > 1 && <span className="gic-muted"> (billed ×{FLEET_MULTIPLIER})</span>}</> : '—'}
     </Row>
-    {orbit && (<>
-      <Row label="TLE epoch">{orbit.epoch.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'UTC' })} UTC</Row>
-      <Row label="Orbit">{orbit.inclinationDeg.toFixed(1)}° incl · {orbit.periodMin.toFixed(1)} min</Row>
-      <Row label="Altitude">
-        {Math.abs(orbit.apogeeKm - orbit.perigeeKm) < 20
-          ? `${Math.round((orbit.apogeeKm + orbit.perigeeKm) / 2)} km`
-          : `${Math.round(orbit.perigeeKm)} × ${Math.round(orbit.apogeeKm)} km`}
-      </Row>
-    </>)}
+    <OrbitRows line1={sat.tleLine1} line2={sat.tleLine2} />
     <Row label={pass?.label ?? 'Passes'}>
       {pass ? (<>
         {passStation?.name ?? pass.p.stationId} · {ptDateTime(pass.p.startTime)}
@@ -110,11 +121,63 @@ function SatelliteBody({ sat, stations, passes, currentTime }: { sat: Satellite;
   </>);
 }
 
+function StarlinkBody({ sat, stations, currentTime }: { sat: StarlinkSatellite; stations: Station[]; currentTime: bigint }) {
+  const orbit = useMemo(() => tleOrbit(sat.tleLine1, sat.tleLine2), [sat]);
+  const nowMs = Number(currentTime / 1000n);
+  const minute = Math.floor(nowMs / 60_000);
+  const pass = useMemo(() => nextOverheadPass(
+    sat.tleLine1, sat.tleLine2,
+    stations.map(s => ({ id: s.id, latitude: s.latitude, longitude: s.longitude, altitudeM: s.altitudeM })),
+    minute * 60_000,
+  ), [sat, stations, minute]);
+  const here = satellitePosition(sat.tleLine1, sat.tleLine2, new Date(nowMs));
+  const passStation = pass && stations.find(s => s.id === pass.stationId);
+  const cospar = cosparId(sat.tleLine1);
+  return (<>
+    <Row label="NORAD ID"><code>{sat.noradId}</code>{cospar && <span className="gic-muted"> · {cospar}</span>}</Row>
+    <Row label="Operator">SpaceX</Row>
+    <Row label="Constellation">Starlink{orbit && <span className="gic-muted"> · {starlinkShell(orbit.inclinationDeg)}</span>}</Row>
+    <OrbitRows line1={sat.tleLine1} line2={sat.tleLine2} />
+    {here && <Row label="Over">{latLon(here.lat, here.lon)}</Row>}
+    <Row label={pass?.inProgress ? 'Overhead now' : 'Next overhead'}>
+      {pass ? (<>
+        {passStation?.name ?? pass.stationId}{!pass.inProgress && <> · {ptDateTime(BigInt(pass.startMs) * 1000n)}</>}
+        <span className="gic-muted"> · max {pass.maxElevationDeg.toFixed(0)}°</span>
+      </>) : <span className="gic-muted">None in the next 12 h</span>}
+    </Row>
+    <Row label="Billing"><span className="gic-muted">Not a customer · no passes booked</span></Row>
+    <div className="gic-source">
+      TLE via <a href={STARLINK_SOURCE.tleUrl} target="_blank" rel="noreferrer">CelesTrak</a>, listed operational in
+      SpaceX's <a href={STARLINK_SOURCE.ephemeridesUrl} target="_blank" rel="noreferrer">Starlink public ephemerides</a>.
+      Next overhead is an SGP4 prediction over our stations at 10° or more.
+    </div>
+  </>);
+}
+
 export const GlobeInfoCard = forwardRef<HTMLDivElement, GlobeInfoCardProps>(function GlobeInfoCard(
-  { selection, stations, satellites, passes, kp, currentTime, onClose }, ref,
+  { selection, stations, satellites, starlinks = [], passes, kp, currentTime, onClose }, ref,
 ) {
   const station = selection.kind === 'station' ? stations.find(s => s.id === selection.id) : undefined;
   const sat = selection.kind === 'satellite' ? satellites.find(s => s.noradId === selection.id) : undefined;
+  const starlink = selection.kind === 'starlink' ? starlinks.find(s => s.noradId === selection.id) : undefined;
+  if (starlink) {
+    return (
+      <div ref={ref} className="globe-info-card" role="dialog" aria-label={starlink.name}>
+        <div className="gic-head">
+          <span className="gic-icon starlink" style={{ background: MARKER_COLORS.starlink }} />
+          <div className="gic-title">
+            <span>{starlink.name}</span>
+            <small>Starlink satellite</small>
+          </div>
+          <span className="gic-badge" style={{ color: MARKER_COLORS.starlink, borderColor: `${MARKER_COLORS.starlink}80`, background: `${MARKER_COLORS.starlink}1f` }}>SpaceX</span>
+          <button className="gic-close" onClick={onClose} aria-label="Close"><X size={14} /></button>
+        </div>
+        <div className="gic-body">
+          <StarlinkBody sat={starlink} stations={stations} currentTime={currentTime} />
+        </div>
+      </div>
+    );
+  }
   if (!station && !sat) return null;
   return (
     <div ref={ref} className="globe-info-card" role="dialog" aria-label={station?.name ?? sat?.name}>

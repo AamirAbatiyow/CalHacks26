@@ -44,6 +44,13 @@
   box-shadow: -6px 0 0 -1px rgba(255, 255, 255, 0.35), -11px 0 0 -2px rgba(255, 255, 255, 0.15);
 }
 
+.legend-swatch.starlink {
+  width: 7px;
+  height: 7px;
+  margin: 0 3.5px;
+  transform: rotate(45deg);
+}
+
 .legend-swatch.line {
   width: 14px;
   height: 2px;
