@@ -1,8 +1,8 @@
-# Demo: the live v4 → v6 policy upgrade
+# Demo: self-learning policy from a human decision
 
 [← README](../README.md)
 
-By default `seed.sh` mines six months of human rulings into v6 and promotes it during the seed, so the app opens on v6. For a video or a live judge demo, the staged seed stops one step earlier: **v4 is current and v6 is proposed**. Promoting v6 on camera makes the escalation drop happen live.
+The staged seed loads six months of human rulings as labeled data and stops there: **v4 is current and no mined proposal exists yet** (v5's threshold-lowering proposal stays blocked). One human ruling on camera becomes the trigger that mines the full history and proposes v6.
 
 ## Prepare
 
@@ -18,14 +18,31 @@ Keep the worker running as usual. To check the state:
 
 ```bash
 spacetime sql ground-truth-aamir --server maincloud "SELECT id, status FROM policy_version"
-# v4 current, v6 proposed, v5 proposed (blocked by replay)
+# v4 current, v5 proposed (blocked by replay), no v6
 ```
 
 What changes in staged mode, and nothing else:
 
-- v6 and its 7 rules are `proposed`, and v4's Cedar is the active policy.
-- Incoming claims are decided under v4, so **CLM-20004 and CLM-20008 wait in Approvals**. In the default seed, v6 rules auto-decide them. Promotion does not re-decide claims that are already filed.
-- Break It's first run is decided under v4, so its Before and After bars match (v4 / v4) until v6 is promoted.
+- History labels are seeded (6 months of `audit_decision` rows) but no policy is mined from them.
+- v5 and its threshold replay are present and blocked.
+- Incoming claims are decided under v4, so **CLM-20002, CLM-20003, CLM-20004 and others wait in Approvals** (escalated, not auto-decided).
+- Break It's first run is decided under v4, so its Before and After bars match (v4 / v4).
+
+## The tip claim: CLM-20003
+
+**Claim:** Aether Dynamics filed for their full pass fee. A geomagnetic storm (Kp just under the contract's 7.0 exclusion) knocked out 95% of the downlink.
+
+**Decision to enter on camera:**
+
+| Field | Value |
+|---|---|
+| Outcome | **approve** |
+| Credit | The contract credit shown on the claim (the full pass fee) |
+| Decisive evidence | **Space weather vs exclusion**, **Share of contact lost**, **Data integrity** |
+
+The history already contains two near-threshold full-loss approvals with the same decisive marks. CLM-20003 is the third consistent ruling, which pushes the pattern to the 3-decision support threshold. Because no mined proposal exists yet, `learn_from_decision` mines every escalated label in the history and proposes the **full rule package** as v6.
+
+CLM-20002 (Polar Data Systems, near-threshold, 100% loss) also works as the tip — the same pattern and the same result.
 
 ## The 60–90 second take
 
@@ -33,39 +50,43 @@ Figures below come from a local staged seed. Maincloud figures differ by a few c
 
 | Time | Do | Show / say |
 |---|---|---|
-| 0:00 | Open **Policies** (`#/policies/v6`). | The sidebar shows **v4 Current** and v6 *Mined from history*. The counter says **3,387 escalations under v4, the active policy**, and a dashed line runs to proposed v6 at **1,642** (52% fewer; precision 98.86% → 99.06%). "Six months of human rulings, replayed: v6 would cut escalations in half with zero regressions." |
-| 0:15 | Scroll to **What v6 enforces**. | Read one card aloud, e.g. *IF Partial downlink and Space weather: clear and Maintenance: short notice and Integrity check: passed → APPROVE. 441 past rulings agree · 0 disagree.* "Every rule is a pattern reviewers already followed at least 3 times, with no contradictions." |
-| 0:30 | Optional: click **Show Cedar** on that card, then **Hide Cedar**. | "This is the actual Cedar that runs in the database. The sentence is read straight from its when-clauses." |
-| 0:40 | Scroll up and click **Promote v6 to the active Cedar policy**. | The counter counts down **3,387 → 1,642**, the dashed line turns solid, **v6 Current** and v4 Retired appear in the sidebar, and the badge and every rule turn **Promoted / Active**. "A human promoted it. The AI can't." |
-| 0:55 | Open **Break It**. | The banner reads *14 held attacks cleared by promoting v6*. The bars show Before v4 **31 caught / 41 held** and After **44 caught / 27 held / 1 missed**. "The same attacks, re-decided under the new policy." |
-| 1:10 | Optional v7 (below). | |
+| 0:00 | Open **Approvals**. Click **CLM-20003** (Aether Dynamics). | "One more real claim to decide." |
+| 0:10 | Select **approve**, enter the contract credit, check **Space weather vs exclusion**, **Share of contact lost**, and **Data integrity** as decisive. Click **Submit**. | "We just told the system: this storm was real, the data backs it up, pay the customer." |
+| 0:20 | Open **Policies** (sidebar, or `#/policies`). | v6 has appeared — *Learned from CLM-20003*. The counter says roughly **3,400 escalations under v4** and a dashed line shows v6 at roughly **1,660** (≈ 50% fewer; precision up, 0 regressions). "One ruling triggered a full review of every past decision. Six months of history, 8 consistent patterns, zero contradictions." |
+| 0:35 | Scroll to **What v6 enforces**. | Read one card aloud, e.g. *IF Partial downlink and Maintenance: short notice and Space weather: clear and Integrity: passed → APPROVE. N past rulings agree · 0 disagree.* "Every rule is a pattern reviewers already followed." |
+| 0:45 | Scroll up and click **Promote v6 to the active Cedar policy**. | The counter counts down, the dashed line turns solid, **v6 Current** and v4 Retired appear in the sidebar. "A human promoted it. The AI can't." |
+| 1:00 | Open **Break It**. | The bars show Before v4 vs After v6. Held attacks were cleared by promoting v6. "The same attacks, re-decided under the new policy." |
 
-### Continuing to v7 (the existing Break It talk track)
+## Order matters
 
-1. Still on Break It, click **Run all 72**. The promotion left a v6 clearance on the current run, and that clearance hides the *Review …* button. A fresh run gives the same v6 numbers and brings the button back.
-2. Click **Review …**, rule **partial** with *Space weather vs exclusion* and *Share of contact lost* marked decisive, and save. That proposes **v7** on top of v6.
-3. Click **Promote v7 and re-decide the held attacks**. Locally this cleared 25 of 26 held attacks: **68 caught / 1 held / 3 missed**.
-
-The Approvals path works too: approve **CLM-20002** and then **CLM-20003** ($1,750 each, with *Space weather vs exclusion*, *Share of contact lost* and *Data integrity* marked decisive). The first gives 2 of 3 consistent rulings and no rule. The second proposes v7.
-
-### Order matters
-
-- **Promote v6 before any ruling that could create a rule.** A new rule is built on whichever version is active. With v4 active, a ruling on CLM-20003 or on a Break It attack would propose a v7 equal to v4 plus one rule, and promoting that v7 would drop v6's seven rules. The v6 panel says this next to the Promote button.
-- **Leave CLM-20004 and CLM-20008 alone.** Their patterns are already v6 rules (`v6-learned-7`, `v6-learned-6`), so ruling on them proposes a v7 that duplicates an existing rule.
+- **Decide the tip claim before any other ruling that could create a rule.** The first ruling whose pattern reaches the support threshold triggers the full mine. Deciding a different escalated claim first may produce a smaller v6 or a v6 from a different trigger; the full history-mined package still appears, but the trigger label on the Policies page would differ.
+- **Do not promote v6 before deciding the tip.** Without the tip ruling, there is no v6 to promote.
 
 ## Resetting between takes or judges
 
 | Path | Time | What it resets |
 |---|---|---|
-| **Rewind:** `spacetime call ground-truth-aamir rewind_to_mined_proposal --server maincloud` | about 1 s | Makes v4 current and v6 and its rules proposed. Deletes every version after v6 (learned v7+, and any made with *New version*). Reruns Break It under v4. |
+| **Rewind:** `spacetime call ground-truth-aamir rewind_demo --server maincloud` | about 1 s | Deletes v6 and later, restores the tip claim to Pending in Approvals, makes v4 current again. Reruns Break It under v4. |
 | **Full reseed:** `STAGE_MINED_POLICY=1 server/reseed.sh ground-truth-aamir maincloud --yes` | 4–8 min on Maincloud | Everything |
 
-The rewind keeps the labeled decisions, decided claims, ledger, KPIs and the miner's log. After a rewind:
+After a `rewind_demo`:
 
-- **Repeatable:** the Promote v6 take, and the Break It v7 path (Run all 72 → Review → Promote v7). Tested locally: rewind → promote v6 → Run all → one partial ruling → v7 → 68 / 1 / 3.
-- **Not repeatable:** the CLM-20002 → CLM-20003 Approvals path, because those claims are already decided. Do a full reseed for that.
-- The miner's log on *History* still lists the deleted v7 under its old trigger, and a claim filed under the old v7 (e.g. CLM-20009) keeps its `v7-learned-1` citation.
+- **Repeatable:** the full take — decide the tip → v6 appears → promote → Break It.
+- **Not repeatable** without a full reseed: the Break It v7 path (decide a held attack → promote v7), because the held attacks may have been cleared.
+- The audit decision and its ledger/decision-record entries from the previous take are deleted. The miner's log on *History* is clean.
 
-`rewind_to_mined_proposal` fails without changing anything if there is no history-mined proposal. Like `promote_policy_version`, any connected client can call it, so use it only on demo databases.
+`rewind_demo` fails without changing anything if there is no version after v5. Like `promote_policy_version`, any connected client can call it, so use it only on demo databases.
 
 To return to the default state (v6 current from the start, CLM-20004/20008 auto-decided), reseed without `STAGE_MINED_POLICY`.
+
+## Legacy flow
+
+The previous demo started with v6 already proposed from history mining:
+
+```bash
+# Old staged seed (v6 proposed from history, not from a human decision)
+# No longer the default. Documented here for reference.
+# seed_learning_history_staged used to call create_proposal for all mined patterns.
+```
+
+`rewind_to_mined_proposal` still works for databases seeded with the old flow (it looks for a `history_mining` origin proposal). For the new flow, use `rewind_demo`.

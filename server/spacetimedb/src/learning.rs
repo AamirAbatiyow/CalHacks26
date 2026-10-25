@@ -738,6 +738,10 @@ pub fn create_proposal(ctx: &ReducerContext, patterns: &[Pattern], trigger: Prop
 }
 
 /// Runs the miner on one new human decision and records what it concluded.
+///
+/// When the decision's pattern reaches `Proposed` and no mined proposal exists
+/// yet, the full history is mined and proposed as a single version (the demo
+/// flow where one human ruling triggers the complete policy upgrade).
 pub fn learn_from_decision(ctx: &ReducerContext, decision_id: u64, case_id: &str) -> MiningResult {
     let labeled = all_labeled(ctx);
     let decision = labeled.iter().find(|l| l.id == decision_id).cloned();
@@ -746,11 +750,45 @@ pub fn learn_from_decision(ctx: &ReducerContext, decision_id: u64, case_id: &str
         None => ("no_decisive_evidence".to_string(), None, "Decision not found".to_string(), None),
         Some(p) => {
             let proposal = if p.status == MineStatus::Proposed {
-                create_proposal(ctx, std::slice::from_ref(&p), ProposalTrigger {
-                    origin: "human_decision",
-                    decision_id: Some(decision_id),
-                    case_id: case_id.to_string(),
-                })
+                let has_mined = ctx
+                    .db
+                    .policy_proposal()
+                    .iter()
+                    .any(|pp| pp.origin != "threshold_change" && !pp.rule_ids.is_empty());
+                if has_mined {
+                    create_proposal(
+                        ctx,
+                        std::slice::from_ref(&p),
+                        ProposalTrigger {
+                            origin: "human_decision",
+                            decision_id: Some(decision_id),
+                            case_id: case_id.to_string(),
+                        },
+                    )
+                } else {
+                    let (_, base) = active_policy_set(ctx);
+                    let escalated: Vec<_> = labeled
+                        .iter()
+                        .filter(|l| !gate(&base, &l.features, &crate::evidence::assess(&l.features)).auto)
+                        .cloned()
+                        .collect();
+                    let all_patterns = mine(escalated.iter(), &labeled);
+                    log::info!(
+                        "First mined proposal triggered by {}: {} patterns from {} escalated decisions",
+                        case_id,
+                        all_patterns.len(),
+                        escalated.len()
+                    );
+                    create_proposal(
+                        ctx,
+                        &all_patterns,
+                        ProposalTrigger {
+                            origin: "human_decision",
+                            decision_id: Some(decision_id),
+                            case_id: case_id.to_string(),
+                        },
+                    )
+                }
             } else {
                 None
             };
@@ -881,7 +919,7 @@ mod tests {
             let c = condition_strings(&p.conditions);
             assert!(!c.contains(&"integrity=pending".to_string()), "pending-integrity reviewers disagree");
             assert!(!c.contains(&"elevation_band=below_contract_min".to_string()), "low-elevation reviewers disagree");
-            assert!(!c.contains(&"weather_band=near_threshold".to_string()), "only one near-threshold full-loss decision");
+            assert!(!c.contains(&"weather_band=near_threshold".to_string()), "near-threshold patterns are below support");
         }
     }
 
@@ -912,14 +950,53 @@ mod tests {
     }
 
     #[test]
-    fn single_decision_never_creates_a_rule_and_third_consistent_one_does() {
-        let mut labeled = history_labeled();
-        let near = |id: u64| {
+    fn third_consistent_decision_creates_a_rule() {
+        let mut labeled: Vec<Labeled> = Vec::new();
+        let fresh = |id: u64| {
             let mut f = clean("polar-data");
-            f.kp = 6.6;
-            f.msg.cites_weather = true;
+            f.kp = 2.0;
+            f.maintenance = "unplanned".into();
             Labeled {
                 id,
+                credit_cents: f.contract_credit_cents(),
+                features: f,
+                outcome: APPROVE.into(),
+                decisive: vec!["maintenance".into(), "integrity".into()],
+                history: false,
+            }
+        };
+        let first = fresh(100_001);
+        labeled.push(first.clone());
+        assert_eq!(evaluate_decision(&first, &labeled).status, MineStatus::BelowSupport);
+
+        let second = fresh(100_002);
+        labeled.push(second.clone());
+        assert_eq!(evaluate_decision(&second, &labeled).status, MineStatus::BelowSupport);
+
+        let third = fresh(100_003);
+        labeled.push(third.clone());
+        let pattern = evaluate_decision(&third, &labeled);
+        assert_eq!(pattern.status, MineStatus::Proposed);
+        assert_eq!(pattern.check.consistent.len(), 3);
+
+        let after = with_rules(&[pattern], "v7");
+        let mut probe = fresh(100_004);
+        probe.features.station_id = "trollsat".into();
+        let a = assess(&probe.features);
+        let g = gate(&after, &probe.features, &a);
+        assert!(g.auto && g.confidence >= 95 && g.precedent.is_some(), "{:?}", g);
+    }
+
+    #[test]
+    fn near_threshold_tip_reaches_support_with_history() {
+        let mut labeled = history_labeled();
+        let tip = {
+            let mut f = clean("aether");
+            f.kp = 6.6;
+            f.lost_pct = 95;
+            f.msg.cites_weather = true;
+            Labeled {
+                id: 100_001,
                 credit_cents: f.contract_credit_cents(),
                 features: f,
                 outcome: APPROVE.into(),
@@ -927,25 +1004,10 @@ mod tests {
                 history: false,
             }
         };
-        let first = near(100_001);
-        let mut probe = first.clone();
-        let a = assess(&probe.features);
-        assert!(!gate(&base(), &probe.features, &a).auto);
-
-        labeled.push(first.clone());
-        assert_eq!(evaluate_decision(&first, &labeled).status, MineStatus::BelowSupport);
-
-        let second = near(100_002);
-        labeled.push(second.clone());
-        let pattern = evaluate_decision(&second, &labeled);
+        labeled.push(tip.clone());
+        let pattern = evaluate_decision(&tip, &labeled);
         assert_eq!(pattern.status, MineStatus::Proposed);
-        assert_eq!(pattern.check.consistent.len(), 3);
-
-        let after = with_rules(&[pattern], "v7");
-        probe.features.station_id = "trollsat".into();
-        probe.features.kp = 6.2;
-        let g = gate(&after, &probe.features, &a);
-        assert!(g.auto && g.confidence >= 95 && g.precedent.is_some(), "{:?}", g);
+        assert!(pattern.check.consistent.len() >= MIN_SUPPORT, "need {} support, got {}", MIN_SUPPORT, pattern.check.consistent.len());
     }
 
     #[test]

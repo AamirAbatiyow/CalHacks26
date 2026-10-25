@@ -274,9 +274,9 @@ fn build_case(rng: &mut Rng, zone: Zone, contracts: &[&CustomerContract], statio
     }
 }
 
-/// Storm claims just under a Gold contract's exclusion. Rare: one full-loss
-/// approval and two small-loss partials, so a reviewer pattern exists but has
-/// not yet reached the three decisions a rule needs.
+/// Storm claims just under a Gold contract's exclusion. Two full-loss approvals
+/// and two small-loss partials, so one more consistent full-loss ruling (e.g. the
+/// tip claim in the staged demo) pushes the full-loss pattern to MIN_SUPPORT.
 fn near_threshold_cases(contracts: &[&CustomerContract], stations: &[StationVolume]) -> Vec<HistoryCase> {
     let Some(gold) = contracts.iter().find(|c| c.tier == "gold") else { return Vec::new() };
     let Some(station) = stations.first() else { return Vec::new() };
@@ -287,19 +287,32 @@ fn near_threshold_cases(contracts: &[&CustomerContract], stations: &[StationVolu
         f.claimed_cents = if claimed_full { fee } else { f.contract_credit_cents() };
         f
     };
-    let full = storm(100, true);
+    let full_a = storm(100, true);
+    let full_b = storm(98, true);
     let small_a = storm(18, true);
     let small_b = storm(22, true);
     vec![
         HistoryCase {
-            credit_cents: full.credit_for(APPROVE),
-            features: full,
+            credit_cents: full_a.credit_for(APPROVE),
+            features: full_a,
             outcome: APPROVE,
             reason_code: "below_exclusion",
             reason_text: "Kp below the contract's exclusion; full loss is provider-side, credited in full.".into(),
             decisive: vec!["weather_band", "lost_band", "integrity"],
             reviewer: "S. Chen",
             days_ago: 41.0,
+            zone: "near_threshold",
+            message: WEATHER_MESSAGES[0].into(),
+        },
+        HistoryCase {
+            credit_cents: full_b.credit_for(APPROVE),
+            features: full_b,
+            outcome: APPROVE,
+            reason_code: "below_exclusion",
+            reason_text: "Kp just under exclusion; pass dropped completely, credited per SLA.".into(),
+            decisive: vec!["weather_band", "lost_band", "integrity"],
+            reviewer: "J. Wilson",
+            days_ago: 72.0,
             zone: "near_threshold",
             message: WEATHER_MESSAGES[0].into(),
         },
@@ -322,7 +335,7 @@ fn near_threshold_cases(contracts: &[&CustomerContract], stations: &[StationVolu
             reason_code: "credit_formula",
             reason_text: "Storm below exclusion; paid the measured loss only.".into(),
             decisive: vec!["weather_band", "lost_band"],
-            reviewer: "J. Wilson",
+            reviewer: "R. Patel",
             days_ago: 133.0,
             zone: "near_threshold",
             message: WEATHER_MESSAGES[0].into(),
@@ -395,7 +408,7 @@ pub mod tests {
             .iter()
             .map(|v| (v.monthly_revenue_cents as f64 / v.avg_pass_fee_cents as f64 * claim_rate()).round() * 6.0)
             .sum();
-        assert_eq!(history.len() as f64, expected + 3.0);
+        assert_eq!(history.len() as f64, expected + 4.0);
         let revenue: i64 = volumes.iter().map(|v| v.monthly_revenue_cents * 6).sum();
         let credits: i64 = history.iter().map(|h| h.credit_cents).sum();
         let share = credits as f64 / revenue as f64;
@@ -438,11 +451,13 @@ pub const DEFAULT_PASS_FEE_CENTS: i64 = 20_000;
 use serde_json::json;
 use spacetimedb::{ReducerContext, Table, Timestamp};
 
+use crate::approvals::escalated_claim;
 use crate::authority::cedar_policy_store;
+use crate::cases::claim_case;
 use crate::contracts::{customer_contract, maintenance_log, MaintenanceLog};
 use crate::evidence::assess;
 use crate::learning::{
-    active_policy_set, all_labeled, create_proposal, gate, insert_labeled, audit_decision, mine, mined_rule, parse_policies, policy_proposal,
+    active_policy_set, all_labeled, create_proposal, decision_snapshot, gate, insert_labeled, audit_decision, mine, mining_result, mined_rule, parse_policies, policy_proposal,
     replay, AuditDecision, MinedRule, PolicyProposal, ProposalTrigger,
 };
 use crate::policy::{cedar_rule, policy_replay, policy_version, PolicyReplay, PolicyStatus, PolicyVersion, ReplayStatus};
@@ -584,10 +599,12 @@ fn seed_history(ctx: &ReducerContext, promote: bool) {
     let escalated: Vec<_> = labeled.iter().filter(|l| !gate(&base, &l.features, &assess(&l.features)).auto).cloned().collect();
     let patterns = mine(escalated.iter(), &labeled);
     log::info!("History: {} decisions, {} escalated under {}, {} minable patterns", labeled.len(), escalated.len(), base_version, patterns.len());
-    if let Some(version) = create_proposal(ctx, &patterns, ProposalTrigger { origin: "history_mining", decision_id: None, case_id: "6-month history".to_string() }) {
-        let promotable = ctx.db.policy_proposal().version_id().find(&version).map(|p| p.status == "proposed").unwrap_or(false);
-        if promote && promotable {
-            crate::policy::promote_policy_version(ctx, version);
+    if promote {
+        if let Some(version) = create_proposal(ctx, &patterns, ProposalTrigger { origin: "history_mining", decision_id: None, case_id: "6-month history".to_string() }) {
+            let promotable = ctx.db.policy_proposal().version_id().find(&version).map(|p| p.status == "proposed").unwrap_or(false);
+            if promotable {
+                crate::policy::promote_policy_version(ctx, version);
+            }
         }
     }
     replay_threshold_proposal(ctx, &base_version);
@@ -652,6 +669,115 @@ pub fn rewind_to_mined_proposal(ctx: &ReducerContext) -> Result<(), String> {
 
     crate::attack_run::run_all_attacks(ctx)?;
     log::info!("Rewound policies: {} current, {} proposed, {} later version(s) removed", base, version_id, later.len());
+    Ok(())
+}
+
+/// Resets to the staged-seed state for the demo flow where the mined proposal is
+/// triggered by a human decision: deletes every policy version after v5, undoes
+/// the tip decision so the claim is escalated again, and restores v4 as current.
+/// Use between demo takes when the staged seed created no history-mined proposal.
+#[spacetimedb::reducer]
+pub fn rewind_demo(ctx: &ReducerContext) -> Result<(), String> {
+    let to_delete: Vec<(String, u32)> = ctx
+        .db
+        .policy_version()
+        .iter()
+        .filter(|v| v.version > 5)
+        .map(|v| (v.id.clone(), v.version))
+        .collect();
+    if to_delete.is_empty() {
+        return Err("nothing to rewind: no policy version after v5".to_string());
+    }
+    for (id, _) in &to_delete {
+        if let Some(proposal) = ctx.db.policy_proposal().version_id().find(id.clone()) {
+            if let Some(decision_id) = proposal.trigger_decision_id {
+                ctx.db.audit_decision().id().delete(decision_id);
+                ctx.db.decision_snapshot().decision_id().delete(decision_id);
+                let results: Vec<u64> = ctx
+                    .db
+                    .mining_result()
+                    .decision_id()
+                    .filter(decision_id)
+                    .map(|r| r.id)
+                    .collect();
+                for rid in results {
+                    ctx.db.mining_result().id().delete(rid);
+                }
+            }
+            if !proposal.trigger_case_id.is_empty() {
+                let case_id = proposal.trigger_case_id.clone();
+                if let Some(case) = ctx.db.claim_case().case_id().find(case_id.clone()) {
+                    if let Some(esc_id) = case.escalation_id {
+                        if let Some(esc) = ctx.db.escalated_claim().id().find(esc_id) {
+                            ctx.db.escalated_claim().id().update(crate::approvals::EscalatedClaim {
+                                status: crate::approvals::EscalatedClaimStatus::Pending,
+                                ..esc
+                            });
+                        }
+                    }
+                    ctx.db.claim_case().case_id().update(crate::cases::ClaimCase {
+                        outcome: String::new(),
+                        credit_cents: 0,
+                        gate: "escalated".to_string(),
+                        gate_note: format!(
+                            "Confidence {}% below the 95% auto-decide threshold",
+                            case.confidence
+                        ),
+                        decision_id: None,
+                        ..case
+                    });
+                }
+            }
+            ctx.db.policy_proposal().version_id().delete(id.clone());
+        }
+        ctx.db.policy_version().id().delete(id.clone());
+        ctx.db.cedar_policy_store().version().delete(id.clone());
+        let rules: Vec<String> = ctx
+            .db
+            .cedar_rule()
+            .policy_version_id()
+            .filter(id)
+            .map(|r| r.id)
+            .collect();
+        for rule in rules {
+            ctx.db.cedar_rule().id().delete(rule);
+        }
+        let learned: Vec<String> = ctx
+            .db
+            .mined_rule()
+            .policy_version_id()
+            .filter(id)
+            .map(|r| r.rule_id)
+            .collect();
+        for rule in learned {
+            ctx.db.mined_rule().rule_id().delete(rule);
+        }
+        let replays: Vec<u64> = ctx
+            .db
+            .policy_replay()
+            .proposed_version_id()
+            .filter(id)
+            .map(|r| r.id)
+            .collect();
+        for replay in replays {
+            ctx.db.policy_replay().id().delete(replay);
+        }
+    }
+
+    for v in ctx.db.policy_version().iter().collect::<Vec<_>>() {
+        if v.id == "v4" && v.status != PolicyStatus::Current {
+            ctx.db
+                .policy_version()
+                .id()
+                .update(PolicyVersion { status: PolicyStatus::Current, ..v });
+        }
+    }
+    crate::authority::activate_policy_version(ctx, "v4", "Rewound demo to pre-mined state");
+    crate::attack_run::run_all_attacks(ctx)?;
+    log::info!(
+        "Demo rewind: restored v4 current, deleted {} version(s) after v5",
+        to_delete.len()
+    );
     Ok(())
 }
 
