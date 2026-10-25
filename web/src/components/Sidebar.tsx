@@ -44,8 +44,9 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
 
   return (
     <nav className="sidebar">
-      <div className="sidebar-logo">
-        <span className="logo-icon"><Globe2 size={18} strokeWidth={1.5} /></span>
+      <div className="sidebar-brand">
+        <img src="/logo-dish.png" alt="Ground Truth" className="brand-dish" />
+        <img src="/logo-wordmark.png" alt="Ground Truth" className="brand-wordmark" />
       </div>
       <div className="sidebar-nav">
         {navItems.map((item) => {
