@@ -26,4 +26,5 @@ export default __t.row({
   disputeId: __t.option(__t.u64()).name("dispute_id"),
   passId: __t.option(__t.u64()).name("pass_id"),
   stationId: __t.option(__t.string()).name("station_id"),
+  approvedBy: __t.option(__t.identity()).name("approved_by"),
 });

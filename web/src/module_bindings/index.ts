@@ -83,6 +83,7 @@ import RegisterAttackerReducer from "./register_attacker_reducer";
 import RegisterModelVersionReducer from "./register_model_version_reducer";
 import RequestClaimCapChangeReducer from "./request_claim_cap_change_reducer";
 import RequestPayoutLimitChangeReducer from "./request_payout_limit_change_reducer";
+import RewindDemoReducer from "./rewind_demo_reducer";
 import RewindToMinedProposalReducer from "./rewind_to_mined_proposal_reducer";
 import RunAllAttacksReducer from "./run_all_attacks_reducer";
 import RunAttackFixtureReducer from "./run_attack_fixture_reducer";
@@ -1098,6 +1099,7 @@ const reducersSchema = __reducers(
   __reducerSchema("register_model_version", RegisterModelVersionReducer),
   __reducerSchema("request_claim_cap_change", RequestClaimCapChangeReducer),
   __reducerSchema("request_payout_limit_change", RequestPayoutLimitChangeReducer),
+  __reducerSchema("rewind_demo", RewindDemoReducer),
   __reducerSchema("rewind_to_mined_proposal", RewindToMinedProposalReducer),
   __reducerSchema("run_all_attacks", RunAllAttacksReducer),
   __reducerSchema("run_attack_fixture", RunAttackFixtureReducer),

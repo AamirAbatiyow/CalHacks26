@@ -956,6 +956,7 @@ export const LedgerEntry = __t.object("LedgerEntry", {
   disputeId: __t.option(__t.u64()),
   passId: __t.option(__t.u64()),
   stationId: __t.option(__t.string()),
+  approvedBy: __t.option(__t.identity()),
 });
 export type LedgerEntry = __Infer<typeof LedgerEntry>;
 
