@@ -426,6 +426,7 @@ pub fn seed_finance_history(ctx: &ReducerContext) {
             dispute_id: None,
             pass_id: pass.map(|p| p.id),
             station_id: pass.map(|p| p.station_id.clone()),
+            approved_by: None,
         });
     };
     let after = |pass: &Pass, min: i64| pass.end_time.to_micros_since_unix_epoch() + min * minute;
@@ -492,6 +493,7 @@ pub fn seed_finance_history(ctx: &ReducerContext) {
             dispute_id: None,
             pass_id: None,
             station_id: Some(station_id),
+            approved_by: None,
         });
     }
 
