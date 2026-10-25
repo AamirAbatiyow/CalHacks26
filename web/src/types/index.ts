@@ -124,6 +124,7 @@ export interface EscalatedClaim {
 export interface LayerState {
   groundStations: boolean;
   satellitesAndRoutes: boolean;
+  starlink: boolean;
   passTraffic: boolean;
   spaceWeather: boolean;
 }

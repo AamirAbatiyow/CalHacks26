@@ -7,6 +7,7 @@ import {
   MARKER_COLORS,
   createLink,
   createSatelliteMarker,
+  createStarlinkMarker,
   createStationMarker,
   createStormZone,
   createTrail,
@@ -17,11 +18,13 @@ import {
 import { projectToScreen, useGlobeScene, type GlobeScene } from './useGlobeScene';
 import { GlobeInfoCard, type GlobeSelection } from './GlobeInfoCard';
 import { GlobeLegend } from './GlobeLegend';
+import type { StarlinkSatellite } from '../utils/starlink';
 import './Globe.css';
 
 interface GlobeProps {
   stations: Station[];
   satellites: Satellite[];
+  starlinks?: StarlinkSatellite[];
   passes: Pass[];
   spaceWeather: SpaceWeather | null;
   currentTime: bigint;
@@ -39,7 +42,9 @@ function selectionKey(s: GlobeSelection | null): string | null {
   return s ? `${s.kind}:${s.id}` : null;
 }
 
-export function Globe({ stations, satellites, passes, spaceWeather, currentTime, layers }: GlobeProps) {
+const NO_STARLINKS: StarlinkSatellite[] = [];
+
+export function Globe({ stations, satellites, starlinks = NO_STARLINKS, passes, spaceWeather, currentTime, layers }: GlobeProps) {
   const [selected, setSelected] = useState<GlobeSelection | null>(null);
   const [hovering, setHovering] = useState(false);
   const pickables = useRef<Map<string, Pickable>>(new Map());
@@ -66,12 +71,12 @@ export function Globe({ stations, satellites, passes, spaceWeather, currentTime,
   // Hold still while a marker is under the pointer (so it can be clicked) or
   // selected (so the card stays next to it).
   const { containerRef, scene } = useGlobeScene({ autoRotate: selected === null && !hovering }, positionCard);
-  const layerGroups = useRef<Record<'storm' | 'stations' | 'satellites' | 'links', THREE.Group> | null>(null);
+  const layerGroups = useRef<Record<'storm' | 'stations' | 'satellites' | 'starlinks' | 'links', THREE.Group> | null>(null);
 
   useEffect(() => {
     if (!scene) return;
-    const groups = { storm: new THREE.Group(), stations: new THREE.Group(), satellites: new THREE.Group(), links: new THREE.Group() };
-    scene.group.add(groups.storm, groups.links, groups.stations, groups.satellites);
+    const groups = { storm: new THREE.Group(), stations: new THREE.Group(), satellites: new THREE.Group(), starlinks: new THREE.Group(), links: new THREE.Group() };
+    scene.group.add(groups.storm, groups.links, groups.stations, groups.satellites, groups.starlinks);
     layerGroups.current = groups;
     return () => {
       for (const g of Object.values(groups)) {
@@ -105,7 +110,7 @@ export function Globe({ stations, satellites, passes, spaceWeather, currentTime,
       const s = projectToScreen(scene, p.obj.position);
       if (!s.visible) continue;
       // Satellites sit above stations on screen; prefer them on a tie.
-      const d = Math.hypot(s.x - x, s.y - y) - (p.selection.kind === 'satellite' ? 2 : 0);
+      const d = Math.hypot(s.x - x, s.y - y) - (p.selection.kind !== 'station' ? 2 : 0);
       if (d < bestDist) { best = p; bestDist = d; }
     }
     return best;
@@ -229,6 +234,29 @@ export function Globe({ stations, satellites, passes, spaceWeather, currentTime,
     const groups = layerGroups.current;
     if (!groups) return;
     const objects: THREE.Object3D[] = [];
+    if (layers.starlink) {
+      for (const sat of starlinks) {
+        const now = satellitePosition(sat.tleLine1, sat.tleLine2, new Date(nowMs));
+        if (!now) continue;
+        const trail: THREE.Vector3[] = [];
+        for (let i = TRAIL_POINTS; i >= 0; i--) {
+          const p = satellitePosition(sat.tleLine1, sat.tleLine2, new Date(nowMs - (i / TRAIL_POINTS) * TRAIL_MINUTES * 60_000));
+          if (p) trail.push(p.pos);
+        }
+        if (trail.length > 2) objects.push(createTrail(trail, 0.9, MARKER_COLORS.starlink));
+        const marker = createStarlinkMarker(now.pos);
+        register({ kind: 'starlink', id: sat.noradId }, marker);
+        objects.push(marker);
+      }
+    }
+    for (const [key, p] of pickables.current) if (p.selection.kind === 'starlink' && !objects.includes(p.obj)) pickables.current.delete(key);
+    replaceChildren(groups.starlinks, objects);
+  }, [scene, starlinks, layers.starlink, nowMs, register]);
+
+  useEffect(() => {
+    const groups = layerGroups.current;
+    if (!groups) return;
+    const objects: THREE.Object3D[] = [];
     if (layers.passTraffic) {
       for (const pass of passes) {
         if (pass.startTime > currentTime || pass.endTime <= currentTime) continue;
@@ -249,13 +277,14 @@ export function Globe({ stations, satellites, passes, spaceWeather, currentTime,
   return (
     <div className="globe-wrap">
       <div ref={containerRef} className="globe" />
-      <GlobeLegend kp={kp} showLinks={layers.passTraffic} />
+      <GlobeLegend kp={kp} showLinks={layers.passTraffic} showStarlink={layers.starlink && starlinks.length > 0} />
       {selected && (
         <GlobeInfoCard
           ref={cardRef}
           selection={selected}
           stations={stations}
           satellites={satellites}
+          starlinks={starlinks}
           passes={passes}
           kp={kp}
           currentTime={currentTime}
