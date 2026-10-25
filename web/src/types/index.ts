@@ -222,6 +222,7 @@ export interface LedgerEntry {
   amountCents: bigint;
   passId: bigint | null;
   stationId: string | null;
+  approvedBy: string | null;
 }
 
 export const PolicyStatus = {

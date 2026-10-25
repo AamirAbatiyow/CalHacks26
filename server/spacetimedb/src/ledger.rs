@@ -1,4 +1,4 @@
-use spacetimedb::{ReducerContext, SpacetimeType, Table, Timestamp};
+use spacetimedb::{Identity, ReducerContext, SpacetimeType, Table, Timestamp};
 
 use crate::kpis::sync_kpis;
 
@@ -26,6 +26,9 @@ pub struct LedgerEntry {
     pub dispute_id: Option<u64>,
     pub pass_id: Option<u64>,
     pub station_id: Option<String>,
+    /// For credits: the identity that approved the credit. Used for separation
+    /// of duties on ERP submit (approver cannot also submit).
+    pub approved_by: Option<Identity>,
 }
 
 fn entry_type_from_u8(entry_type: u8) -> LedgerEntryType {
@@ -38,7 +41,8 @@ fn entry_type_from_u8(entry_type: u8) -> LedgerEntryType {
 
 /// Posts a credit paid out to a customer. Every approved or auto-approved
 /// decision that moves money goes through here, so the credits-paid KPI and the
-/// Ledger page always agree with the audit trail.
+/// Ledger page always agree with the audit trail. The approver identity is stored
+/// for separation of duties on ERP submit.
 pub fn post_credit(
     ctx: &ReducerContext,
     pass_id: Option<u64>,
@@ -60,6 +64,7 @@ pub fn post_credit(
         dispute_id: None,
         pass_id,
         station_id,
+        approved_by: Some(ctx.sender()),
     });
 }
 
@@ -91,6 +96,7 @@ pub fn record_ledger_entry(
         dispute_id: None,
         pass_id: None,
         station_id: None,
+        approved_by: None,
     });
     sync_kpis(ctx);
 }
@@ -114,6 +120,7 @@ pub fn seed_ledger_entry(
         dispute_id: None,
         pass_id: None,
         station_id: None,
+        approved_by: None,
     });
     sync_kpis(ctx);
 }

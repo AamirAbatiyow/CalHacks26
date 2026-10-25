@@ -30,6 +30,13 @@ export interface ErpEntry {
   amountCents: bigint;
   passId: bigint | null;
   stationId: string | null;
+  approvedBy: string | null;
+}
+
+/** Checks separation of duties: returns credits in entries that were approved by currentIdentity. */
+export function sodViolations(entries: ErpEntry[], currentIdentity: string | null): ErpEntry[] {
+  if (!currentIdentity) return [];
+  return entries.filter(e => e.entryType === 'Credit' && e.approvedBy === currentIdentity);
 }
 
 export interface ErpPostingView {
