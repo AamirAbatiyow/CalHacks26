@@ -129,9 +129,17 @@ done
 # SLA contracts (fixtures/sla_contracts.json), six months of labeled human decisions (mined into the
 # promoted learned policy), then live claims analyzed against all three sources.
 # Escalated ones land in Approvals with their full evidence.
+# STAGE_MINED_POLICY=1 leaves the mined version (v6) proposed with v4 current, so the
+# v4 -> v6 promotion can be done live (docs/DEMO.md). Incoming claims and Break It then
+# run under v4.
 echo "Seeding contracts, decision history and incoming claims..."
 "$SPACETIME" call "$MODULE" seed_contracts --server "$SERVER" || true
-"$SPACETIME" call "$MODULE" seed_learning_history --server "$SERVER" || true
+if [ "${STAGE_MINED_POLICY:-0}" = "1" ]; then
+  echo "STAGE_MINED_POLICY=1: the mined policy stays proposed; promote it on the Policies page."
+  "$SPACETIME" call "$MODULE" seed_learning_history_staged --server "$SERVER" || true
+else
+  "$SPACETIME" call "$MODULE" seed_learning_history --server "$SERVER" || true
+fi
 "$SPACETIME" call "$MODULE" seed_incoming_claims --server "$SERVER" || true
 
 # Decision architecture: SLA terms System 1/2 read, station maintenance windows, and

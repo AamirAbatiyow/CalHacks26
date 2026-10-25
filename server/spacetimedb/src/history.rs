@@ -442,10 +442,10 @@ use crate::authority::cedar_policy_store;
 use crate::contracts::{customer_contract, maintenance_log, MaintenanceLog};
 use crate::evidence::assess;
 use crate::learning::{
-    active_policy_set, all_labeled, create_proposal, gate, insert_labeled, audit_decision, mine, parse_policies, policy_proposal, replay,
-    AuditDecision, PolicyProposal, ProposalTrigger,
+    active_policy_set, all_labeled, create_proposal, gate, insert_labeled, audit_decision, mine, mined_rule, parse_policies, policy_proposal,
+    replay, AuditDecision, MinedRule, PolicyProposal, ProposalTrigger,
 };
-use crate::policy::{policy_replay, PolicyReplay, ReplayStatus};
+use crate::policy::{cedar_rule, policy_replay, policy_version, PolicyReplay, PolicyStatus, PolicyVersion, ReplayStatus};
 use crate::{pass, station};
 
 const DAY_MICROS: i64 = 24 * 60 * 60 * 1_000_000;
@@ -467,10 +467,21 @@ fn station_volumes(ctx: &ReducerContext) -> Vec<StationVolume> {
 }
 
 /// Seeds the 6-month labeled history and station maintenance log, mines it for
-/// policies, and replays the proposed threshold change. Run after stations,
-/// passes, contracts, `init_authority`.
+/// policies, promotes the mined version, and replays the proposed threshold
+/// change. Run after stations, passes, contracts, `init_authority`.
 #[spacetimedb::reducer]
 pub fn seed_learning_history(ctx: &ReducerContext) {
+    seed_history(ctx, true);
+}
+
+/// `seed_learning_history` with the mined version left proposed, so the base
+/// version stays current until someone promotes the mined one.
+#[spacetimedb::reducer]
+pub fn seed_learning_history_staged(ctx: &ReducerContext) {
+    seed_history(ctx, false);
+}
+
+fn seed_history(ctx: &ReducerContext, promote: bool) {
     if ctx.db.audit_decision().iter().next().is_some() {
         log::info!("Learning history already seeded");
         return;
@@ -575,11 +586,73 @@ pub fn seed_learning_history(ctx: &ReducerContext) {
     log::info!("History: {} decisions, {} escalated under {}, {} minable patterns", labeled.len(), escalated.len(), base_version, patterns.len());
     if let Some(version) = create_proposal(ctx, &patterns, ProposalTrigger { origin: "history_mining", decision_id: None, case_id: "6-month history".to_string() }) {
         let promotable = ctx.db.policy_proposal().version_id().find(&version).map(|p| p.status == "proposed").unwrap_or(false);
-        if promotable {
+        if promote && promotable {
             crate::policy::promote_policy_version(ctx, version);
         }
     }
     replay_threshold_proposal(ctx, &base_version);
+}
+
+/// Resets the policy store to the state `seed_learning_history_staged` leaves,
+/// without a reseed: the history-mined proposal's base is current again, the
+/// mined version and its rules are proposed again, every later policy version is
+/// deleted, and Break It reruns under the restored policy. Labeled decisions,
+/// decided claims and the ledger are kept, so claims already decided stay decided.
+#[spacetimedb::reducer]
+pub fn rewind_to_mined_proposal(ctx: &ReducerContext) -> Result<(), String> {
+    let mined = ctx
+        .db
+        .policy_proposal()
+        .iter()
+        .find(|p| p.origin == "history_mining")
+        .ok_or("no history-mined proposal; run seed_learning_history first")?;
+    let mined_number = ctx.db.policy_version().id().find(mined.version_id.clone()).map(|v| v.version).ok_or("history-mined version is missing")?;
+    if ctx.db.cedar_policy_store().version().find(mined.base_version_id.clone()).is_none() {
+        return Err(format!("no Cedar text stored for {}", mined.base_version_id));
+    }
+
+    let later: Vec<String> = ctx.db.policy_version().iter().filter(|v| v.version > mined_number).map(|v| v.id).collect();
+    for id in &later {
+        ctx.db.policy_version().id().delete(id.clone());
+        ctx.db.policy_proposal().version_id().delete(id.clone());
+        ctx.db.cedar_policy_store().version().delete(id.clone());
+        let rules: Vec<String> = ctx.db.cedar_rule().policy_version_id().filter(id).map(|r| r.id).collect();
+        for rule in rules {
+            ctx.db.cedar_rule().id().delete(rule);
+        }
+        let learned: Vec<String> = ctx.db.mined_rule().policy_version_id().filter(id).map(|r| r.rule_id).collect();
+        for rule in learned {
+            ctx.db.mined_rule().rule_id().delete(rule);
+        }
+        let replays: Vec<u64> = ctx.db.policy_replay().proposed_version_id().filter(id).map(|r| r.id).collect();
+        for replay in replays {
+            ctx.db.policy_replay().id().delete(replay);
+        }
+    }
+
+    for v in ctx.db.policy_version().iter().collect::<Vec<_>>() {
+        let status = if v.id == mined.base_version_id {
+            PolicyStatus::Current
+        } else if v.id == mined.version_id {
+            PolicyStatus::Proposed
+        } else if v.status == PolicyStatus::Current {
+            PolicyStatus::Retired
+        } else {
+            continue;
+        };
+        ctx.db.policy_version().id().update(PolicyVersion { status, ..v });
+    }
+    let rules: Vec<MinedRule> = ctx.db.mined_rule().policy_version_id().filter(&mined.version_id).collect();
+    for rule in rules {
+        ctx.db.mined_rule().rule_id().update(MinedRule { status: "proposed".to_string(), ..rule });
+    }
+    crate::authority::activate_policy_version(ctx, &mined.base_version_id, "Rewound to before the history-mined proposal");
+    let (version_id, base) = (mined.version_id.clone(), mined.base_version_id.clone());
+    ctx.db.policy_proposal().version_id().update(PolicyProposal { status: "proposed".to_string(), promoted_at: None, ..mined });
+
+    crate::attack_run::run_all_attacks(ctx)?;
+    log::info!("Rewound policies: {} current, {} proposed, {} later version(s) removed", base, version_id, later.len());
+    Ok(())
 }
 
 /// The seeded v5 proposal lowers the auto-decide threshold to 90%. Replace its
