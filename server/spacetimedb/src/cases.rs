@@ -430,6 +430,7 @@ fn analyze(ctx: &ReducerContext, intake: Intake) -> ClaimCase {
             dispute_id: None,
             pass_id: Some(pass.id),
             station_id: Some(pass.station_id.clone()),
+            approved_by: None,
         });
     }
     if !g.auto {

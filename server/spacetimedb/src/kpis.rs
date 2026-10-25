@@ -205,6 +205,7 @@ mod tests {
             dispute_id: None,
             pass_id,
             station_id: None,
+            approved_by: None,
         }
     }
 

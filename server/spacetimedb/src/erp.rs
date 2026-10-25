@@ -285,6 +285,7 @@ mod tests {
             dispute_id: None,
             pass_id: None,
             station_id: station.map(String::from),
+            approved_by: None,
         }
     }
 

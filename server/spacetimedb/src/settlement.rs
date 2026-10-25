@@ -102,6 +102,7 @@ pub fn settle_contract_passes(ctx: &ReducerContext, a: &SettlementAssumptions) {
             dispute_id: None,
             pass_id: Some(pass.id),
             station_id: Some(pass.station_id.clone()),
+            approved_by: None,
         });
     };
 

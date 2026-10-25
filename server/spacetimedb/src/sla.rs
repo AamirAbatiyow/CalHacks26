@@ -227,6 +227,7 @@ pub fn check_sla_deadline(ctx: &ReducerContext, timer: SlaDeadlineSchedule) {
                 dispute_id: Some(dispute.id),
                 pass_id: Some(dispute.pass_id),
                 station_id: Some(dispute.station_id.clone()),
+                approved_by: None,
             });
             sync_kpis(ctx);
             
@@ -297,6 +298,7 @@ pub fn approve_dispute(ctx: &ReducerContext, dispute_id: u64, notes: String) {
             amount_cents: -credit_amount,
             dispute_id: Some(dispute.id),
             pass_id: Some(dispute.pass_id),
+            approved_by: Some(ctx.sender()),
             station_id: Some(dispute.station_id.clone()),
         });
         sync_kpis(ctx);
@@ -401,6 +403,7 @@ pub fn issue_manual_credit(
         dispute_id: None,
         pass_id,
         station_id: Some(station_id.clone()),
+        approved_by: None,
     });
     sync_kpis(ctx);
     
