@@ -222,7 +222,8 @@ export interface LedgerEntry {
   amountCents: bigint;
   passId: bigint | null;
   stationId: string | null;
-  approvedBy: string | null;
+  /** Identity (hex string) that approved the credit, for SoD. May be absent on old rows or non-credit entries. */
+  approvedBy?: string | null;
 }
 
 export const PolicyStatus = {

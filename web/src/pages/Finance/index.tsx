@@ -38,6 +38,7 @@ function useFinanceData() {
     amountCents: row.amountCents,
     passId: row.passId ?? null,
     stationId: row.stationId ?? null,
+    approvedBy: (row as { approvedBy?: { toHexString?: () => string } }).approvedBy?.toHexString?.() ?? null,
   })), [ledgerRows]);
 
   return { decisionRecords, ledgerEntries };
