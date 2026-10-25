@@ -102,6 +102,7 @@ export function useDecisionData() {
       models: sortedModels,
       active,
       rules: [...rules].sort((a, b) => Number(b.id - a.id)),
+      labels,
       labelByCase,
       modelByLabel,
       messageById,
