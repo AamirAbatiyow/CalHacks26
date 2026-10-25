@@ -6,7 +6,9 @@
 
 <p align="center">
   <strong>An AI dispute analyst and credit approver for satellite ground-station operators.</strong>
-</p> It decides SLA credit claims from the evidence, decides alone only when it is at least 95% confident and Cedar policy allows it, asks a human otherwise, and turns each human ruling into tested, versioned policy.
+</p>
+
+It decides SLA credit claims from the evidence, decides alone only when it is at least 95% confident and Cedar policy allows it, asks a human otherwise, and turns each human ruling into tested, versioned policy.
 
 Built at Cal Hacks 2026 by Aamir Abatiyow, for **Hyphenate**, **SpacetimeDB**, **SpaceX** and **CRS**.
 
