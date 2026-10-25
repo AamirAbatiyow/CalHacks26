@@ -1,8 +1,6 @@
 .dz-page {
-  --lane-fast: #22c55e;
-  --lane-fast-soft: rgba(34, 197, 94, 0.1);
+  --lane-fast: var(--color-green);
   --lane-deep: var(--color-accent);
-  --lane-deep-soft: rgba(77, 163, 255, 0.07);
   --lane-human: var(--color-amber);
   position: relative;
   display: flex;
@@ -301,26 +299,22 @@
   transform-origin: 0 0;
 }
 
+/* Lane groupings: hairline outlines only, no fills. Colour lives in the label text and the edges. */
+
 .pm-band {
   position: absolute;
-  border-radius: 10px;
+  border-radius: 6px;
+  border: 1px solid #1c1c1c;
   pointer-events: none;
-  transition: background 0.25s ease, border-color 0.25s ease;
-}
-
-.pm-band-fast {
-  background: linear-gradient(90deg, rgba(34, 197, 94, 0.03) 0%, rgba(34, 197, 94, 0.09) 50%, rgba(34, 197, 94, 0.03) 100%);
-  border: 1px solid rgba(34, 197, 94, 0.22);
+  transition: border-color 0.2s ease;
 }
 
 .pm-band-fast.lit {
-  background: linear-gradient(90deg, rgba(34, 197, 94, 0.05) 0%, rgba(34, 197, 94, 0.14) 50%, rgba(34, 197, 94, 0.05) 100%);
-  border-color: rgba(34, 197, 94, 0.4);
+  border-color: #333;
 }
 
 .pm-band-deep {
-  background: var(--lane-deep-soft);
-  border: 1px dashed rgba(77, 163, 255, 0.28);
+  border-style: dashed;
 }
 
 .pm-band-label,
@@ -329,8 +323,8 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 10px;
+  font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -343,16 +337,16 @@
   font-weight: 400;
   letter-spacing: 0;
   text-transform: none;
-  font-size: 13px;
-  color: #a8a8a8;
+  font-size: 11px;
+  color: var(--color-secondary);
 }
 
 .pm-band-stat {
-  font-weight: 500;
+  font-weight: 400;
   letter-spacing: 0;
   text-transform: none;
-  font-size: 13px;
-  color: #cfcfcf;
+  font-size: 11px;
+  color: var(--color-secondary);
   font-variant-numeric: tabular-nums;
 }
 
@@ -367,66 +361,45 @@
   fill: none;
 }
 
+/* Edges: thin solid strokes at the same alphas as .gedge in ui.css. The fast lane is the one heavier line. */
+
 .pm-edge-base {
   stroke: #3a3a3a;
-  stroke-width: 1.5;
-  transition: stroke 0.2s ease, opacity 0.2s ease;
+  stroke-width: 1;
+  transition: stroke 0.2s ease;
 }
 
-.pm-edge-flow {
-  stroke-width: 2;
-  stroke-dasharray: 2 14;
-  stroke-linecap: round;
-  animation: pm-flow 1.6s linear infinite;
-}
+.pm-edge-fast .pm-edge-base { stroke: var(--lane-fast); stroke-width: 2; }
+.pm-edge-deep .pm-edge-base { stroke: rgba(77, 163, 255, 0.55); }
+.pm-edge-rule .pm-edge-base { stroke: rgba(34, 197, 94, 0.45); stroke-dasharray: 4 4; }
+.pm-edge-human .pm-edge-base { stroke: rgba(245, 158, 11, 0.55); }
+.pm-edge-flagged .pm-edge-base { stroke: rgba(239, 68, 68, 0.5); stroke-dasharray: 4 4; }
+.pm-edge-loop .pm-edge-base { stroke: #3a3a3a; stroke-dasharray: 3 4; }
+.pm-edge-plain .pm-edge-base { stroke: #4a4a4a; }
 
-.pm-edge-fast .pm-edge-base { stroke: var(--lane-fast); stroke-width: 3.5; }
-.pm-edge-fast .pm-edge-flow { stroke: #d7ffe6; stroke-width: 3; stroke-dasharray: 3 18; animation-duration: 0.7s; }
-.pm-edge-fast .pm-edge-glow { stroke: var(--lane-fast); stroke-width: 10; opacity: 0.35; }
+.pm-edge-deep.lit .pm-edge-base { stroke: var(--lane-deep); }
+.pm-edge-rule.lit .pm-edge-base { stroke: rgba(34, 197, 94, 0.7); }
+.pm-edge-human.lit .pm-edge-base { stroke: var(--lane-human); }
+.pm-edge-flagged.lit .pm-edge-base { stroke: rgba(239, 68, 68, 0.8); }
+.pm-edge-loop.lit .pm-edge-base { stroke: #666; }
+.pm-edge-plain.lit .pm-edge-base { stroke: #777; }
 
-.pm-edge-deep .pm-edge-base { stroke: rgba(77, 163, 255, 0.6); }
-.pm-edge-deep .pm-edge-flow { stroke: rgba(170, 210, 255, 0.85); animation-duration: 2.4s; }
-
-.pm-edge-rule .pm-edge-base { stroke: rgba(34, 197, 94, 0.55); stroke-dasharray: 5 4; }
-.pm-edge-rule .pm-edge-flow { stroke: rgba(180, 255, 210, 0.7); animation-duration: 1.8s; }
-
-.pm-edge-human .pm-edge-base { stroke: rgba(245, 158, 11, 0.7); }
-.pm-edge-flagged .pm-edge-base { stroke: rgba(239, 68, 68, 0.6); stroke-dasharray: 4 4; }
-
-.pm-edge-loop .pm-edge-base { stroke: #5a5a5a; stroke-dasharray: 4 5; }
-.pm-edge-loop .pm-edge-flow { stroke: #9a9a9a; stroke-width: 1.5; animation-duration: 3s; }
-
-.pm-edge-plain .pm-edge-base { stroke: #6a6a6a; }
-
-.pm-edge.lit .pm-edge-base { opacity: 1; }
-.pm-edge-deep.lit .pm-edge-base { stroke: var(--lane-deep); stroke-width: 2; }
-.pm-edge-loop.lit .pm-edge-base { stroke: #8a8a8a; }
-.pm-edge-human.lit .pm-edge-base { stroke: var(--lane-human); stroke-width: 2; }
-
-.pm-arrow { fill: #555; }
+.pm-arrow { fill: #4a4a4a; }
 .pm-arrow-fast { fill: var(--lane-fast); }
-.pm-arrow-deep { fill: rgba(77, 163, 255, 0.8); }
-.pm-arrow-rule { fill: rgba(34, 197, 94, 0.7); }
-.pm-arrow-human { fill: var(--lane-human); }
-.pm-arrow-flagged { fill: rgba(239, 68, 68, 0.8); }
-.pm-arrow-loop { fill: #777; }
-.pm-arrow-plain { fill: #777; }
-
-@keyframes pm-flow {
-  to { stroke-dashoffset: -32; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .pm-edge-flow { animation: none; }
-}
+.pm-arrow-deep { fill: rgba(77, 163, 255, 0.7); }
+.pm-arrow-rule { fill: rgba(34, 197, 94, 0.6); }
+.pm-arrow-human { fill: rgba(245, 158, 11, 0.7); }
+.pm-arrow-flagged { fill: rgba(239, 68, 68, 0.6); }
+.pm-arrow-loop { fill: #555; }
+.pm-arrow-plain { fill: #555; }
 
 .pm-edge-label {
   position: absolute;
   transform: translate(-50%, -100%);
-  font-size: 12px;
-  line-height: 15px;
+  font-size: 11px;
+  line-height: 14px;
   white-space: nowrap;
-  color: #9a9a9a;
+  color: var(--color-secondary);
   pointer-events: none;
 }
 
@@ -434,15 +407,12 @@
 .pm-edge-label.align-end { transform: translate(-100%, -100%); }
 .pm-edge-label.below { transform: translate(-50%, 4px); }
 
-.pm-edge-label-deep { color: #8fbfff; }
-.pm-edge-label-rule { color: #7fdca2; }
-.pm-edge-label-human { color: #e9b45a; }
-.pm-edge-label-flagged { color: #f08a8a; }
 .pm-edge-label-loop {
-  color: #9a9a9a;
-  font-size: 11px;
+  font-size: 10px;
   letter-spacing: 0.06em;
 }
+
+/* The fast-pass marker sits on the fast edge: a flat label, the only green text in the map. */
 
 .pm-fastpass {
   position: absolute;
@@ -450,33 +420,39 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(34, 197, 94, 0.6);
-  background: #03140a;
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  background: var(--color-bg);
   color: var(--lane-fast);
-  font-size: 14px;
+  font-size: 12px;
   white-space: nowrap;
-  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.08), 0 0 28px rgba(34, 197, 94, 0.25);
   cursor: pointer;
-  transition: box-shadow 0.2s ease, background 0.2s ease;
+  transition: border-color 0.2s ease;
 }
 
 .pm-fastpass b {
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .pm-fastpass span {
-  color: #b9f3cf;
+  color: var(--color-secondary);
 }
 
 .pm-fastpass:hover,
 .pm-fastpass.lit {
-  background: #052111;
-  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.14), 0 0 36px rgba(34, 197, 94, 0.35);
+  border-color: var(--lane-fast);
 }
+
+.pm-fastpass:hover span,
+.pm-fastpass.lit span {
+  color: #b4b4b4;
+}
+
+/* Stage nodes: the same card as .gnode in ui.css. Lane colour is carried by the icon only. */
 
 .pm-node {
   position: absolute;
@@ -486,18 +462,17 @@
   gap: 3px;
   padding: 10px 12px;
   text-align: left;
-  border: 1px solid #333;
-  border-radius: 8px;
-  background: #070707;
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+  background: #050505;
   color: var(--color-primary);
   cursor: pointer;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .pm-node:hover {
-  border-color: #777;
-  background: #0c0c0c;
-  transform: translateY(-1px);
+  border-color: #6a6a6a;
+  background: #0a0a0a;
 }
 
 .pm-node:focus-visible {
@@ -505,19 +480,9 @@
   outline-offset: 2px;
 }
 
-.pm-node.lane-fast { border-color: rgba(34, 197, 94, 0.55); background: radial-gradient(120% 140% at 0% 0%, rgba(34, 197, 94, 0.1) 0%, #070707 60%); }
-.pm-node.lane-deep { border-color: rgba(77, 163, 255, 0.45); }
-.pm-node.lane-outcome { border-color: rgba(34, 197, 94, 0.45); }
-.pm-node.lane-human { border-color: rgba(245, 158, 11, 0.55); }
-
 .pm-node.selected {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 1px var(--color-primary), 0 0 28px rgba(255, 255, 255, 0.12);
 }
-
-.pm-node.lane-fast.selected { box-shadow: 0 0 0 1px var(--color-primary), 0 0 32px rgba(34, 197, 94, 0.35); }
-.pm-node.lane-deep.selected { box-shadow: 0 0 0 1px var(--color-primary), 0 0 32px rgba(77, 163, 255, 0.3); }
-.pm-node.lane-human.selected { box-shadow: 0 0 0 1px var(--color-primary), 0 0 32px rgba(245, 158, 11, 0.3); }
 
 .pm-node-head {
   display: flex;
@@ -532,9 +497,9 @@
 .pm-node.lane-human .pm-node-icon { color: var(--lane-human); }
 
 .pm-node-kicker {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
   overflow: hidden;
@@ -565,8 +530,8 @@
 }
 
 .pm-node-tech {
-  font-size: 12px;
-  color: #a0a0a0;
+  font-size: 11px;
+  color: var(--color-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -574,15 +539,14 @@
 
 .pm-node-metric {
   margin-top: auto;
-  font-size: 12px;
-  color: #d0d0d0;
+  font-size: 11px;
+  color: #b4b4b4;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.pm-node.lane-fast .pm-node-metric { color: #8fe7b0; }
-.pm-node-metric.warn { color: var(--color-red) !important; }
+.pm-node-metric.warn { color: var(--color-red); }
 
 /* Stage detail */
 
@@ -592,14 +556,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  border-top: 2px solid #333;
 }
-
-.sd.lane-fast { border-top-color: var(--lane-fast); }
-.sd.lane-deep { border-top-color: var(--lane-deep); }
-.sd.lane-human { border-top-color: var(--lane-human); }
-.sd.lane-outcome { border-top-color: rgba(34, 197, 94, 0.6); }
-.sd.lane-intake { border-top-color: #777; }
 
 .sd-head {
   display: flex;
@@ -653,22 +610,21 @@
   display: flex;
   gap: 14px;
   padding: 16px 18px;
-  border: 1px solid rgba(34, 197, 94, 0.45);
-  border-radius: 8px;
-  background: linear-gradient(100deg, rgba(34, 197, 94, 0.12) 0%, rgba(34, 197, 94, 0.03) 70%);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  border-radius: 4px;
+  background: rgba(34, 197, 94, 0.04);
 }
 
 .sd-callout-icon {
   flex-shrink: 0;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #02130a;
-  background: var(--lane-fast);
-  box-shadow: 0 0 20px rgba(34, 197, 94, 0.45);
+  color: var(--lane-fast);
+  background: rgba(34, 197, 94, 0.1);
 }
 
 .sd-callout-body {
@@ -680,9 +636,9 @@
 }
 
 .sd-callout-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #c6f6d7;
+  font-size: var(--font-body);
+  font-weight: 500;
+  color: var(--color-primary);
 }
 
 .sd-callout-body > p {
@@ -720,8 +676,8 @@
   gap: 10px;
   min-width: 0;
   padding: 14px 16px;
-  border: 1px solid #1f1f1f;
-  border-radius: 8px;
+  border: 1px solid #1c1c1c;
+  border-radius: 4px;
   background: #050505;
 }
 
@@ -776,9 +732,9 @@
   flex-direction: column;
   gap: 2px;
   padding: 9px 11px;
-  border-radius: 6px;
+  border-radius: 4px;
   background: rgba(255, 255, 255, 0.03);
-  border: 1px solid #1a1a1a;
+  border: 1px solid #1c1c1c;
   min-width: 0;
 }
 
@@ -805,7 +761,7 @@
 .sd-tile.tone-block .sd-tile-value { color: var(--color-red); }
 
 .sd-callout .sd-tile {
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--color-bg);
 }
 
 .sd-bullets {
@@ -878,7 +834,7 @@
 }
 
 .sd-weight-bar .up { background: var(--lane-fast); }
-.sd-weight-bar .down { background: var(--color-red); opacity: 0.8; }
+.sd-weight-bar .down { background: var(--color-red); opacity: 0.7; }
 
 .sd-weight-dir {
   font-size: 11px;
@@ -899,7 +855,7 @@
 .sd-seg {
   display: inline-flex;
   border: 1px solid var(--color-muted);
-  border-radius: 5px;
+  border-radius: 4px;
   overflow: hidden;
 }
 
@@ -988,7 +944,7 @@
   gap: 4px 10px;
   align-items: center;
   padding: 8px 10px;
-  border-radius: 6px;
+  border-radius: 4px;
   border: 1px solid transparent;
   text-align: left;
   font-size: 12px;
@@ -1025,8 +981,8 @@
   flex-direction: column;
   gap: 6px;
   padding: 10px 12px;
-  border: 1px solid #1a1a1a;
-  border-radius: 6px;
+  border: 1px solid #1c1c1c;
+  border-radius: 4px;
   background: rgba(255, 255, 255, 0.02);
 }
 
@@ -1062,12 +1018,12 @@
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  border: 1px solid #1f1f1f;
-  border-radius: 6px;
+  border: 1px solid #1c1c1c;
+  border-radius: 4px;
 }
 
 .sd-version.on {
-  border-color: rgba(34, 197, 94, 0.45);
+  border-color: var(--color-muted);
 }
 
 @media (max-width: 1180px) {
