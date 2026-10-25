@@ -143,7 +143,7 @@ export function createSatelliteMarker(pos: THREE.Vector3, size = 0.009): THREE.M
 }
 
 /** Starlink (SpaceX): a violet diamond, so it reads apart from the white satellite dots. */
-export function createStarlinkMarker(pos: THREE.Vector3, size = 0.014): THREE.Mesh {
+export function createStarlinkMarker(pos: THREE.Vector3, size = 0.017): THREE.Mesh {
   const mesh = new THREE.Mesh(
     new THREE.OctahedronGeometry(size),
     new THREE.MeshBasicMaterial({ color: MARKER_COLORS.starlink }),
