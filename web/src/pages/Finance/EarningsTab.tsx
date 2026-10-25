@@ -6,7 +6,7 @@ import { C, Sparkline } from '../../ui/charts';
 import { CountUp, compactUsd, wholeUsd } from '../../ui/CountUp';
 import { EmptyState } from '../../ui/EmptyState';
 import {
-  GRAINS, change, combine, periodLabel, periodWindow, shortPeriodLabel, toCsv, totals,
+  DEFAULT_GRAIN, GRAINS, change, combine, periodLabel, periodWindow, shortPeriodLabel, toCsv, totals,
   type Change, type Flow, type Grain, type LineTotals,
 } from './earnings';
 
@@ -111,7 +111,7 @@ function useFlows(passes: Pass[], entries: LedgerEntry[]) {
 
 export function EarningsTab({ passes, entries, simNow }: EarningsTabProps) {
   const tech = useTechMode();
-  const [grain, setGrain] = useState<Grain>('week');
+  const [grain, setGrain] = useState<Grain>(DEFAULT_GRAIN);
   const [wallNow, setWallNow] = useState(() => Date.now());
   useEffect(() => {
     if (simNow !== null) return;

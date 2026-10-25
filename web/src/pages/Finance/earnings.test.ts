@@ -1,8 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { change, combine, periodLabel, periodStart, periodWindow, toCsv, totals, type Flow } from './earnings.ts';
+import { DEFAULT_GRAIN, GRAINS, change, combine, periodLabel, periodStart, periodWindow, toCsv, totals, type Flow } from './earnings.ts';
 
 const at = (iso: string) => Date.parse(iso);
+
+test('earnings opens on the month period, which is one of the toggle options', () => {
+  assert.equal(DEFAULT_GRAIN, 'month');
+  assert.ok(GRAINS.some(g => g.id === DEFAULT_GRAIN));
+});
 
 test('periods are UTC calendar periods with Monday weeks', () => {
   const now = at('2026-10-26T06:07:00Z');
