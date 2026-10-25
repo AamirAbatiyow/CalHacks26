@@ -169,18 +169,12 @@ export function PipelineMap({ stages, selected, onSelect, fastStat, deepStat }: 
                 <path d="M 0 0 L 10 5 L 0 10 z" className={`pm-arrow pm-arrow-${k}`} />
               </marker>
             ))}
-            <filter id="pm-glow" x="-20%" y="-200%" width="140%" height="500%">
-              <feGaussianBlur stdDeviation="4" />
-            </filter>
           </defs>
           {EDGES.map(e => {
-            const d = roundedPath(e.points);
             const lit = e.ends.includes(selected);
             return (
               <g key={e.id} className={`pm-edge pm-edge-${e.kind} ${lit ? 'lit' : ''}`}>
-                {e.kind === 'fast' && <path d={d} className="pm-edge-glow" filter="url(#pm-glow)" />}
-                <path d={d} className="pm-edge-base" markerEnd={`url(#pm-arrow-${e.kind})`} />
-                {(e.kind === 'fast' || e.kind === 'deep' || e.kind === 'rule' || e.kind === 'loop') && <path d={d} className="pm-edge-flow" />}
+                <path d={roundedPath(e.points)} className="pm-edge-base" markerEnd={`url(#pm-arrow-${e.kind})`} />
               </g>
             );
           })}
