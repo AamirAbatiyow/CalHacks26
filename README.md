@@ -121,6 +121,7 @@ flowchart LR
 | Real | Simulated |
 |---|---|
 | 169 satellites with CelesTrak TLEs (Planet, ICEYE, Spire, Satellogic, Capella, Umbra and 30 curated), propagated with SGP4 | The 24-hour Kp, flare and Dst curve (peaks at Kp 6.7, G3) |
+| 12 operational Starlinks on the Overview globe (violet diamonds), one per orbital plane across the 53°, 43°, 70° and 97° shells: CelesTrak TLEs, each checked against SpaceX's [public Starlink ephemerides](https://api.starlink.com/public-files/ephemerides/) (`server/scripts/refresh-starlink.mjs`). Display only, never booked or billed | |
 | 28 ground stations: 22 KSAT sites plus 6 AWS Ground Station regions, 322 antennas | Six customer contracts and their SLA terms |
 | Volumes sized from KSAT's 2025 annual report | The ledger, invoices, disputes, drop rates and six months of reviewer history |
 | AWS Ground Station on-demand pricing | Customer claim messages (written so sources disagree) |
