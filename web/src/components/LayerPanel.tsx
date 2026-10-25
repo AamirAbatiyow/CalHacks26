@@ -1,5 +1,6 @@
 import type { LayerState, Station } from '../types';
 import { auroralOval, inStormZone, stormLevel } from '../utils/storm';
+import { MARKER_COLORS } from './globeMarkers';
 import './LayerPanel.css';
 
 interface LayerPanelProps {
@@ -8,6 +9,7 @@ interface LayerPanelProps {
   kpIndex: number;
   stations: Station[];
   affectedPasses: number;
+  starlinkCount?: number;
 }
 
 interface LayerToggleProps {
@@ -38,7 +40,7 @@ function LayerToggle({ label, enabled, onToggle, badge }: LayerToggleProps) {
   );
 }
 
-export function LayerPanel({ layers, onToggle, kpIndex, stations, affectedPasses }: LayerPanelProps) {
+export function LayerPanel({ layers, onToggle, kpIndex, stations, affectedPasses, starlinkCount = 0 }: LayerPanelProps) {
   const level = stormLevel(kpIndex);
   const affectedStations = level ? stations.filter(s => inStormZone(s.latitude, s.longitude, kpIndex)).length : 0;
   return (
@@ -52,6 +54,12 @@ export function LayerPanel({ layers, onToggle, kpIndex, stations, affectedPasses
         label="Satellites and trails"
         enabled={layers.satellitesAndRoutes}
         onToggle={() => onToggle('satellitesAndRoutes')}
+      />
+      <LayerToggle
+        label="Starlink"
+        enabled={layers.starlink}
+        onToggle={() => onToggle('starlink')}
+        badge={starlinkCount > 0 ? { text: `SpaceX · ${starlinkCount}`, color: MARKER_COLORS.starlink } : undefined}
       />
       <LayerToggle
         label="Pass traffic"

@@ -11,6 +11,7 @@ export const MARKER_COLORS = {
   satellite: '#ffffff',
   link: '#e5e7eb',
   dropped: '#f59e0b',
+  starlink: '#a78bfa',
 } as const;
 
 export function latLonToVector3(lat: number, lon: number, radius: number): THREE.Vector3 {
@@ -141,14 +142,26 @@ export function createSatelliteMarker(pos: THREE.Vector3, size = 0.009): THREE.M
   return mesh;
 }
 
+/** Starlink (SpaceX): a violet diamond, so it reads apart from the white satellite dots. */
+export function createStarlinkMarker(pos: THREE.Vector3, size = 0.017): THREE.Mesh {
+  const mesh = new THREE.Mesh(
+    new THREE.OctahedronGeometry(size),
+    new THREE.MeshBasicMaterial({ color: MARKER_COLORS.starlink }),
+  );
+  mesh.position.copy(pos);
+  mesh.lookAt(pos.clone().multiplyScalar(2));
+  return mesh;
+}
+
 /** Motion trail fading from the satellite's current position back to `points[0]`. */
-export function createTrail(points: THREE.Vector3[], opacity = 0.8): THREE.Line {
+export function createTrail(points: THREE.Vector3[], opacity = 0.8, color = '#ffffff'): THREE.Line {
   const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  const tint = new THREE.Color(color);
   const colors: number[] = [];
   points.forEach((_, i) => {
     const t = points.length > 1 ? i / (points.length - 1) : 1;
     const v = t * t * opacity;
-    colors.push(v, v, v);
+    colors.push(tint.r * v, tint.g * v, tint.b * v);
   });
   geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   return new THREE.Line(geometry, new THREE.LineBasicMaterial({ vertexColors: true }));

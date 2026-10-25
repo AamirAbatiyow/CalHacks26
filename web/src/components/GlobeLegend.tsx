@@ -6,10 +6,11 @@ import './GlobeLegend.css';
 interface GlobeLegendProps {
   kp: number;
   showLinks?: boolean;
+  showStarlink?: boolean;
   extra?: { swatch: ReactNode; label: string }[];
 }
 
-export function GlobeLegend({ kp, showLinks = true, extra = [] }: GlobeLegendProps) {
+export function GlobeLegend({ kp, showLinks = true, showStarlink = false, extra = [] }: GlobeLegendProps) {
   const current = stormLevel(kp);
   return (
     <div className="globe-legend" aria-label="Map legend">
@@ -21,6 +22,12 @@ export function GlobeLegend({ kp, showLinks = true, extra = [] }: GlobeLegendPro
         <span className="legend-swatch satellite" style={{ background: MARKER_COLORS.satellite }} />
         Satellite + trail
       </div>
+      {showStarlink && (
+        <div className="legend-row">
+          <span className="legend-swatch starlink" style={{ background: MARKER_COLORS.starlink }} />
+          Starlink (SpaceX)
+        </div>
+      )}
       {showLinks && (
         <>
           <div className="legend-row">

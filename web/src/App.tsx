@@ -3,6 +3,7 @@ import { Sidebar, type PageId } from './components/Sidebar';
 import { KpiStrip } from './components/KpiStrip';
 import { Globe } from './components/Globe';
 import { isDegraded } from './utils/storm';
+import { STARLINK_SATELLITES } from './utils/starlink';
 import { LayerPanel } from './components/LayerPanel';
 import { PlaybackBar } from './components/PlaybackBar';
 import { useSpacetimeDB } from './hooks/useSpacetimeDB';
@@ -25,6 +26,7 @@ function App() {
   const [layers, setLayers] = useState<LayerState>({
     groundStations: true,
     satellitesAndRoutes: true,
+    starlink: true,
     passTraffic: true,
     spaceWeather: true,
   });
@@ -131,6 +133,7 @@ function App() {
           <Globe
             stations={stations}
             satellites={satellites}
+            starlinks={STARLINK_SATELLITES}
             passes={passes}
             spaceWeather={currentWeather}
             currentTime={currentTime}
@@ -142,6 +145,7 @@ function App() {
             kpIndex={currentWeather?.kpIndex ?? 0}
             stations={stations}
             affectedPasses={affectedPasses}
+            starlinkCount={STARLINK_SATELLITES.length}
           />
         </div>
         <PlaybackBar
