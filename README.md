@@ -154,7 +154,7 @@ SPACETIMEDB_SERVER=local SPACETIMEDB_MODULE=ground-truth bash server/seed.sh   #
 ```
 
 - **Maincloud:** `server/reseed.sh ground-truth-aamir maincloud --yes`, with the worker running against `wss://maincloud.spacetimedb.com`.
-- **Live v4 → v6 demo:** prefix the seed with `STAGE_MINED_POLICY=1` to start at v4 current with v6 proposed, then promote v6 on camera. Click path and seconds-long reset: [docs/DEMO.md](docs/DEMO.md).
+- **Self-learning demo:** prefix the seed with `STAGE_MINED_POLICY=1` to start at v4 current with no mined proposal. One human ruling on an escalated claim triggers the full v6 proposal from history. Decide → promote → Break It in 60–90 s, with a 1 s rewind between takes: [docs/DEMO.md](docs/DEMO.md).
 - **Vercel:** root `web`, Vite preset.
 - **Tests:** `cargo +stable test` in `server/spacetimedb` and `npm test` in `worker`.
 
