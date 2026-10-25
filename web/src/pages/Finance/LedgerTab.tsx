@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, ArrowDownLeft, ArrowUpRight, Check, Clock, RotateCcw, Send, X, type LucideIcon } from 'lucide-react';
+import { AlertTriangle, ArrowDownLeft, ArrowUpRight, Check, Clock, RotateCcw, Send, ShieldAlert, X, type LucideIcon } from 'lucide-react';
 import type { LedgerEntry } from '../../types';
 import { formatDollars } from '../../utils/money';
 import { C, LineSeries } from '../../ui/charts';
@@ -8,9 +8,10 @@ import { CountUp, compactUsd } from '../../ui/CountUp';
 import { DataTable, type Column } from '../../ui/DataTable';
 import { EmptyState } from '../../ui/EmptyState';
 import { dailyBuckets } from '../../ui/series';
-import { erpTime, postedRefs, precheck, stateOf, summarize, type EntryKind, type ErpState } from './erp';
+import { erpTime, postedRefs, precheck, sodViolations, stateOf, summarize, type EntryKind, type ErpState } from './erp';
 import { ErpPanel } from './ErpPanel';
 import { useErp } from './useErp';
+import { useIdentity } from '../../hooks/useTable';
 
 interface LedgerTabProps {
   entries: LedgerEntry[];
@@ -59,6 +60,7 @@ function Checkbox({ checked, indeterminate = false, disabled, onChange, label }:
 
 export function LedgerTab({ entries }: LedgerTabProps) {
   const { postings, batches, batchById, submit } = useErp();
+  const identity = useIdentity();
   const [filter, setFilter] = useState<Filter>('All');
   const [shown, setShown] = useState(PAGE);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
@@ -120,8 +122,10 @@ export function LedgerTab({ entries }: LedgerTabProps) {
         refs.set(e.referenceId.trim(), e.id);
       }
     }
-    return { cents, rejected, reasons: [...reasons.entries()] };
-  }, [picked, postings]);
+    // Separation of duties: submitter cannot have approved any credit in the batch
+    const sodBlocked = sodViolations(sorted, identity);
+    return { cents, rejected, reasons: [...reasons.entries()], sodBlocked };
+  }, [picked, postings, identity]);
 
   const allChecked = selectable.length > 0 && selectable.every(e => selected.has(String(e.id)));
   const someChecked = !allChecked && selectable.some(e => selected.has(String(e.id)));
@@ -291,6 +295,11 @@ export function LedgerTab({ entries }: LedgerTabProps) {
                     {' '}· {preview.rejected} will fail checks
                   </span>
                 )}
+                {preview.sodBlocked.length > 0 && (
+                  <span className="bad" title={`Separation of duties: you approved ${preview.sodBlocked.map(e => e.referenceId).join(', ')} and cannot also submit`}>
+                    {' '}· <ShieldAlert size={12} aria-hidden /> SoD: you approved {preview.sodBlocked.length === 1 ? preview.sodBlocked[0].referenceId : `${preview.sodBlocked.length} credits`}
+                  </span>
+                )}
                 <button className="ui-icon-btn" onClick={() => setSelected(new Set())} aria-label="Clear selection"><X size={13} /></button>
               </span>
             )}
@@ -298,9 +307,14 @@ export function LedgerTab({ entries }: LedgerTabProps) {
               as
               <input value={name} onChange={e => setName(e.target.value)} aria-label="Submitted by" maxLength={64} />
             </label>
-            <button className="erp-submit" onClick={onSubmit} disabled={picked.length === 0 || !!inFlight}>
+            <button
+              className="erp-submit"
+              onClick={onSubmit}
+              disabled={picked.length === 0 || !!inFlight || preview.sodBlocked.length > 0}
+              title={preview.sodBlocked.length > 0 ? 'Separation of duties: a different user must submit credits you approved' : undefined}
+            >
               <Send size={13} aria-hidden />
-              {inFlight ? 'Submitting…' : picked.length > 0 ? `Submit ${picked.length.toLocaleString('en-US')} to ERP` : 'Submit to ERP'}
+              {inFlight ? 'Submitting…' : preview.sodBlocked.length > 0 ? 'SoD blocked' : picked.length > 0 ? `Submit ${picked.length.toLocaleString('en-US')} to ERP` : 'Submit to ERP'}
             </button>
           </div>
         </div>

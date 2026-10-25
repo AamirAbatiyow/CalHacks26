@@ -17,6 +17,7 @@ interface TableHandle {
 let conn: DbConnection | null = null;
 let connected = false;
 let reconnectDelay = 1000;
+let currentIdentity: string | null = null;
 const listeners = new Map<string, Set<() => void>>();
 const subscribed = new Set<string>();
 const pending = new Set<string>();
@@ -50,8 +51,9 @@ export function getConnection(): DbConnection {
   conn = DbConnection.builder()
     .withUri(SPACETIMEDB_HOST)
     .withDatabaseName(SPACETIMEDB_MODULE)
-    .onConnect(() => {
+    .onConnect((_connection, identity) => {
       connected = true;
+      currentIdentity = identity.toHexString();
       reconnectDelay = 1000;
       for (const name of listeners.keys()) ensureSubscribed(name as TableName);
       connectionListeners.forEach(l => l());
@@ -65,10 +67,24 @@ export function getConnection(): DbConnection {
 function scheduleReconnect() {
   connected = false;
   conn = null;
+  currentIdentity = null;
   subscribed.clear();
   connectionListeners.forEach(l => l());
   setTimeout(getConnection, reconnectDelay);
   reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+}
+
+/** Returns the current database identity as a hex string, or null if not connected. */
+export function useIdentity(): string | null {
+  const [id, setId] = useState<string | null>(currentIdentity);
+  useEffect(() => {
+    const update = () => setId(currentIdentity);
+    connectionListeners.add(update);
+    getConnection();
+    update();
+    return () => { connectionListeners.delete(update); };
+  }, []);
+  return id;
 }
 
 function readRows<K extends TableName>(name: K): RowOf<K>[] {

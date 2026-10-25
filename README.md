@@ -10,9 +10,9 @@
 
 It decides SLA credit claims from the evidence, decides alone only when it is at least 95% confident and Cedar policy allows it, asks a human otherwise, and turns each human ruling into tested, versioned policy.
 
-Built at Cal Hacks 2026 by Aamir Abatiyow, for **Hyphenate**, **SpacetimeDB**, **SpaceX** and **CRS**.
+Built at Cal Hacks 2026 by Aamir Abatiyow, for **Hyphenate**, **SpacetimeDB**, and **SpaceX**.
 
-Live: [cal-hacks26.vercel.app](https://cal-hacks26.vercel.app) · [groundtruth-classic.vercel.app](https://groundtruth-classic.vercel.app) · [groundtruth-graphs.vercel.app](https://groundtruth-graphs.vercel.app) · Full detail: [docs/REFERENCE.md](docs/REFERENCE.md)
+Live demo: [cal-hacks26.vercel.app](https://cal-hacks26.vercel.app) · Full detail: [docs/REFERENCE.md](docs/REFERENCE.md)
 
 ## The problem
 
@@ -56,7 +56,8 @@ Each conflict lowers confidence by a stated penalty, and the claim says why it i
 - The AI proposes and the module decides. The language model cannot write a decision, a ledger entry or a policy.
 - Cedar runs inside the database and forbids the AI from editing policy.
 - There are no dollar caps to game. The only gate is confidence: 95% or more and Cedar's permission, or a human decides.
-- **Separation of duties.** Whoever requests an authority change (a payout limit or a claim cap) cannot approve it, and no one can raise their own limit. Two Cedar forbids enforce this (`sod-no-own-authority`, `sod-no-own-request`), the module checks it again, and it holds in every policy version. It refused Break It's two insider attacks, worth $1.645M.
+- **Separation of duties (authority).** Whoever requests an authority change (a payout limit or a claim cap) cannot approve it, and no one can raise their own limit. Two Cedar forbids enforce this (`sod-no-own-authority`, `sod-no-own-request`), the module checks it again, and it holds in every policy version. It refused Break It's two insider attacks, worth $1.645M.
+- **Separation of duties (ERP submit).** The identity that approved a credit cannot submit that credit (or a batch containing it) to the ERP. The server rejects the batch with a clear error, and the UI disables the submit button and shows which credits you approved. A different user (e.g. controller vs approver) must submit. Demo: approve a claim as user A → select its credit on the Ledger → submit blocked → switch to user B → submit succeeds.
 
 **A clean record of its work.**
 - Every call traces back to the data, rule or person behind it.

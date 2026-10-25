@@ -143,8 +143,19 @@ pub fn validate(entry: &LedgerEntry, posted_refs: &HashMap<String, u64>) -> Resu
     Ok(reference.to_string())
 }
 
+/// Checks separation of duties: the submitter must not have approved any credit
+/// in the batch. Returns the reference IDs of credits that would violate SoD.
+pub fn sod_violations(entries: &[LedgerEntry], submitter: Identity) -> Vec<String> {
+    entries
+        .iter()
+        .filter(|e| e.entry_type == LedgerEntryType::Credit && e.approved_by == Some(submitter))
+        .filter_map(|e| e.reference_id.clone())
+        .collect()
+}
+
 /// Sends ledger entries to the ERP in one batch. Entries already submitted are
 /// skipped, failed ones are retried, and an unknown entry id rejects the whole call.
+/// Separation of duties: rejects if the submitter approved any credit in the batch.
 #[spacetimedb::reducer]
 pub fn submit_to_erp(
     ctx: &ReducerContext,
@@ -170,6 +181,15 @@ pub fn submit_to_erp(
         .iter()
         .map(|id| ctx.db.ledger_entry().id().find(id).ok_or_else(|| format!("No ledger entry #{}", id)))
         .collect::<Result<_, _>>()?;
+
+    let sod = sod_violations(&entries, ctx.sender());
+    if !sod.is_empty() {
+        return Err(format!(
+            "Separation of duties: you approved {} and cannot also submit {} to the ERP. A different user must submit.",
+            if sod.len() == 1 { sod[0].clone() } else { format!("{} credits", sod.len()) },
+            if sod.len() == 1 { "it" } else { "them" }
+        ));
+    }
 
     let mut posted_refs: HashMap<String, u64> = ctx
         .db
