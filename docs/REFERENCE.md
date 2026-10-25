@@ -394,6 +394,8 @@ If your default Rust toolchain is older than the module's edition 2024, prefix t
 
 `seed.sh` generates the pass history with SGP4 (about 30 s), loads it in batches, settles the dispute and credit history, and seeds SLA terms, maintenance windows, labeled decisions, the six-month audit history and Break It fixtures. A full local seed takes a few minutes.
 
+By default the seed promotes the history-mined v6. With `STAGE_MINED_POLICY=1` it leaves v6 proposed and v4 current, so the v4 → v6 upgrade can be promoted live; [DEMO.md](DEMO.md) has the click path and the reset options.
+
 ### Maincloud publish and reseed
 
 ```bash
@@ -547,6 +549,8 @@ Ground Truth is built on the idea that an AI should earn autonomy one provable c
 | `register_model_version` | Re-check and promote a retrained System 1 |
 | `decide_case` | Policies channel: store a ruling and run the miner |
 | `promote_policy_version` | Make a policy version current and activate its Cedar |
+| `seed_learning_history_staged` | `seed_learning_history` with the mined v6 left proposed and v4 current (`STAGE_MINED_POLICY=1` in `seed.sh`); see [DEMO.md](DEMO.md) |
+| `rewind_to_mined_proposal` | Demo reset in about a second: v4 current, v6 proposed, later versions deleted, Break It rerun under v4; decided claims stay decided |
 | `toggle_rule` | Switch a non-governing rule; refuses the four fixed rules |
 | `run_injection_attacks` | File 12 prompt-injection attacks as real claims; refused if the worker has no heartbeat in 15 s, closed by `expire_injection_run` after 60 s |
 | `record_decision` | Log a decision with policy and model versions |
