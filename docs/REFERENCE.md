@@ -88,7 +88,7 @@ Ground Truth is an AI dispute and billing analyst. Each claim becomes a case. Th
 | **Break It** | Adversarial testing: real attack claims filed through the real decision path, scored as caught, held or missed |
 | **Settings** | **Show technical details**. Off by default, so the app reads like a billing product (dollars, status, a short reason). On, it reveals confidence, SHAP terms, re-verify checks, model and policy versions, Cedar text and replay internals |
 
-The sidebar is Overview, Claims, Decisions, Finance (Ledger and Audit tabs), Policies and Break It, with Settings at the bottom. Old links still work: `#/approvals` redirects to `#/claims`, and `#/ledger` and `#/audit` redirect to the Finance tabs.
+The sidebar is Overview, Claims, Decisions, Finance (Summary, Earnings, Ledger and Audit tabs), Policies and Break It, with Settings at the bottom. Old links still work: `#/approvals` redirects to `#/claims`, and `#/ledger` and `#/audit` redirect to the Finance tabs.
 
 ### Decision replay
 
