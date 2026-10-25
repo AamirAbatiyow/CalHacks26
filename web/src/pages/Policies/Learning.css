@@ -181,50 +181,253 @@
   color: var(--color-primary);
 }
 
-.lp-rule {
-  border-top: 1px solid var(--color-muted);
-  padding: 6px 0;
-}
-
-.lp-rule summary {
-  display: grid;
-  grid-template-columns: 110px minmax(0, 1fr) auto auto;
-  gap: 12px;
-  align-items: baseline;
-  cursor: pointer;
-  list-style: none;
-}
-
-.lp-rule summary::-webkit-details-marker {
-  display: none;
-}
-
-.lp-rule summary b {
-  font-weight: 500;
-  color: var(--color-primary);
-}
-
 .lp-conds {
   color: var(--color-primary);
 }
 
-.lp-support {
+.lp-promote-note {
+  color: var(--color-primary);
+  font-size: 13px;
+  max-width: 760px;
+  margin-bottom: -8px;
+}
+
+/* What a version enforces: one IF -> THEN card per learned rule, grouped by claim type. */
+
+.lp-enforces {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.lp-enforces-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.lp-enforces-sub {
+  max-width: 640px;
+}
+
+.lp-enforces-tools {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.lp-outcome-counts {
+  display: flex;
+  gap: 12px;
+}
+
+.lp-outcome-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.lp-outcome-count.approve { color: var(--color-green); }
+.lp-outcome-count.partial { color: var(--color-amber); }
+.lp-outcome-count.deny { color: var(--color-red); }
+
+.lp-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--color-secondary);
   white-space: nowrap;
 }
 
-.lp-rule p {
-  margin: 8px 0 4px 122px;
+.lp-link-btn:hover {
+  color: var(--color-primary);
+}
+
+.lp-link-btn .open {
+  transform: rotate(180deg);
+}
+
+.lp-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lp-group-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--color-muted);
+}
+
+.lp-group-head b {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-primary);
+}
+
+.lp-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-muted);
+  border-left: 3px solid var(--color-secondary);
+  border-radius: 4px;
+}
+
+.lp-card.approve { border-left-color: var(--color-green); }
+.lp-card.partial { border-left-color: var(--color-amber); }
+.lp-card.deny { border-left-color: var(--color-red); }
+
+.lp-card-rule {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.lp-if {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-secondary);
+}
+
+.lp-card-conds {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.lp-cond-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lp-and {
+  font-size: 11px;
+  color: var(--color-secondary);
+}
+
+.lp-cond {
+  font-size: 12px;
+  color: var(--color-primary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--color-muted);
+  border-radius: 3px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+.lp-cond.type {
+  font-weight: 500;
+}
+
+.lp-then-arrow {
+  color: var(--color-secondary);
+}
+
+.lp-verdict {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 3px;
+  padding: 3px 9px;
+}
+
+.lp-verdict.approve { color: var(--color-green); background: rgba(34, 197, 94, 0.12); }
+.lp-verdict.partial { color: var(--color-amber); background: rgba(245, 158, 11, 0.14); }
+.lp-verdict.deny { color: var(--color-red); background: rgba(239, 68, 68, 0.14); }
+
+.lp-card-sentence {
+  font-size: 13px;
+  color: var(--color-primary);
+  max-width: 880px;
+}
+
+.lp-pays {
+  color: var(--color-secondary);
+}
+
+.lp-card-proof {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+}
+
+.lp-agree {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--color-green);
+}
+
+.lp-disagree.bad {
+  color: var(--color-amber);
+}
+
+.lp-reason b {
+  font-weight: 500;
+  color: var(--color-primary);
+}
+
+.lp-reason q {
+  font-style: italic;
+}
+
+.lp-card-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lp-rule-status {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.lp-rule-status.active { color: var(--color-green); }
+.lp-rule-status.proposed { color: var(--color-amber); }
+.lp-rule-status.blocked { color: var(--color-red); }
+
+.lp-card-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 14px;
 }
 
 .lp-sources {
-  margin-left: 122px;
   display: flex;
   flex-wrap: wrap;
   gap: 4px 10px;
 }
 
-.lp-rule pre {
-  margin: 8px 0 4px 122px;
+.lp-cedar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lp-cedar-note {
+  font-size: 11px;
+}
+
+.lp-cedar pre {
   padding: 10px 12px;
   border: 1px solid var(--color-muted);
   border-radius: 4px;
@@ -318,10 +521,47 @@
   background: transparent;
 }
 
+.version-trend-legend i.dashed {
+  width: 14px;
+  height: 0;
+  border-radius: 0;
+  border-top: 2px dashed var(--color-accent);
+}
+
+.version-trend-live {
+  display: flex;
+  align-items: flex-end;
+  gap: 24px;
+  margin: 4px 0 12px;
+}
+
+.version-trend-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--color-secondary);
+}
+
+.version-trend-stat b {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.version-trend-number {
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
 .version-trend-summary {
   font-size: 12px;
   color: var(--color-secondary);
-  margin: 4px 0 12px;
+  max-width: 720px;
 }
 
 .version-trend-summary b {

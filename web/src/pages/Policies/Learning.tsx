@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { ArrowRight, Ban, ChartPie, CheckCircle2, ChevronDown, CodeXml, Users, type LucideIcon } from 'lucide-react';
 import { micros } from '../../hooks/useTable';
 import {
   KEY_LABELS,
@@ -11,8 +12,10 @@ import {
   useMinedRules,
   useMiningResults,
   type AuditDecision,
+  type MinedRule,
   type PolicyProposal,
 } from '../../hooks/useCases';
+import { CLAIM_TYPES, OUTCOME, mostCommon, readRule, ruleNumber } from './ruleText';
 import './Learning.css';
 
 function fmtDate(us: bigint): string {
@@ -103,6 +106,14 @@ export function ProposalPanel({ proposal: p, decisions }: ProposalProps) {
 
       {p.blockReason && <div className="lp-blocked">Blocked: {p.blockReason}. Promotion is disabled.</div>}
 
+      {p.status === 'proposed' && (
+        <p className="lp-promote-note">
+          Promoting switches on {p.versionId}'s {p.ruleIds.length} rule{p.ruleIds.length === 1 ? '' : 's'} in place of {p.baseVersionId}: on replay,
+          escalations go from {p.escalationsBefore.toLocaleString()} to {p.escalationsAfter.toLocaleString()} with {p.regressions} regression{p.regressions === 1 ? '' : 's'}.
+          Rules learned from new rulings build on whichever version is active.
+        </p>
+      )}
+
       <div className="lp-actions">
         {p.status === 'proposed' && (
           <button className="lp-btn primary" disabled={busy} onClick={() => run(() => promoteVersion(p.versionId))}>
@@ -131,31 +142,144 @@ export function ProposalPanel({ proposal: p, decisions }: ProposalProps) {
         </div>
       )}
 
-      {rules.length > 0 && (
-        <div className="lp-rules">
-          <span className="lp-label">{rules.length} learned rule{rules.length > 1 ? 's' : ''} · written by {rules[0].writer}</span>
-          {rules.map(r => (
-            <details key={r.ruleId} className="lp-rule">
-              <summary>
-                <code>{r.ruleId}</code>
-                <span className="lp-conds">{r.conditions.map(condition).join(' · ')}</span>
-                <b>→ {r.outcome}</b>
-                <span className="lp-support">{r.support} consistent · {r.contradictions} contradicting · {r.status}</span>
-              </summary>
-              <p>{r.rationale}</p>
-              <div className="lp-sources">
-                Source decisions:{' '}
-                {r.sourceDecisionIds.slice(0, 8).map(id => {
-                  const d = byId.get(id);
-                  return d ? <span key={String(id)}>{d.caseId} ({d.reviewer.split(' ')[0]}, {dollars(d.creditCents)})</span> : null;
-                })}
-                {r.sourceDecisionIds.length > 8 && <span>and {r.sourceDecisionIds.length - 8} more</span>}
-              </div>
-              <pre>{r.cedarText}</pre>
-            </details>
-          ))}
+      {rules.length > 0 && <RuleCards versionId={p.versionId} rules={rules} byId={byId} />}
+    </div>
+  );
+}
+
+const OUTCOME_ICON: Record<string, LucideIcon> = { approve: CheckCircle2, partial: ChartPie, deny: Ban };
+const CLAIM_TYPE_ORDER = ['dropped_pass', 'partial_downlink', 'data_integrity'];
+
+function RuleCards({ versionId, rules, byId }: { versionId: string; rules: MinedRule[]; byId: Map<bigint, AuditDecision> }) {
+  const [cedarOpen, setCedarOpen] = useState<Set<string>>(new Set());
+  const [sourcesOpen, setSourcesOpen] = useState<Set<string>>(new Set());
+  const read = useMemo(() => rules
+    .map(r => {
+      const sources = r.sourceDecisionIds.map(id => byId.get(id)).filter((d): d is AuditDecision => d !== undefined);
+      const reason = mostCommon(sources.map(d => d.reasonCode));
+      const example = reason ? sources.find(d => d.reasonCode === reason.text)?.reasonText : undefined;
+      return { rule: r, text: readRule(r), reason, example, reviewers: new Set(sources.map(d => d.reviewer)).size, sources };
+    })
+    .sort((a, b) => ruleNumber(a.rule.ruleId) - ruleNumber(b.rule.ruleId)), [rules, byId]);
+  const groups = useMemo(() => {
+    const types = [...new Set(read.map(r => r.text.claimType))]
+      .sort((a, b) => (CLAIM_TYPE_ORDER.indexOf(a) + 1 || 99) - (CLAIM_TYPE_ORDER.indexOf(b) + 1 || 99));
+    return types.map(t => ({ type: t, rules: read.filter(r => r.text.claimType === t) }));
+  }, [read]);
+  const counts = (['approve', 'partial', 'deny'] as const)
+    .map(o => ({ o, n: read.filter(r => r.text.outcome === o).length }))
+    .filter(c => c.n > 0);
+  const allCedar = read.length > 0 && read.every(r => cedarOpen.has(r.rule.ruleId));
+  const toggle = (set: Set<string>, id: string) => {
+    const next = new Set(set);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return next;
+  };
+
+  return (
+    <div className="lp-enforces">
+      <div className="lp-enforces-head">
+        <div>
+          <span className="lp-label">What {versionId} enforces</span>
+          <p className="lp-enforces-sub">
+            {rules.length} rule{rules.length > 1 ? 's' : ''} learned from human rulings. A rule decides a claim only when every condition matches;
+            any other claim still goes through the 95% confidence gate or to a human.
+          </p>
         </div>
-      )}
+        <div className="lp-enforces-tools">
+          <span className="lp-outcome-counts">
+            {counts.map(({ o, n }) => {
+              const Icon = OUTCOME_ICON[o];
+              return <span key={o} className={`lp-outcome-count ${o}`}><Icon size={12} aria-hidden />{n} {OUTCOME[o].label.toLowerCase()}</span>;
+            })}
+          </span>
+          <button
+            className="lp-link-btn"
+            onClick={() => setCedarOpen(allCedar ? new Set() : new Set(read.map(r => r.rule.ruleId)))}
+            aria-pressed={allCedar}
+          >
+            <CodeXml size={12} aria-hidden /> {allCedar ? 'Hide Cedar' : 'Show Cedar for all'}
+          </button>
+        </div>
+      </div>
+
+      {groups.map(g => (
+        <div key={g.type} className="lp-group">
+          <div className="lp-group-head">
+            <b>{CLAIM_TYPES[g.type]?.name ?? (g.type || 'Any claim')}</b>
+            {CLAIM_TYPES[g.type] && <span>{CLAIM_TYPES[g.type].hint}</span>}
+          </div>
+          {g.rules.map(({ rule: r, text, reason, example, reviewers, sources }) => {
+            const o = OUTCOME[text.outcome as keyof typeof OUTCOME];
+            const Icon = OUTCOME_ICON[text.outcome] ?? CheckCircle2;
+            const showCedar = cedarOpen.has(r.ruleId);
+            const showSources = sourcesOpen.has(r.ruleId);
+            return (
+              <article key={r.ruleId} className={`lp-card ${text.outcome}`} aria-label={`${r.ruleId}: ${text.sentence}`}>
+                <div className="lp-card-rule">
+                  <span className="lp-if">If</span>
+                  <span className="lp-card-conds">
+                    {text.clauses.map((c, i) => (
+                      <span key={c.key} className="lp-cond-wrap">
+                        {i > 0 && <span className="lp-and">and</span>}
+                        <span className={`lp-cond ${c.key === 'claim_type' ? 'type' : ''}`}>{c.short}</span>
+                      </span>
+                    ))}
+                  </span>
+                  <ArrowRight size={14} className="lp-then-arrow" aria-hidden />
+                  <span className={`lp-verdict ${text.outcome}`}>
+                    <Icon size={14} aria-hidden />
+                    {o?.label ?? text.outcome}
+                  </span>
+                </div>
+                <p className="lp-card-sentence">
+                  {text.sentence} {o && <span className="lp-pays">It {o.pays}.</span>}
+                </p>
+                <div className="lp-card-proof">
+                  <span className="lp-agree"><Users size={12} aria-hidden /> {r.support.toLocaleString()} past rulings agree</span>
+                  <span className={r.contradictions > 0 ? 'lp-disagree bad' : 'lp-disagree'}>{r.contradictions} disagree</span>
+                  {reviewers > 0 && <span>{reviewers} reviewer{reviewers > 1 ? 's' : ''}</span>}
+                  {reason && (
+                    <span className="lp-reason">
+                      Reason given: <b>{humanize(reason.text)}</b> ({reason.count.toLocaleString()} of {sources.length.toLocaleString()})
+                      {example && <> · e.g. <q>{example}</q></>}
+                    </span>
+                  )}
+                </div>
+                <div className="lp-card-foot">
+                  <code>{r.ruleId}</code>
+                  <span className={`lp-rule-status ${r.status}`}>{r.status}</span>
+                  <span className="lp-card-actions">
+                    <button className="lp-link-btn" onClick={() => setSourcesOpen(s => toggle(s, r.ruleId))} aria-expanded={showSources}>
+                      <ChevronDown size={12} className={showSources ? 'open' : ''} aria-hidden /> Source rulings ({r.sourceDecisionIds.length.toLocaleString()})
+                    </button>
+                    <button className="lp-link-btn" onClick={() => setCedarOpen(s => toggle(s, r.ruleId))} aria-expanded={showCedar}>
+                      <CodeXml size={12} aria-hidden /> {showCedar ? 'Hide Cedar' : 'Show Cedar'}
+                    </button>
+                  </span>
+                </div>
+                {showSources && (
+                  <div className="lp-sources">
+                    {sources.slice(0, 12).map(d => (
+                      <span key={String(d.id)}>{d.caseId} ({d.reviewer.split(' ')[0]}, {d.outcome} {dollars(d.creditCents)})</span>
+                    ))}
+                    {r.sourceDecisionIds.length > 12 && <span>and {(r.sourceDecisionIds.length - 12).toLocaleString()} more</span>}
+                  </div>
+                )}
+                {showCedar && (
+                  <div className="lp-cedar">
+                    <span className="lp-cedar-note">
+                      Cedar policy that runs in the database{text.fromCedar ? '. The sentence above is read from these when-clauses.' : '.'} Written by {r.writer}.
+                    </span>
+                    <pre>{r.cedarText}</pre>
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 }

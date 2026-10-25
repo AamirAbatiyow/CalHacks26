@@ -126,7 +126,7 @@ export function LiveLearning({ after, clusterIds, clearances, onOpen }: Props) {
           <b className="ll-big">{clearance.cleared}</b>
           <div>
             <div className="ll-cleared-title">
-              held attack{clearance.cleared === 1 ? '' : 's'} cleared by one human decision
+              held attack{clearance.cleared === 1 ? '' : 's'} cleared by {proposals.find(p => p.versionId === clearance.versionId)?.origin === 'history_mining' ? `promoting ${clearance.versionId}` : 'one human decision'}
             </div>
             <div className="breakit-muted">
               Promoting <PolicyLink version={clearance.versionId} /> (learned from {clearance.triggerCaseId || 'a human decision'}) re-decided the {clearance.heldBefore} attacks waiting for a human:

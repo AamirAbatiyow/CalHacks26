@@ -83,6 +83,7 @@ import RegisterAttackerReducer from "./register_attacker_reducer";
 import RegisterModelVersionReducer from "./register_model_version_reducer";
 import RequestClaimCapChangeReducer from "./request_claim_cap_change_reducer";
 import RequestPayoutLimitChangeReducer from "./request_payout_limit_change_reducer";
+import RewindToMinedProposalReducer from "./rewind_to_mined_proposal_reducer";
 import RunAllAttacksReducer from "./run_all_attacks_reducer";
 import RunAttackFixtureReducer from "./run_attack_fixture_reducer";
 import RunAttackTypeReducer from "./run_attack_type_reducer";
@@ -105,6 +106,7 @@ import SeedFinanceHistoryReducer from "./seed_finance_history_reducer";
 import SeedIncomingClaimsReducer from "./seed_incoming_claims_reducer";
 import SeedLabeledDecisionsReducer from "./seed_labeled_decisions_reducer";
 import SeedLearningHistoryReducer from "./seed_learning_history_reducer";
+import SeedLearningHistoryStagedReducer from "./seed_learning_history_staged_reducer";
 import SeedLedgerEntryReducer from "./seed_ledger_entry_reducer";
 import SeedPassReducer from "./seed_pass_reducer";
 import SeedPassTelemetryReducer from "./seed_pass_telemetry_reducer";
@@ -1096,6 +1098,7 @@ const reducersSchema = __reducers(
   __reducerSchema("register_model_version", RegisterModelVersionReducer),
   __reducerSchema("request_claim_cap_change", RequestClaimCapChangeReducer),
   __reducerSchema("request_payout_limit_change", RequestPayoutLimitChangeReducer),
+  __reducerSchema("rewind_to_mined_proposal", RewindToMinedProposalReducer),
   __reducerSchema("run_all_attacks", RunAllAttacksReducer),
   __reducerSchema("run_attack_fixture", RunAttackFixtureReducer),
   __reducerSchema("run_attack_type", RunAttackTypeReducer),
@@ -1118,6 +1121,7 @@ const reducersSchema = __reducers(
   __reducerSchema("seed_incoming_claims", SeedIncomingClaimsReducer),
   __reducerSchema("seed_labeled_decisions", SeedLabeledDecisionsReducer),
   __reducerSchema("seed_learning_history", SeedLearningHistoryReducer),
+  __reducerSchema("seed_learning_history_staged", SeedLearningHistoryStagedReducer),
   __reducerSchema("seed_ledger_entry", SeedLedgerEntryReducer),
   __reducerSchema("seed_pass", SeedPassReducer),
   __reducerSchema("seed_pass_telemetry", SeedPassTelemetryReducer),
