@@ -15,6 +15,8 @@ export const GRAINS: { id: Grain; label: string; history: number }[] = [
   { id: 'year', label: 'Annual', history: 5 },
 ];
 
+export const DEFAULT_GRAIN: Grain = 'month';
+
 /** One dated amount: cents for money lines, 1 per item for counts. */
 export interface Flow {
   at: number;
