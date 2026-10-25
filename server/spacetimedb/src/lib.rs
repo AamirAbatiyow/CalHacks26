@@ -14,6 +14,7 @@ pub mod confidence_gate;
 pub mod contracts;
 pub mod decision;
 pub mod decision_logic;
+pub mod erp;
 pub mod pipeline;
 pub mod events;
 pub mod evidence;
