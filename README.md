@@ -1,7 +1,7 @@
 <p align="center">
-  <img src="web/public/logo-dish-black.png" alt="Ground Truth" width="80" />
+  <img src="web/public/logo-dish.png" alt="Ground Truth" width="80" />
   <br />
-  <img src="web/public/logo-wordmark-black.png" alt="Ground Truth" width="200" />
+  <img src="web/public/logo-wordmark.png" alt="Ground Truth" width="200" />
 </p>
 
 <p align="center">
