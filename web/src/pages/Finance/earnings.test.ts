@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { change, combine, periodLabel, periodStart, periodWindow, toCsv, totals, type Flow } from './earnings.ts';
+import {
+  REVIEW_COST_SAVED_CENTS, change, combine, periodLabel, periodStart, periodWindow, savingsFlows, toCsv, totals, type Flow,
+} from './earnings.ts';
 
 const at = (iso: string) => Date.parse(iso);
 
@@ -46,13 +48,38 @@ test('totals split flows into current, like-for-like previous and trend', () => 
   assert.deepEqual(months.trend, [0, 212]);
 });
 
-test('net and change', () => {
-  const gross = { current: 1000, previous: 800, trend: [800, 1000] };
+test('combine and change', () => {
+  const atRisk = { current: 1000, previous: 800, trend: [800, 1000] };
   const credits = { current: 100, previous: 0, trend: [0, 100] };
-  const net = combine(gross, credits, (a, b) => a - b);
-  assert.deepEqual(net, { current: 900, previous: 800, trend: [800, 900] });
-  assert.deepEqual(change(net), { abs: 100, pct: 12.5 });
+  const protectedRevenue = combine(atRisk, credits, (a, b) => a - b);
+  assert.deepEqual(protectedRevenue, { current: 900, previous: 800, trend: [800, 900] });
+  assert.deepEqual(change(protectedRevenue), { abs: 100, pct: 12.5 });
   assert.deepEqual(change(credits), { abs: 100, pct: null });
+});
+
+test('savings follow the kpi rules', () => {
+  const s = savingsFlows({
+    passRevenue: new Map([['1', 500], ['2', 9_000]]),
+    decisions: [
+      { at: 10, outcome: 'Denied', passId: '1', amountCents: 2_000 }, // capped at the pass fee
+      { at: 11, outcome: 'Denied', passId: null, amountCents: 300 },
+      { at: 12, outcome: 'AutoApproved', passId: '2', amountCents: 400 },
+      { at: 13, outcome: 'Approved', passId: '2', amountCents: 400 },
+    ],
+    disputes: [
+      { at: 20, status: 'Denied', passId: '2', claimCents: 700 },
+      { at: 21, status: 'UnderReview', passId: '2', claimCents: 700 },
+    ],
+    escalations: [
+      { at: 30, status: 'Edited', claimedCents: 1_000, proposedCents: 250 },
+      { at: 31, status: 'Approved', claimedCents: 100, proposedCents: 100 },
+      { at: 32, status: 'Denied', claimedCents: 60, proposedCents: 0 },
+      { at: 33, status: 'Pending', claimedCents: 999, proposedCents: 0 },
+    ],
+  });
+  assert.deepEqual(s.denied.map(f => f.value), [500, 300, 700, 60]);
+  assert.deepEqual(s.trimmed, [{ at: 30, value: 750 }]);
+  assert.deepEqual(s.reviewSaved, [{ at: 12, value: REVIEW_COST_SAVED_CENTS }]);
 });
 
 test('csv quotes cells that need it', () => {
