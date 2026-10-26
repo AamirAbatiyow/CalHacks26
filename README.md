@@ -11,7 +11,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/HYPHENATE-2ND%20PLACE%20(%245%2C000)-6366F1?style=for-the-badge&labelColor=555555" alt="Hyphenate 2nd Place ($5,000)" />
   <img src="https://img.shields.io/badge/CAL%20HACKS-13.0-111111?style=for-the-badge&labelColor=555555" alt="Cal Hacks 13.0" />
-  <a href="https://cal-hacks-13-0.devpost.com/"><img src="https://img.shields.io/badge/READ%20THE%20STORY-DEVPOST-003E54?style=for-the-badge&labelColor=555555" alt="Devpost" /></a>
+  <a href="https://devpost.com/software/groundtruth-k3g5v6"><img src="https://img.shields.io/badge/READ%20THE%20STORY-DEVPOST-003E54?style=for-the-badge&labelColor=555555" alt="Devpost" /></a>
 </p>
 
 <p align="center">
