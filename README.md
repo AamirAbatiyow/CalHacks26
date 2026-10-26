@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="web/public/logo-dish-outlined.png" alt="Ground Truth" width="80" />
+  <img src="web/public/logo-dish-outlined.png" alt="Ground Truth" width="140" />
   <br />
   <img src="web/public/logo-wordmark-outlined.png" alt="Ground Truth" width="200" />
 </p>
