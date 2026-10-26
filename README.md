@@ -8,9 +8,22 @@
   <strong>An AI dispute analyst and credit approver for satellite ground-station operators.</strong>
 </p>
 
-It decides SLA credit claims from the evidence, decides alone only when it is at least 95% confident and Cedar policy allows it, asks a human otherwise, and turns each human ruling into tested, versioned policy.
+<p align="center">
+  <img src="https://img.shields.io/badge/HYPHENATE-2ND%20PLACE%20(%245%2C000)-6366F1?style=for-the-badge&labelColor=555555" alt="Hyphenate 2nd Place ($5,000)" />
+  <img src="https://img.shields.io/badge/CAL%20HACKS-13.0-111111?style=for-the-badge&labelColor=555555" alt="Cal Hacks 13.0" />
+  <a href="https://devpost.com/software/groundtruth-k3g5v6"><img src="https://img.shields.io/badge/READ%20THE%20STORY-DEVPOST-003E54?style=for-the-badge&labelColor=555555" alt="Devpost" /></a>
+</p>
 
-Built at Cal Hacks 2026 by Aamir Abatiyow, for **Hyphenate**, **SpacetimeDB**, and **SpaceX**.
+<p align="center">
+  <strong>Awards:</strong> 🏆 Hyphenate "The Hyphenated Enterprise: Autonomous Systems for Finance" — <strong>2nd Place ($5,000)</strong>
+</p>
+
+<p align="center">
+  Built at <strong>Cal Hacks 13.0</strong> — the world's largest collegiate hackathon with 2,500+ hackers — where <strong>Hyphenate</strong> was one of the main tracks.<br/>
+  By Aamir Abatiyow, for <strong>Hyphenate</strong>, <strong>SpacetimeDB</strong>, and <strong>SpaceX</strong>.
+</p>
+
+It decides SLA credit claims from the evidence, decides alone only when it is at least 95% confident and Cedar policy allows it, asks a human otherwise, and turns each human ruling into tested, versioned policy.
 
 Live demo: [cal-hacks26.vercel.app](https://cal-hacks26.vercel.app) · Full detail: [docs/REFERENCE.md](docs/REFERENCE.md)
 
