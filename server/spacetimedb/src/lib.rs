@@ -1,7 +1,10 @@
-use spacetimedb::{ReducerContext, ScheduleAt, SpacetimeType, Table, Timestamp};
+use spacetimedb::{rand::Rng, ReducerContext, ScheduleAt, SpacetimeType, Table, Timestamp};
 use std::time::Duration;
 
 use ledger::{ledger_entry, LedgerEntry, LedgerEntryType};
+
+const HOUR_MICROS: i64 = 3600 * 1_000_000;
+const WEATHER_RETENTION_HOURS: i64 = 48;
 
 pub mod approvals;
 pub mod attack_eval;
@@ -186,6 +189,76 @@ pub fn init(ctx: &ReducerContext) {
     log::info!("Ground Truth module initialized");
 }
 
+/// Truncates a microsecond timestamp to the start of its hour.
+fn hour_floor(micros: i64) -> i64 {
+    (micros / HOUR_MICROS) * HOUR_MICROS
+}
+
+/// Generates plausible space weather for a given hour if no row exists yet.
+/// Uses deterministic RNG seeded by the reducer context. Weather is mostly
+/// quiet (Kp 1-4) with occasional elevated periods (Kp 5-7) and rare extremes.
+fn ensure_weather_for_hour(ctx: &ReducerContext, hour_micros: i64) {
+    let ts = Timestamp::from_micros_since_unix_epoch(hour_micros);
+    if ctx.db.space_weather().timestamp().find(ts).is_some() {
+        return;
+    }
+
+    let mut rng = ctx.rng();
+    let roll: f32 = rng.gen();
+
+    let kp_index = if roll < 0.70 {
+        1.0 + rng.gen::<f32>() * 3.0
+    } else if roll < 0.88 {
+        4.0 + rng.gen::<f32>() * 1.0
+    } else if roll < 0.96 {
+        5.0 + rng.gen::<f32>() * 2.0
+    } else if roll < 0.99 {
+        7.0 + rng.gen::<f32>() * 1.5
+    } else {
+        8.5 + rng.gen::<f32>() * 0.5
+    };
+
+    let flare_class = if kp_index >= 7.0 && rng.gen::<f32>() < 0.4 {
+        if rng.gen::<f32>() < 0.3 { FlareClass::X } else { FlareClass::M }
+    } else if kp_index >= 5.0 && rng.gen::<f32>() < 0.25 {
+        FlareClass::C
+    } else {
+        FlareClass::None
+    };
+
+    let dst_index = if kp_index >= 7.0 {
+        -50 - (rng.gen::<i32>() % 80)
+    } else if kp_index >= 5.0 {
+        -20 - (rng.gen::<i32>() % 40)
+    } else {
+        -5 - (rng.gen::<i32>() % 15)
+    };
+
+    ctx.db.space_weather().insert(SpaceWeather {
+        timestamp: ts,
+        kp_index,
+        flare_class,
+        dst_index,
+    });
+
+    log::info!("Generated weather for hour {}: Kp {:.1}", hour_micros / HOUR_MICROS, kp_index);
+}
+
+/// Removes weather rows older than the retention window relative to sim_time.
+fn prune_old_weather(ctx: &ReducerContext, sim_time_micros: i64) {
+    let cutoff = sim_time_micros - WEATHER_RETENTION_HOURS * HOUR_MICROS;
+    let old: Vec<Timestamp> = ctx
+        .db
+        .space_weather()
+        .iter()
+        .filter(|w| w.timestamp.to_micros_since_unix_epoch() < cutoff)
+        .map(|w| w.timestamp)
+        .collect();
+    for ts in old {
+        ctx.db.space_weather().timestamp().delete(ts);
+    }
+}
+
 #[spacetimedb::reducer]
 pub fn sim_tick(ctx: &ReducerContext, _timer: SimTickSchedule) {
     if let Some(clock) = ctx.db.sim_clock().id().find(0) {
@@ -215,6 +288,15 @@ pub fn sim_tick(ctx: &ReducerContext, _timer: SimTickSchedule) {
                         ..pass
                     });
                 }
+            }
+
+            let old_hour = hour_floor(clock.current_time.to_micros_since_unix_epoch());
+            let new_hour = hour_floor(new_sim_time.to_micros_since_unix_epoch());
+            if new_hour > old_hour {
+                for h in ((old_hour / HOUR_MICROS + 1)..=(new_hour / HOUR_MICROS)).take(24) {
+                    ensure_weather_for_hour(ctx, h * HOUR_MICROS);
+                }
+                prune_old_weather(ctx, new_sim_time.to_micros_since_unix_epoch());
             }
 
             ctx.db.sim_clock().id().update(SimClock {
@@ -256,6 +338,10 @@ pub fn set_playback_playing(ctx: &ReducerContext, playing: bool) {
 pub fn seek_to_time(ctx: &ReducerContext, timestamp_micros: i64) {
     if let Some(clock) = ctx.db.sim_clock().id().find(0) {
         let new_time = Timestamp::from_micros_since_unix_epoch(timestamp_micros);
+        
+        let target_hour = hour_floor(timestamp_micros);
+        ensure_weather_for_hour(ctx, target_hour);
+        
         ctx.db.sim_clock().id().update(SimClock {
             current_time: new_time,
             real_time_anchor: ctx.timestamp,
@@ -268,6 +354,9 @@ pub fn seek_to_time(ctx: &ReducerContext, timestamp_micros: i64) {
 #[spacetimedb::reducer]
 pub fn go_live(ctx: &ReducerContext) {
     if let Some(clock) = ctx.db.sim_clock().id().find(0) {
+        let now_micros = ctx.timestamp.to_micros_since_unix_epoch();
+        ensure_weather_for_hour(ctx, hour_floor(now_micros));
+        
         ctx.db.sim_clock().id().update(SimClock {
             current_time: ctx.timestamp,
             speed_multiplier: 1.0,
@@ -548,4 +637,33 @@ pub fn client_connected(_ctx: &ReducerContext) {
 #[spacetimedb::reducer(client_disconnected)]
 pub fn client_disconnected(_ctx: &ReducerContext) {
     log::info!("Client disconnected");
+}
+
+#[cfg(test)]
+mod weather_tests {
+    use super::{hour_floor, HOUR_MICROS, WEATHER_RETENTION_HOURS};
+
+    #[test]
+    fn hour_floor_truncates_to_start_of_hour() {
+        assert_eq!(hour_floor(0), 0);
+        assert_eq!(hour_floor(HOUR_MICROS), HOUR_MICROS);
+        assert_eq!(hour_floor(HOUR_MICROS + 1_000_000), HOUR_MICROS);
+        assert_eq!(hour_floor(HOUR_MICROS - 1), 0);
+        assert_eq!(hour_floor(2 * HOUR_MICROS + 1_800_000_000), 2 * HOUR_MICROS);
+    }
+
+    #[test]
+    fn hour_floor_handles_large_timestamps() {
+        let now_ish: i64 = 1_730_000_000_000_000;
+        let floored = hour_floor(now_ish);
+        assert_eq!(floored % HOUR_MICROS, 0);
+        assert!(floored <= now_ish);
+        assert!(floored + HOUR_MICROS > now_ish);
+    }
+
+    #[test]
+    fn retention_window_is_reasonable() {
+        assert!(WEATHER_RETENTION_HOURS >= 24);
+        assert!(WEATHER_RETENTION_HOURS <= 168);
+    }
 }
