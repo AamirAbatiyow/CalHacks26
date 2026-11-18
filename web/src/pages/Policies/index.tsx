@@ -57,15 +57,22 @@ function pts(before: number, after: number): string {
 
 const STATUS_ICON = { [PolicyStatus.Proposed]: Sparkles, [PolicyStatus.Current]: CheckCircle2, [PolicyStatus.Retired]: CircleDot };
 
-function VersionItem({ version, isSelected, onClick }: { version: PolicyVersion; isSelected: boolean; onClick: () => void }) {
-  const Icon = STATUS_ICON[version.status];
+function VersionItem({ version, isSelected, blocked, onClick }: { version: PolicyVersion; isSelected: boolean; blocked: boolean; onClick: () => void }) {
+  const isBlocked = blocked && version.status === PolicyStatus.Proposed;
+  const Icon = isBlocked ? Ban : STATUS_ICON[version.status];
   return (
-    <button className={`version-item ${isSelected ? 'selected' : ''} ${version.status.toLowerCase()}`} onClick={onClick}>
+    <button className={`version-item ${isSelected ? 'selected' : ''} ${version.status.toLowerCase()}${isBlocked ? ' blocked' : ''}`} onClick={onClick}>
       {isSelected && <motion.span layoutId="policy-version-active" className="version-active-bg" transition={{ type: 'spring', stiffness: 500, damping: 40 }} />}
       <span className="version-number">v{version.version}</span>
       <span className="version-meta">
-        <Icon size={11} aria-hidden />
-        <span className="version-status">{version.status === PolicyStatus.Proposed ? version.author : version.status}</span>
+        {isBlocked ? (
+          <span className="version-badge blocked"><Icon size={10} aria-hidden />Blocked</span>
+        ) : (
+          <>
+            <Icon size={11} aria-hidden />
+            <span className="version-status">{version.status === PolicyStatus.Proposed ? version.author : version.status}</span>
+          </>
+        )}
         {version.status !== PolicyStatus.Proposed && <span className="version-date">{formatDate(version.createdAt)}</span>}
       </span>
     </button>
@@ -258,14 +265,18 @@ export default function Policies() {
       setSelectedVersionId(linkedVersionId);
       setAppliedLinkId(linkedVersionId);
     } else if (!selectedVersionId) {
-      const proposed = policyVersions.find(v => v.status === PolicyStatus.Proposed);
-      setSelectedVersionId(proposed?.id ?? policyVersions[0].id);
+      const current = policyVersions.find(v => v.status === PolicyStatus.Current);
+      setSelectedVersionId(current?.id ?? policyVersions[0].id);
     }
   }, [policyVersions, selectedVersionId, linkedVersionId, appliedLinkId]);
 
   const selectedVersion = policyVersions.find(v => v.id === selectedVersionId);
   const selectedProposal = proposals.find(p => p.versionId === selectedVersionId);
   const currentVersion = policyVersions.find(v => v.status === PolicyStatus.Current);
+  const blockedVersionIds = useMemo(() => new Set([
+    ...proposals.filter(p => p.status === 'blocked').map(p => p.versionId),
+    ...replays.filter(r => r.status === ReplayStatus.Blocked).map(r => r.proposedVersionId),
+  ]), [proposals, replays]);
   const selectedRules = cedarRules.filter(r => r.policyVersionId === selectedVersionId);
 
   const activeReplay = replays.find(
@@ -414,6 +425,7 @@ export default function Policies() {
                 key={version.id}
                 version={version}
                 isSelected={selectedVersionId === version.id}
+                blocked={blockedVersionIds.has(version.id)}
                 onClick={() => setSelectedVersionId(version.id)}
               />
             ))}
